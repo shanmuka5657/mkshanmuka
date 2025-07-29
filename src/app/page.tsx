@@ -43,7 +43,7 @@ import { analyzeCreditReport } from '@/ai/flows/credit-report-analysis';
 import { getCreditImprovementSuggestions } from '@/ai/flows/credit-improvement-suggestions';
 import { getDebtManagementAdvice } from '@/ai/flows/debt-management-advice';
 import { getAiRating, AiRatingOutput } from '@/ai/flows/ai-rating';
-import { getLoanEligibility } from '@/ai/flows/loan-eligibility';
+import { getLoanEligibility, LoanEligibilityOutput } from '@/ai/flows/loan-eligibility';
 import { cn } from '@/lib/utils';
 import {
   Alert,
@@ -58,6 +58,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type QuestionnaireAnswers = { [key: string]: string };
 type CreditSummary = {
@@ -220,7 +221,7 @@ export default function CreditWiseAIPage() {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [aiRating, setAiRating] = useState<AiRatingOutput | null>(null);
   const [isRating, setIsRating] = useState(false);
-  const [loanEligibility, setLoanEligibility] = useState<{ eligibleLoanAmount: number; estimatedInterestRate: string; eligibilitySummary: string; } | null>(null);
+  const [loanEligibility, setLoanEligibility] = useState<LoanEligibilityOutput | null>(null);
   const [isCalculatingEligibility, setIsCalculatingEligibility] = useState(false);
 
 
@@ -519,8 +520,8 @@ export default function CreditWiseAIPage() {
           }
           
           const paymentHistory = loan.paymentHistory;
-          const dpdValues = (paymentHistory.match(/\b(\d{1,3}|STD|SUB|DBT|LSS)\b/g) || []).map(val => {
-              if (val === 'STD' || val === '000') return 0;
+          const dpdValues = (paymentHistory.match(/\b(\d{1,3}|STD|SUB|DBT|LSS|XXX)\b/g) || []).map(val => {
+              if (val === 'STD' || val === '000' || val === 'XXX') return 0;
               if (val === 'SUB') return 90; // Standard to map SUB to 90+
               if (val === 'DBT') return 999; // Doubtful
               if (val === 'LSS') return 999; // Loss
@@ -529,25 +530,24 @@ export default function CreditWiseAIPage() {
           });
 
           let highestDpd = 0;
-          let accountHadDpd = false;
           dpdValues.forEach(dpd => {
               highestDpd = Math.max(highestDpd, dpd);
-              if (dpd > 0) {
-                accountHadDpd = true;
-              }
           });
-
-          if(accountHadDpd) {
-              if (highestDpd === 0) dpdCounts.onTime += 1; // Should not happen if accountHadDpd is true, but for safety
-              else if (highestDpd <= 30) dpdCounts.days1_30 += 1;
-              else if (highestDpd <= 60) dpdCounts.days31_60 += 1;
-              else if (highestDpd <= 90) dpdCounts.days61_90 += 1;
-              else if (highestDpd < 999) dpdCounts.days90plus += 1;
-              else if (highestDpd >= 999) dpdCounts.default += 1;
-          } else {
-             dpdCounts.onTime += 1; // Assume on-time if no DPD values > 0 found
+          
+          if (dpdValues.length > 0) {
+            const hasDpd = dpdValues.some(dpd => dpd > 0);
+            if (!hasDpd) {
+                dpdCounts.onTime += 1;
+            } else {
+                 if (highestDpd === 0) dpdCounts.onTime += 1;
+                 else if (highestDpd <= 30) dpdCounts.days1_30 += 1;
+                 else if (highestDpd <= 60) dpdCounts.days31_60 += 1;
+                 else if (highestDpd <= 90) dpdCounts.days61_90 += 1;
+                 else if (highestDpd < 999) dpdCounts.days90plus += 1;
+                 else if (highestDpd >= 999) dpdCounts.default += 1;
+            }
           }
-
+         
           accountDpdDetails.push({
               accountType: accountType,
               status: accountStatus || 'N/A',
@@ -572,11 +572,11 @@ export default function CreditWiseAIPage() {
       setCreditSummary(summary);
       setTotalEmi(String(totalEMI));
 
-      const inquirySectionMatch = text.match(/ENQUIRY INFORMATION([\s\S]+?)(\n\n[A-Z]|$)/);
+      const inquirySectionMatch = text.match(/ENQUIRY INFORMATION([\s\S]+?)(\n\n[A-Z]|$|OTHER INFORMATION|END OF REPORT)/i);
       const inquiryText = inquirySectionMatch ? inquirySectionMatch[1] : '';
       
       const currentInquiries: Inquiry[] = [];
-      const inquiryRegex = /(\d{2}-\d{2}-\d{4})\s+([A-Z\s.,()-]+?)\s+(Consumer Loan|Personal Loan|Credit Card|Auto Loan|Business Loan|Housing Loan|Other|Two-wheeler Loan|Loan Against Property)[\s\S]*?(?=\d{2}-\d{2}-\d{4}|$)/g;
+      const inquiryRegex = /(\d{2}-\d{2}-\d{4})\s+([A-Z\s.,()-]+?)\s+(Consumer Loan|Personal Loan|Credit Card|Auto Loan|Business Loan|Housing Loan|Other|Two-wheeler Loan|Loan Against Property)/g;
 
       let match;
       while ((match = inquiryRegex.exec(inquiryText)) !== null) {
@@ -1030,7 +1030,7 @@ export default function CreditWiseAIPage() {
                 </CardContent>
               </Card>
               
-               {aiRating && estimatedIncome !== null && (
+               {aiRating && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center">
@@ -1043,17 +1043,31 @@ export default function CreditWiseAIPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <Button
-                      onClick={handleGetLoanEligibility}
-                      disabled={isCalculatingEligibility}
-                    >
-                      {isCalculatingEligibility ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Sparkles className="mr-2 h-4 w-4" />
-                      )}
-                      Calculate Loan Eligibility
-                    </Button>
+                    <TooltipProvider>
+                      <UiTooltip>
+                        <TooltipTrigger asChild>
+                           <div className="inline-block">
+                              <Button
+                                onClick={handleGetLoanEligibility}
+                                disabled={isCalculatingEligibility || estimatedIncome === null}
+                              >
+                                {isCalculatingEligibility ? (
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Sparkles className="mr-2 h-4 w-4" />
+                                )}
+                                Calculate Loan Eligibility
+                              </Button>
+                           </div>
+                        </TooltipTrigger>
+                         {estimatedIncome === null && (
+                           <TooltipContent>
+                             <p>Please estimate your income first using the calculator below.</p>
+                           </TooltipContent>
+                         )}
+                      </UiTooltip>
+                    </TooltipProvider>
+
                     {loanEligibility && (
                       <div className="mt-6 p-4 bg-muted rounded-lg">
                         <h4 className="font-semibold">
