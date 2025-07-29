@@ -60,7 +60,7 @@ type CreditSummary = {
 const questionnaireItems = [
     { id: 'paymentHistory', label: 'Payment History (Highest DPD in last 12 months)', options: ["No DPD in last 12 months", "1–2 DPD <30 days", "Frequent 30 DPD (3–4 times)", "1 DPD = 60 days", "2+ DPDs 60+ or 1 DPD 90+", "180+/999 DPD or default once", "Multiple 999 / Write-off"] },
     { id: 'creditUtilization', label: 'Credit Utilization (%)', options: ["<10%", "10–30%", "30–50%", "50–75%", "75–100%", ">100% or over-limit"] },
-    { id: 'creditAge', label: 'Credit Age (Oldest Account)', options: [">7 years", "5–7 years", "3–5 years", "<1 year", "All <6 months"] },
+    { id: 'creditAge', label: 'Credit Age (Oldest Account)', options: [">7 years", "5–7 years", "3–5 years", "1–3 years", "<1 year", "All <6 months"] },
     { id: 'creditMix', label: 'Credit Mix', options: ["Secured + Unsecured", "Only one type but diverse", "Only 1 type", "Only 1 type, short history"] },
     { id: 'inquiries', label: 'Inquiries (Last 12 months)', options: ["0–1", "2–3", "4–5", "6+"] },
     { id: 'dpdRecent', label: 'DPD Last 3 Months', options: ["All 000", "1 DPD = 30", "1 DPD = 60+", "Any 90/999"] },
@@ -237,11 +237,17 @@ export default function CreditWiseAIPage() {
       const nameMatch = text.match(/(?:Name)\s*:\s*(.*?)(?:Date of Birth)/i);
       const dobMatch = text.match(/(?:Date of Birth)\s*:\s*(\d{2}-\d{2}-\d{4})/i);
       const panMatch = text.match(/(?:PAN)\s*:\s*([A-Z]{5}[0-9]{4}[A-Z]{1})/i);
-      
+      const genderMatch = text.match(/Gender\s*:\s*(Male|Female)/i);
+      const addressMatch = text.match(/ADDRESS\(ES\):\s*([\s\S]*?)(?:CATEGORY|PERMANENT ADDRESS)/i);
+
+
       let info: Record<string, string> = {};
       if (nameMatch) info['Name'] = nameMatch[1].trim();
       if (dobMatch) info['Date of Birth'] = dobMatch[1];
       if (panMatch) info['PAN'] = panMatch[1];
+      if (genderMatch) info['Gender'] = genderMatch[1];
+      if (addressMatch) info['Address'] = addressMatch[1].replace(/\s+/g, ' ').trim();
+
       setConsumerInfo(info);
       
       const emiMatch = text.match(/TOTAL MONTHLY PAYMENT AMOUNT\s*:\s*Rs\. ([\d,]+)/i);
@@ -512,19 +518,36 @@ export default function CreditWiseAIPage() {
                   <CardHeader>
                       <CardTitle className="flex items-center"><FileText className="mr-3 h-6 w-6 text-primary" />Credit Score &amp; Summary</CardTitle>
                   </CardHeader>
-                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
                       <div className="text-center">
                           <p className="text-muted-foreground">Official CIBIL Score</p>
                           <div className="text-7xl font-bold text-primary">{creditScore || 'N/A'}</div>
                           {creditScore && <Progress value={scoreProgress} className="mt-4" />}
                       </div>
                       <div>
-                          <h4 className="font-semibold mb-2">Consumer Information</h4>
-                          <ul className="space-y-1 text-sm list-disc list-inside">
-                              {Object.entries(consumerInfo).map(([key, value]) => (
-                                  <li key={key}><span className="font-semibold">{key}:</span> {value}</li>
-                              ))}
-                          </ul>
+                          <h4 className="font-semibold mb-4">Consumer Information</h4>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                            <div>
+                              <p className="font-semibold">Name:</p>
+                              <p>{consumerInfo['Name'] || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <p className="font-semibold">PAN:</p>
+                              <p>{consumerInfo['PAN'] || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <p className="font-semibold">Date of Birth:</p>
+                              <p>{consumerInfo['Date of Birth'] || 'N/A'}</p>
+                            </div>
+                             <div>
+                              <p className="font-semibold">Gender:</p>
+                              <p>{consumerInfo['Gender'] || 'N/A'}</p>
+                            </div>
+                            <div className="col-span-2">
+                                <p className="font-semibold">Address:</p>
+                                <p>{consumerInfo['Address'] || 'N/A'}</p>
+                            </div>
+                          </div>
                       </div>
                   </CardContent>
               </Card>
