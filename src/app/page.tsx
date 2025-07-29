@@ -1030,7 +1030,7 @@ export default function CreditWiseAIPage() {
                 </CardContent>
               </Card>
               
-               {aiRating && estimatedIncome && (
+               {aiRating && estimatedIncome !== null && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center">
