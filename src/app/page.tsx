@@ -25,6 +25,7 @@ import {
   CalendarDays,
   ShieldAlert,
   Flag,
+  Search,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -210,6 +211,7 @@ export default function CreditWiseAIPage() {
   const [potentialIssues, setPotentialIssues] = useState<string[]>([]);
   const [debtPaydownTimeline, setDebtPaydownTimeline] = useState<DebtPaydown[]>([]);
   const [flaggedAccounts, setFlaggedAccounts] = useState<FlaggedAccount[]>([]);
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
 
 
   const { toast } = useToast()
@@ -271,6 +273,7 @@ export default function CreditWiseAIPage() {
     setPotentialIssues([]);
     setDebtPaydownTimeline([]);
     setFlaggedAccounts([]);
+    setInquiries([]);
     if(fileInputRef.current) {
         fileInputRef.current.value = '';
     }
@@ -311,7 +314,7 @@ export default function CreditWiseAIPage() {
     }
   };
   
-    const assessCreditRisk = (loans: LoanAccount[], inquiries: Inquiry[]): RiskAssessment => {
+    const assessCreditRisk = (loans: LoanAccount[], currentInquiries: Inquiry[]): RiskAssessment => {
         let riskScore = 100; // Start with perfect score
         const riskFactors: RiskAssessment['factors'] = [];
         const mitigations: RiskAssessment['mitigations'] = [];
@@ -363,7 +366,7 @@ export default function CreditWiseAIPage() {
         }
 
         // 4. Recent Inquiries
-        const recentInquiries = inquiries.filter(inq => {
+        const recentInquiries = currentInquiries.filter(inq => {
             const inqDate = new Date(inq.date.split('-').reverse().join('-'));
             const sixMonthsAgo = new Date();
             sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
@@ -393,8 +396,8 @@ export default function CreditWiseAIPage() {
         setCreditScore(parseInt(scoreMatch[1], 10));
       }
       
-      const nameMatch = text.match(/(?:Name|CONSUMER NAME)\s*:\s*(.*?)(?:Date of Birth|DOB)/i);
-      const dobMatch = text.match(/(?:Date of Birth|DOB)\s*:\s*(\d{2}-\d{2}-\d{4})/i);
+      const nameMatch = text.match(/(?:Name|CONSUMER NAME)\s*:?\s*(.*?)(?:Date of Birth|DOB)/i);
+      const dobMatch = text.match(/(?:Date of Birth|DOB)\s*:?\s*(\d{2}-\d{2}-\d{4})/i);
       const panMatch = text.match(/(?:PAN|Permanent Account Number)\s*:?\s*([A-Z]{5}[0-9]{4}[A-Z]{1})/i);
       const genderMatch = text.match(/Gender\s*:?\s*(Male|Female)/i);
       const addressMatch = text.match(/(?:ADDRESS\(ES\)|Address)\s*:\s*([\s\S]*?)(?:CATEGORY|PERMANENT ADDRESS|IDENTIFICATION|CONTACT)/i);
@@ -536,7 +539,7 @@ export default function CreditWiseAIPage() {
       setCreditSummary(summary);
       setTotalEmi(String(totalEMI));
 
-      const inquiries: Inquiry[] = (text.match(/(\d{2}-\d{2}-\d{4})\s+([A-Z\s]+)\s+(.+)/g) || [])
+      const currentInquiries: Inquiry[] = (text.match(/(\d{2}-\d{2}-\d{4})\s+([A-Z\s]+?)\s+(.+)/g) || [])
           .map(line => {
               const parts = line.match(/(\d{2}-\d{2}-\d{4})\s+([A-Z\s]+?)\s+(.+)/);
               if (parts) {
@@ -544,8 +547,10 @@ export default function CreditWiseAIPage() {
               }
               return null;
           }).filter((inq): inq is Inquiry => inq !== null);
+      
+      setInquiries(currentInquiries);
 
-      const risk = assessCreditRisk(loans, inquiries);
+      const risk = assessCreditRisk(loans, currentInquiries);
       setRiskAssessment(risk);
 
       const issues = [];
@@ -745,6 +750,36 @@ export default function CreditWiseAIPage() {
     }
   };
 
+  const getInquiryCounts = useCallback(() => {
+    const now = new Date();
+    const thirtyDaysAgo = new Date(new Date().setDate(now.getDate() - 30));
+    const oneYearAgo = new Date(new Date().setFullYear(now.getFullYear() - 1));
+    const twoYearsAgo = new Date(new Date().setFullYear(now.getFullYear() - 2));
+
+    const counts = {
+      thirtyDays: 0,
+      oneYear: 0,
+      twoYears: 0,
+    };
+
+    inquiries.forEach(inq => {
+      try {
+        const inqDate = new Date(inq.date.split('-').reverse().join('-'));
+        if (isNaN(inqDate.getTime())) return;
+        
+        if (inqDate > thirtyDaysAgo) counts.thirtyDays++;
+        if (inqDate > oneYearAgo) counts.oneYear++;
+        if (inqDate > twoYearsAgo) counts.twoYears++;
+      } catch (e) {
+        console.warn(`Could not parse date: ${inq.date}`)
+      }
+    });
+
+    return counts;
+  }, [inquiries]);
+
+  const inquiryCounts = getInquiryCounts();
+
   return (
     <div className={cn("min-h-screen bg-background font-body text-foreground", theme)}>
        <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm">
@@ -815,10 +850,10 @@ export default function CreditWiseAIPage() {
                       </div>
                       <div>
                           <h4 className="font-semibold mb-4">Consumer Information</h4>
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
                             <div>
                               <p className="font-semibold">Name:</p>
-                              <p>{consumerInfo['Name'] || 'N/A'}</p>
+                              <p className="truncate">{consumerInfo['Name'] || 'N/A'}</p>
                               <p className="font-semibold mt-2">Date of Birth:</p>
                               <p>{consumerInfo['Date of Birth'] || 'N/A'}</p>
                               <p className="font-semibold mt-2">Gender:</p>
@@ -828,7 +863,7 @@ export default function CreditWiseAIPage() {
                               <p className="font-semibold">PAN:</p>
                               <p>{consumerInfo['PAN'] || 'N/A'}</p>
                               <p className="font-semibold mt-2">Address:</p>
-                              <p>{consumerInfo['Address'] || 'N/A'}</p>
+                              <p className="line-clamp-3">{consumerInfo['Address'] || 'N/A'}</p>
                             </div>
                           </div>
                       </div>
@@ -855,6 +890,19 @@ export default function CreditWiseAIPage() {
                   <SummaryItem label="Total Monthly EMI" value={`₹${creditSummary.totalMonthlyEMI.toLocaleString('en-IN')}`} />
                   <SummaryItem label="Max Single EMI" value={`₹${creditSummary.maxSingleEMI.toLocaleString('en-IN')}`} />
                   <SummaryItem label="Credit Card Payments" value={`₹${creditSummary.creditCardPayments.toLocaleString('en-IN')}`} />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center"><Search className="mr-3 h-6 w-6 text-primary" />Credit Inquiries Analysis</CardTitle>
+                  <CardDescription>An overview of recent credit inquiries on your report.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <SummaryItem label="Total Inquiries" value={inquiries.length} />
+                  <SummaryItem label="Past 30 Days" value={inquiryCounts.thirtyDays} />
+                  <SummaryItem label="Past 12 Months" value={inquiryCounts.oneYear} />
+                  <SummaryItem label="Past 24 Months" value={inquiryCounts.twoYears} />
                 </CardContent>
               </Card>
 
@@ -1204,5 +1252,7 @@ export default function CreditWiseAIPage() {
     </div>
   );
 }
+
+    
 
     
