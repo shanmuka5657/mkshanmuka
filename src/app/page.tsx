@@ -26,6 +26,9 @@ import {
   ShieldAlert,
   Flag,
   Search,
+  Bot,
+  ThumbsUp,
+  ThumbsDown,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -38,6 +41,7 @@ import { useToast } from "@/hooks/use-toast"
 import { analyzeCreditReport } from '@/ai/flows/credit-report-analysis';
 import { getCreditImprovementSuggestions } from '@/ai/flows/credit-improvement-suggestions';
 import { getDebtManagementAdvice } from '@/ai/flows/debt-management-advice';
+import { getAiRating, AiRatingOutput } from '@/ai/flows/ai-rating';
 import { cn } from '@/lib/utils';
 import {
   Alert,
@@ -212,6 +216,8 @@ export default function CreditWiseAIPage() {
   const [debtPaydownTimeline, setDebtPaydownTimeline] = useState<DebtPaydown[]>([]);
   const [flaggedAccounts, setFlaggedAccounts] = useState<FlaggedAccount[]>([]);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [aiRating, setAiRating] = useState<AiRatingOutput | null>(null);
+  const [isRating, setIsRating] = useState(false);
 
 
   const { toast } = useToast()
@@ -274,6 +280,8 @@ export default function CreditWiseAIPage() {
     setDebtPaydownTimeline([]);
     setFlaggedAccounts([]);
     setInquiries([]);
+    setAiRating(null);
+    setIsRating(false);
     if(fileInputRef.current) {
         fileInputRef.current.value = '';
     }
@@ -630,6 +638,33 @@ export default function CreditWiseAIPage() {
       setIsAnalyzing(false);
     }
   };
+  
+  const handleGetAiRating = async () => {
+    if (!rawText) return;
+    setIsRating(true);
+    setAiRating(null);
+    try {
+      const result = await getAiRating({
+        creditReportText: rawText,
+        riskAssessment: riskAssessment,
+      });
+      setAiRating(result);
+       toast({
+        title: "AI Rating Complete",
+        description: "Your comprehensive AI credit rating is ready.",
+      })
+    } catch (error) {
+      console.error('Error getting AI rating:', error);
+       toast({
+        variant: "destructive",
+        title: "AI Rating Failed",
+        description: "Could not get AI rating. Please try again.",
+      })
+    } finally {
+      setIsRating(false);
+    }
+  }
+
 
   const handleGetSuggestions = async () => {
     if (Object.keys(questionnaireAnswers).length !== questionnaireItems.length) {
@@ -774,6 +809,17 @@ export default function CreditWiseAIPage() {
       default: return 'bg-muted border-border';
     }
   };
+  
+  const getRatingColorClass = (rating: string = '') => {
+      rating = rating.toLowerCase();
+      if (rating.includes('excellent')) return 'text-green-500';
+      if (rating.includes('good')) return 'text-emerald-500';
+      if (rating.includes('fair')) return 'text-yellow-500';
+      if (rating.includes('poor')) return 'text-orange-500';
+      if (rating.includes('very poor')) return 'text-red-500';
+      return 'text-foreground';
+  }
+
 
   const getInquiryCounts = useCallback(() => {
     const now = new Date();
@@ -893,6 +939,52 @@ export default function CreditWiseAIPage() {
                           </div>
                       </div>
                   </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center"><Bot className="mr-3 h-6 w-6 text-primary" />AI Credit Analysis Meter</CardTitle>
+                  <CardDescription>A holistic rating based on a comprehensive AI analysis of your report.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                   <Button onClick={handleGetAiRating} disabled={isRating}>
+                    {isRating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                    Get AI Rating
+                  </Button>
+                  
+                  {aiRating && (
+                    <div className="mt-6">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                        <div className="text-center">
+                          <div className={cn("text-7xl font-bold", getRatingColorClass(aiRating.rating))}>
+                            {aiRating.aiScore}
+                          </div>
+                          <div className={cn("text-2xl font-semibold", getRatingColorClass(aiRating.rating))}>
+                            {aiRating.rating}
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">AI Score / 100</p>
+                        </div>
+                        <div className="md:col-span-2">
+                           <p className="text-sm text-muted-foreground">{aiRating.summary}</p>
+                           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                <h4 className="font-semibold flex items-center mb-2"><ThumbsUp className="h-5 w-5 mr-2 text-green-500" />Positive Factors</h4>
+                                <ul className="list-disc list-inside space-y-1 text-sm">
+                                  {aiRating.positiveFactors.map((factor, i) => <li key={i}>{factor}</li>)}
+                                </ul>
+                              </div>
+                              <div>
+                                <h4 className="font-semibold flex items-center mb-2"><ThumbsDown className="h-5 w-5 mr-2 text-red-500" />Negative Factors</h4>
+                                 <ul className="list-disc list-inside space-y-1 text-sm">
+                                  {aiRating.negativeFactors.map((factor, i) => <li key={i}>{factor}</li>)}
+                                </ul>
+                              </div>
+                           </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
               </Card>
 
               <Card>
