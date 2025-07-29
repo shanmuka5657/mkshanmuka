@@ -418,7 +418,7 @@ export default function CreditWiseAIPage() {
       const currentFlaggedAccounts: FlaggedAccount[] = [];
       
       let summary: CreditSummary = { ...initialCreditSummary };
-      summary.totalAccounts = accountSections.length;
+      summary.totalAccounts = accountSections.length > 1 ? accountSections.length - 1 : 0;
 
       let totalLimit = 0;
       let totalOutstanding = 0;
@@ -430,7 +430,7 @@ export default function CreditWiseAIPage() {
       const dpdCounts: DpdSummary = { ...initialDpdSummary };
       const accountDpdDetails: AccountDpdStatus[] = [];
 
-      accountSections.forEach(section => {
+      accountSections.slice(1).forEach(section => {
           const typeMatch = section.match(/Account Type\s*:\s*(.+)/i) || section.match(/Type\s*:\s*(.+)/i);
           const accountType = typeMatch ? typeMatch[1].trim() : "N/A";
 
@@ -455,7 +455,7 @@ export default function CreditWiseAIPage() {
               emi: emiMatchS ? emiMatchS[1].replace(/,/g, '') : '0',
               opened: openedMatch ? openedMatch[1] : 'N/A',
               closed: closedMatch ? closedMatch[1] : 'N/A',
-              paymentHistory: paymentHistoryMatch ? paymentHistoryMatch[1].trim() : 'N/A',
+              paymentHistory: paymentHistoryMatch ? paymentHistoryMatch[1].trim().replace(/\s+/g, ' ') : 'N/A',
           };
           loans.push(loan);
 
