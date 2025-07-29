@@ -5,3 +5,4 @@ import '@/ai/flows/credit-improvement-suggestions.ts';
 import '@/ai/flows/debt-management-advice.ts';
 import '@/ai/flows/credit-report-analysis.ts';
 import '@/ai/flows/ai-rating.ts';
+import '@/ai/flows/loan-eligibility.ts';

@@ -29,6 +29,7 @@ import {
   Bot,
   ThumbsUp,
   ThumbsDown,
+  Banknote,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,7 @@ import { analyzeCreditReport } from '@/ai/flows/credit-report-analysis';
 import { getCreditImprovementSuggestions } from '@/ai/flows/credit-improvement-suggestions';
 import { getDebtManagementAdvice } from '@/ai/flows/debt-management-advice';
 import { getAiRating, AiRatingOutput } from '@/ai/flows/ai-rating';
+import { getLoanEligibility } from '@/ai/flows/loan-eligibility';
 import { cn } from '@/lib/utils';
 import {
   Alert,
@@ -218,6 +220,8 @@ export default function CreditWiseAIPage() {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [aiRating, setAiRating] = useState<AiRatingOutput | null>(null);
   const [isRating, setIsRating] = useState(false);
+  const [loanEligibility, setLoanEligibility] = useState<{ eligibleLoanAmount: number; estimatedInterestRate: string; eligibilitySummary: string; } | null>(null);
+  const [isCalculatingEligibility, setIsCalculatingEligibility] = useState(false);
 
 
   const { toast } = useToast()
@@ -282,6 +286,8 @@ export default function CreditWiseAIPage() {
     setInquiries([]);
     setAiRating(null);
     setIsRating(false);
+    setLoanEligibility(null);
+    setIsCalculatingEligibility(false);
     if(fileInputRef.current) {
         fileInputRef.current.value = '';
     }
@@ -731,6 +737,43 @@ export default function CreditWiseAIPage() {
     }
   };
   
+  const handleGetLoanEligibility = async () => {
+    if (!aiRating || estimatedIncome === null) {
+      toast({
+        variant: 'destructive',
+        title: 'Missing Information',
+        description:
+          'Please get your AI Rating and estimate your income first.',
+      });
+      return;
+    }
+    setIsCalculatingEligibility(true);
+    setLoanEligibility(null);
+    try {
+      const result = await getLoanEligibility({
+        aiScore: aiRating.aiScore,
+        rating: aiRating.rating,
+        monthlyIncome: estimatedIncome,
+        totalMonthlyEMI: creditSummary.totalMonthlyEMI,
+      });
+      setLoanEligibility(result);
+      toast({
+        title: 'Loan Eligibility Calculated',
+        description: 'Your estimated loan eligibility is ready.',
+      });
+    } catch (error) {
+      console.error('Error calculating loan eligibility:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Eligibility Calculation Failed',
+        description:
+          'Could not calculate your loan eligibility. Please try again.',
+      });
+    } finally {
+      setIsCalculatingEligibility(false);
+    }
+  };
+  
   const calculateCustomScore = useCallback(() => {
     let totalScore = 0;
     const maxScore = Object.values(scoringMaps).reduce((acc, map) => acc + Math.max(...Object.values(map)), 0);
@@ -986,6 +1029,60 @@ export default function CreditWiseAIPage() {
                   )}
                 </CardContent>
               </Card>
+              
+               {aiRating && estimatedIncome && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Banknote className="mr-3 h-6 w-6 text-primary" />
+                      AI Loan Eligibility
+                    </CardTitle>
+                    <CardDescription>
+                      Estimate your potential loan eligibility based on your AI
+                      rating and financial details.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button
+                      onClick={handleGetLoanEligibility}
+                      disabled={isCalculatingEligibility}
+                    >
+                      {isCalculatingEligibility ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="mr-2 h-4 w-4" />
+                      )}
+                      Calculate Loan Eligibility
+                    </Button>
+                    {loanEligibility && (
+                      <div className="mt-6 p-4 bg-muted rounded-lg">
+                        <h4 className="font-semibold">
+                          Estimated Loan Eligibility:
+                        </h4>
+                        <p className="text-2xl font-bold text-primary">
+                          ₹
+                          {loanEligibility.eligibleLoanAmount.toLocaleString(
+                            'en-IN'
+                          )}
+                        </p>
+                        <p className="text-muted-foreground">
+                          at an estimated interest rate of{' '}
+                          <strong>
+                            {loanEligibility.estimatedInterestRate}% p.a.
+                          </strong>
+                        </p>
+                        <Alert className="mt-4">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertTitle>Eligibility Summary</AlertTitle>
+                          <AlertDescription>
+                            {loanEligibility.eligibilitySummary}
+                          </AlertDescription>
+                        </Alert>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
               <Card>
                 <CardHeader>
