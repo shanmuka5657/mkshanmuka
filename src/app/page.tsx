@@ -15,7 +15,8 @@ import {
   Moon,
   Sun,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  TrendingUp
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -54,6 +55,14 @@ const questionnaireItems = [
     { id: 'emiRatio', label: 'EMI-to-Income Ratio', options: ["<30%", "30–40%", "40–50%", ">50%"] },
 ];
 
+const scoringMaps = {
+  paymentHistory: { "No DPD in last 12 months": 30, "1–2 DPD <30 days": 28, "Frequent 30 DPD (3–4 times)": 24, "1 DPD = 60 days": 20, "2+ DPDs 60+ or 1 DPD 90+": 15, "180+/999 DPD or default once": 8, "Multiple 999 / Write-off": 2 },
+  creditUtilization: { "<10%": 15, "10–30%": 14, "30–50%": 11, "50–75%": 7, "75–100%": 4, ">100% or over-limit": 1 },
+  creditAge: { ">7 years": 7, "5–7 years": 6, "3–5 years": 5, "1–3 years": 3, "<1 year": 1, "All <6 months": 0 },
+  creditMix: { "Secured + Unsecured": 5, "Only one type but diverse": 4, "Only 1 type": 2, "Only 1 type, short history": 0 },
+  inquiries: { "0–1": 5, "2–3": 4, "4–5": 2, "6+": 0 },
+};
+
 export default function CreditWiseAIPage() {
   const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState('No file chosen');
@@ -74,6 +83,8 @@ export default function CreditWiseAIPage() {
   const [aiDebtAdvice, setAiDebtAdvice] = useState('');
   const [isAdvising, setIsAdvising] = useState(false);
   const [theme, setTheme] = useState('light');
+  const [customScore, setCustomScore] = useState<number | null>(null);
+  const [customScoreRating, setCustomScoreRating] = useState<string | null>(null);
 
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -122,6 +133,8 @@ export default function CreditWiseAIPage() {
     setEstimatedIncome(null);
     setAiDebtAdvice('');
     setIsAdvising(false);
+    setCustomScore(null);
+    setCustomScoreRating(null);
     if(fileInputRef.current) {
         fileInputRef.current.value = '';
     }
@@ -163,13 +176,10 @@ export default function CreditWiseAIPage() {
   };
   
   const parseCibilData = (text: string) => {
-    // Credit Score
     const scoreMatch = text.match(/(?:CIBIL SCORE|CREDIT SCORE)\s*:?\s*(\d{3})/i);
     if (scoreMatch) {
       setCreditScore(parseInt(scoreMatch[1], 10));
     }
-
-    // Consumer Info
     const nameMatch = text.match(/(?:Name)\s*:\s*(.*?)(?:Date of Birth)/i);
     const dobMatch = text.match(/(?:Date of Birth)\s*:\s*(\d{2}-\d{2}-\d{4})/i);
     const panMatch = text.match(/(?:PAN)\s*:\s*([A-Z]{5}[0-9]{4}[A-Z]{1})/i);
@@ -180,7 +190,6 @@ export default function CreditWiseAIPage() {
     if(panMatch) info['PAN'] = panMatch[1];
     setConsumerInfo(info);
     
-    // Auto-fill total EMI
     const emiMatch = text.match(/TOTAL MONTHLY PAYMENT AMOUNT\s*:\s*Rs\. ([\d,]+)/i);
     if(emiMatch) {
         setTotalEmi(emiMatch[1].replace(/,/g, ''));
@@ -225,7 +234,7 @@ export default function CreditWiseAIPage() {
       const input = {
           ...questionnaireAnswers,
           cibilSummary: rawText.substring(0, 4000)
-      } as any; // Cast to any to match GenAI flow input
+      } as any;
       const result = await getCreditImprovementSuggestions(input);
       setAiSuggestions(result.suggestions);
     } catch (error) {
@@ -273,9 +282,35 @@ export default function CreditWiseAIPage() {
     }
   };
   
+  const calculateCustomScore = useCallback(() => {
+    let totalScore = 0;
+    totalScore += scoringMaps.paymentHistory[questionnaireAnswers.paymentHistory as keyof typeof scoringMaps.paymentHistory] ?? 0;
+    totalScore += scoringMaps.creditUtilization[questionnaireAnswers.creditUtilization as keyof typeof scoringMaps.creditUtilization] ?? 0;
+    totalScore += scoringMaps.creditAge[questionnaireAnswers.creditAge as keyof typeof scoringMaps.creditAge] ?? 0;
+    totalScore += scoringMaps.creditMix[questionnaireAnswers.creditMix as keyof typeof scoringMaps.creditMix] ?? 0;
+    totalScore += scoringMaps.inquiries[questionnaireAnswers.inquiries as keyof typeof scoringMaps.inquiries] ?? 0;
+
+    const scaledScore = Math.round((totalScore / 62.0) * 600 + 300);
+    setCustomScore(scaledScore);
+
+    if (scaledScore >= 800) setCustomScoreRating("Excellent");
+    else if (scaledScore >= 750) setCustomScoreRating("Very Good");
+    else if (scaledScore >= 700) setCustomScoreRating("Good");
+    else if (scaledScore >= 650) setCustomScoreRating("Fair");
+    else if (scaledScore >= 600) setCustomScoreRating("Poor");
+    else setCustomScoreRating("Very Poor");
+  }, [questionnaireAnswers]);
+
+
   const handleQuestionnaireChange = (id: string, value: string) => {
     setQuestionnaireAnswers(prev => ({ ...prev, [id]: value }));
   };
+
+  useEffect(() => {
+    if (Object.keys(questionnaireAnswers).length === questionnaireItems.length) {
+      calculateCustomScore();
+    }
+  }, [questionnaireAnswers, calculateCustomScore]);
 
   const loanTypeData = [
     { name: 'Personal', value: rawText.match(/PERSONAL LOAN/gi)?.length || 2 },
@@ -351,7 +386,7 @@ export default function CreditWiseAIPage() {
                   <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                       <div className="text-center">
                           <div className="text-7xl font-bold text-primary">{creditScore || 'N/A'}</div>
-                          <p className="text-muted-foreground mt-2">A score above 750 is considered excellent</p>
+                          <p className="text-muted-foreground mt-2">Official score from your CIBIL report</p>
                           {creditScore && <Progress value={scoreProgress} className="mt-4" />}
                       </div>
                       <div>
@@ -371,6 +406,18 @@ export default function CreditWiseAIPage() {
                   <CardDescription>Complete this questionnaire for a comprehensive credit health assessment.</CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {customScore && (
+                    <Card className="mb-6 bg-accent/20 border-accent">
+                        <CardHeader>
+                            <CardTitle className="flex items-center text-primary"><TrendingUp className="mr-2 h-6 w-6"/> Your Estimated Credit Score</CardTitle>
+                        </CardHeader>
+                        <CardContent className="text-center">
+                             <div className="text-7xl font-bold text-primary">{customScore}</div>
+                            <p className="text-xl font-semibold text-muted-foreground mt-2">{customScoreRating}</p>
+                            <Progress value={(customScore - 300) / 6} className="mt-4 max-w-sm mx-auto" />
+                        </CardContent>
+                    </Card>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {questionnaireItems.map((item, index) => (
                       <div key={item.id} className="space-y-2">
@@ -514,3 +561,5 @@ export default function CreditWiseAIPage() {
     </div>
   );
 }
+
+    
