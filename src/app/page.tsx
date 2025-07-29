@@ -505,15 +505,28 @@ export default function CreditWiseAIPage() {
           }
           
           const paymentHistory = loan.paymentHistory;
-          const dpdValues = (paymentHistory.match(/\d+/g) || []).map(Number);
-          const highestDpd = dpdValues.length > 0 ? Math.max(...dpdValues) : 0;
-          
-          if (highestDpd === 0) dpdCounts.onTime += 1;
-          else if (highestDpd <= 30) dpdCounts.days1_30 += 1;
-          else if (highestDpd <= 60) dpdCounts.days31_60 += 1;
-          else if (highestDpd <= 90) dpdCounts.days61_90 += 1;
-          else if (highestDpd < 999) dpdCounts.days90plus += 1;
-          else if (highestDpd === 999) dpdCounts.default += 1;
+          const dpdValues = (paymentHistory.match(/\b(\d{1,3}|STD|SUB|DBT|LSS)\b/g) || []).map(val => {
+              if (/\d+/.test(val)) return parseInt(val, 10);
+              if (val === 'STD' || val === '000') return 0;
+              if (val === 'SUB') return 90; // Standard to map SUB to 90+
+              if (val === 'DBT') return 999; // Doubtful
+              if (val === 'LSS') return 999; // Loss
+              return 0;
+          });
+
+          let highestDpd = 0;
+          if (dpdValues.length > 0) {
+            highestDpd = Math.max(...dpdValues);
+            
+            if (highestDpd === 0) dpdCounts.onTime += 1;
+            else if (highestDpd <= 30) dpdCounts.days1_30 += 1;
+            else if (highestDpd <= 60) dpdCounts.days31_60 += 1;
+            else if (highestDpd <= 90) dpdCounts.days61_90 += 1;
+            else if (highestDpd < 999) dpdCounts.days90plus += 1;
+            else if (highestDpd >= 999) dpdCounts.default += 1;
+          } else {
+             dpdCounts.onTime += 1; // Assume on-time if no DPD values found
+          }
 
           accountDpdDetails.push({
               accountType: accountType,
@@ -1252,7 +1265,3 @@ export default function CreditWiseAIPage() {
     </div>
   );
 }
-
-    
-
-    
