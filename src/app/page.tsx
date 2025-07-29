@@ -387,17 +387,17 @@ export default function CreditWiseAIPage() {
 
 
   const parseCibilData = (text: string) => {
-      const scoreMatch = text.match(/(?:CIBIL SCORE|CREDIT SCORE)\s*:?\s*(\d{3})/i);
+      // More robust regex patterns
+      const scoreMatch = text.match(/(?:CIBIL SCORE|CREDIT SCORE|SCORE)\s*:?\s*(\d{3})/i);
       if (scoreMatch) {
         setCreditScore(parseInt(scoreMatch[1], 10));
       }
       
-      const nameMatch = text.match(/(?:Name)\s*:\s*(.*?)(?:Date of Birth)/i);
-      const dobMatch = text.match(/(?:Date of Birth)\s*:\s*(\d{2}-\d{2}-\d{4})/i);
-      const panMatch = text.match(/(?:PAN)\s*:\s*([A-Z]{5}[0-9]{4}[A-Z]{1})/i);
-      const genderMatch = text.match(/Gender\s*:\s*(Male|Female)/i);
-      const addressMatch = text.match(/ADDRESS\(ES\):\s*([\s\S]*?)(?:CATEGORY|PERMANENT ADDRESS)/i);
-
+      const nameMatch = text.match(/(?:Name|CONSUMER NAME)\s*:\s*(.*?)(?:Date of Birth|DOB)/i);
+      const dobMatch = text.match(/(?:Date of Birth|DOB)\s*:\s*(\d{2}-\d{2}-\d{4})/i);
+      const panMatch = text.match(/(?:PAN|Permanent Account Number)\s*:?\s*([A-Z]{5}[0-9]{4}[A-Z]{1})/i);
+      const genderMatch = text.match(/Gender\s*:?\s*(Male|Female)/i);
+      const addressMatch = text.match(/(?:ADDRESS\(ES\)|Address)\s*:\s*([\s\S]*?)(?:CATEGORY|PERMANENT ADDRESS|IDENTIFICATION|CONTACT)/i);
 
       let info: Record<string, string> = {};
       if (nameMatch) info['Name'] = nameMatch[1].trim();
@@ -408,12 +408,12 @@ export default function CreditWiseAIPage() {
 
       setConsumerInfo(info);
       
-      const emiMatch = text.match(/TOTAL MONTHLY PAYMENT AMOUNT\s*:\s*Rs\. ([\d,]+)/i);
+      const emiMatch = text.match(/TOTAL MONTHLY PAYMENT AMOUNT\s*:?\s*Rs\.?\s*([\d,]+)/i);
       if (emiMatch) {
           setTotalEmi(emiMatch[1].replace(/,/g, ''));
       }
 
-      const accountSections = text.split(/ACCOUNT DETAILS/i)[1]?.split(/ACCOUNT /i) || [];
+      const accountSections = text.split(/ACCOUNT DETAILS|ACCOUNT INFORMATION/i)[1]?.split(/ACCOUNT\s+\d+|MEMBER NAME/) || [];
       const loans: LoanAccount[] = [];
       const currentFlaggedAccounts: FlaggedAccount[] = [];
       
@@ -431,19 +431,19 @@ export default function CreditWiseAIPage() {
       const accountDpdDetails: AccountDpdStatus[] = [];
 
       accountSections.slice(1).forEach(section => {
-          const typeMatch = section.match(/Account Type\s*:\s*(.+)/i) || section.match(/Type\s*:\s*(.+)/i);
+          const typeMatch = section.match(/(?:Account Type|Type)\s*:\s*(.+)/i);
           const accountType = typeMatch ? typeMatch[1].trim() : "N/A";
 
-          const statusMatch = section.match(/Account Status\s*:\s*([A-Za-z\s]+)/i);
+          const statusMatch = section.match(/(?:Account Status|Status)\s*:?\s*([A-Za-z\s]+)/i);
           const accountStatus = statusMatch ? statusMatch[1].trim().toLowerCase() : '';
           
-          const sanctionedMatch = section.match(/(?:Credit Limit|Sanctioned Amount)\s*:\s*Rs\. ([\d,]+)/i);
-          const balanceMatch = section.match(/Current Balance\s*:\s*Rs\. ([\d,]+)/i);
-          const overdueMatch = section.match(/Amount Overdue\s*:\s*Rs\. ([\d,]+)/i);
-          const emiMatchS = section.match(/EMI Amount\s*:\s*Rs\. ([\d,]+)/i);
-          const openedMatch = section.match(/Date Opened\s*:\s*(\d{2}-\d{2}-\d{4})/i);
-          const closedMatch = section.match(/Date Closed\s*:\s*(\d{2}-\d{2}-\d{4})/i);
-          const paymentHistoryMatch = section.match(/Payment History\s*:([\s\S]+?)(?=Written-off Status|$)/i);
+          const sanctionedMatch = section.match(/(?:Credit Limit|Sanctioned Amount)\s*:?\s*Rs\.?\s*([\d,]+)/i);
+          const balanceMatch = section.match(/(?:Current Balance|Outstanding Balance)\s*:?\s*Rs\.?\s*([\d,]+)/i);
+          const overdueMatch = section.match(/(?:Amount Overdue|OVERDUE)\s*:?\s*Rs\.?\s*([\d,]+)/i);
+          const emiMatchS = section.match(/EMI Amount\s*:?\s*Rs\.?\s*([\d,]+)/i);
+          const openedMatch = section.match(/(?:Date Opened|OPENED ON)\s*:?\s*(\d{2}-\d{2}-\d{4})/i);
+          const closedMatch = section.match(/(?:Date Closed|CLOSED ON)\s*:?\s*(\d{2}-\d{2}-\d{4})/i);
+          const paymentHistoryMatch = section.match(/Payment History\s*:([\s\S]+?)(?=Written-off Status|$|ACCOUNT DETAILS|ACCOUNT INFORMATION)/i);
 
           const loan: LoanAccount = {
               type: accountType,
@@ -457,6 +457,9 @@ export default function CreditWiseAIPage() {
               closed: closedMatch ? closedMatch[1] : 'N/A',
               paymentHistory: paymentHistoryMatch ? paymentHistoryMatch[1].trim().replace(/\s+/g, ' ') : 'N/A',
           };
+          
+          if(loan.type === "N/A" && loan.sanctioned === '0' && loan.balance === '0') return; // Skip empty/invalid sections
+          
           loans.push(loan);
 
           let isFlagged = false;
@@ -1201,3 +1204,5 @@ export default function CreditWiseAIPage() {
     </div>
   );
 }
+
+    
