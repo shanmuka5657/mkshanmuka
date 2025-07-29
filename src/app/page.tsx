@@ -20,6 +20,7 @@ import {
   FileSearch,
   Book,
   FileSymlink,
+  LineChart,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,14 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 
 type QuestionnaireAnswers = { [key: string]: string };
 type CreditSummary = {
@@ -55,6 +64,20 @@ type CreditSummary = {
   totalMonthlyEMI: number;
   maxSingleEMI: number;
   creditCardPayments: number;
+};
+type DpdSummary = {
+  onTime: number;
+  days1_30: number;
+  days31_60: number;
+  days61_90: number;
+  days90plus: number;
+  default: number;
+};
+type AccountDpdStatus = {
+  accountType: string;
+  status: string;
+  highestDpd: number;
+  paymentHistory: string;
 };
 
 const questionnaireItems = [
@@ -108,6 +131,15 @@ const initialCreditSummary: CreditSummary = {
   creditCardPayments: 0,
 };
 
+const initialDpdSummary: DpdSummary = {
+  onTime: 0,
+  days1_30: 0,
+  days31_60: 0,
+  days61_90: 0,
+  days90plus: 0,
+  default: 0,
+};
+
 export default function CreditWiseAIPage() {
   const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState('No file chosen');
@@ -133,6 +165,8 @@ export default function CreditWiseAIPage() {
   const [customScore, setCustomScore] = useState<number | null>(null);
   const [customScoreRating, setCustomScoreRating] = useState<string | null>(null);
   const [creditSummary, setCreditSummary] = useState<CreditSummary>(initialCreditSummary);
+  const [dpdSummary, setDpdSummary] = useState<DpdSummary>(initialDpdSummary);
+  const [accountDpdStatus, setAccountDpdStatus] = useState<AccountDpdStatus[]>([]);
 
 
   const { toast } = useToast()
@@ -188,6 +222,8 @@ export default function CreditWiseAIPage() {
     setCustomScoreRating(null);
     setShowRawText(false);
     setCreditSummary(initialCreditSummary);
+    setDpdSummary(initialDpdSummary);
+    setAccountDpdStatus([]);
     if(fileInputRef.current) {
         fileInputRef.current.value = '';
     }
@@ -255,7 +291,6 @@ export default function CreditWiseAIPage() {
           setTotalEmi(emiMatch[1].replace(/,/g, ''));
       }
 
-      // Enhanced summary extraction
       const accountSections = text.split(/ACCOUNT DETAILS/i)[1]?.split(/ACCOUNT /i) || [];
       
       let summary: CreditSummary = { ...initialCreditSummary };
@@ -267,8 +302,14 @@ export default function CreditWiseAIPage() {
       let totalEMI = 0;
       let maxEMI = 0;
       let ccPayments = 0;
+      
+      const dpdCounts: DpdSummary = { ...initialDpdSummary };
+      const accountDpdDetails: AccountDpdStatus[] = [];
 
       accountSections.forEach(section => {
+          const typeMatch = section.match(/Account Type\s*:\s*(.+)/i) || section.match(/Type\s*:\s*(.+)/i);
+          const accountType = typeMatch ? typeMatch[1].trim() : "N/A";
+
           const statusMatch = section.match(/Account Status\s*:\s*([A-Za-z\s]+)/i);
           const accountStatus = statusMatch ? statusMatch[1].trim().toLowerCase() : '';
 
@@ -300,7 +341,30 @@ export default function CreditWiseAIPage() {
           if (section.toLowerCase().includes('credit card')) {
               ccPayments += Math.max(outstanding * 0.05, 1000); // 5% or 1000
           }
+          
+          const paymentHistoryMatch = section.match(/Payment History\s*:([\s\S]+?)(?=Written-off Status|$)/i);
+          const paymentHistory = paymentHistoryMatch ? paymentHistoryMatch[1].trim() : "N/A";
+          
+          const dpdValues = (paymentHistory.match(/\d+/g) || []).map(Number);
+          const highestDpd = dpdValues.length > 0 ? Math.max(...dpdValues) : 0;
+          
+          if (highestDpd === 0) dpdCounts.onTime += 1;
+          else if (highestDpd <= 30) dpdCounts.days1_30 += 1;
+          else if (highestDpd <= 60) dpdCounts.days31_60 += 1;
+          else if (highestDpd <= 90) dpdCounts.days61_90 += 1;
+          else if (highestDpd < 999) dpdCounts.days90plus += 1;
+          else if (highestDpd === 999) dpdCounts.default += 1;
+
+          accountDpdDetails.push({
+              accountType: accountType,
+              status: accountStatus || 'N/A',
+              highestDpd,
+              paymentHistory,
+          });
       });
+      
+      setDpdSummary(dpdCounts);
+      setAccountDpdStatus(accountDpdDetails);
       
       summary.totalCreditLimit = totalLimit;
       summary.totalOutstanding = totalOutstanding;
@@ -455,6 +519,24 @@ export default function CreditWiseAIPage() {
       <p className="text-xl font-bold text-primary">{value}</p>
     </div>
   );
+  
+  const DpdSummaryBox = ({
+    label,
+    count,
+    colorClass,
+    subtext,
+  }: {
+    label: string;
+    count: number;
+    colorClass: string;
+    subtext: string;
+  }) => (
+    <div className={cn('rounded-lg p-4 text-center text-white', colorClass)}>
+      <p className="font-semibold">{label}</p>
+      <p className="text-sm">{subtext}</p>
+      <p className="text-3xl font-bold">{count}</p>
+    </div>
+  );
 
   return (
     <div className={cn("min-h-screen bg-background font-body text-foreground", theme)}>
@@ -516,7 +598,7 @@ export default function CreditWiseAIPage() {
             <div className="space-y-8">
               <Card>
                   <CardHeader>
-                      <CardTitle className="flex items-center"><FileText className="mr-3 h-6 w-6 text-primary" />Credit Score &amp; Summary</CardTitle>
+                      <CardTitle className="flex items-center"><FileText className="mr-3 h-6 w-6 text-primary" />Credit Score &amp; Consumer Information</CardTitle>
                   </CardHeader>
                   <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
                       <div className="text-center">
@@ -530,22 +612,16 @@ export default function CreditWiseAIPage() {
                             <div>
                               <p className="font-semibold">Name:</p>
                               <p>{consumerInfo['Name'] || 'N/A'}</p>
+                              <p className="font-semibold mt-2">Date of Birth:</p>
+                              <p>{consumerInfo['Date of Birth'] || 'N/A'}</p>
+                              <p className="font-semibold mt-2">Gender:</p>
+                              <p>{consumerInfo['Gender'] || 'N/A'}</p>
                             </div>
                             <div>
                               <p className="font-semibold">PAN:</p>
                               <p>{consumerInfo['PAN'] || 'N/A'}</p>
-                            </div>
-                            <div>
-                              <p className="font-semibold">Date of Birth:</p>
-                              <p>{consumerInfo['Date of Birth'] || 'N/A'}</p>
-                            </div>
-                             <div>
-                              <p className="font-semibold">Gender:</p>
-                              <p>{consumerInfo['Gender'] || 'N/A'}</p>
-                            </div>
-                            <div className="col-span-2">
-                                <p className="font-semibold">Address:</p>
-                                <p>{consumerInfo['Address'] || 'N/A'}</p>
+                              <p className="font-semibold mt-2">Address:</p>
+                              <p>{consumerInfo['Address'] || 'N/A'}</p>
                             </div>
                           </div>
                       </div>
@@ -572,6 +648,57 @@ export default function CreditWiseAIPage() {
                   <SummaryItem label="Total Monthly EMI" value={`₹${creditSummary.totalMonthlyEMI.toLocaleString('en-IN')}`} />
                   <SummaryItem label="Max Single EMI" value={`₹${creditSummary.maxSingleEMI.toLocaleString('en-IN')}`} />
                   <SummaryItem label="Credit Card Payments" value={`₹${creditSummary.creditCardPayments.toLocaleString('en-IN')}`} />
+                </CardContent>
+              </Card>
+
+               <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center"><LineChart className="mr-3 h-6 w-6 text-primary" />DPD (Days Past Due) Analysis</CardTitle>
+                  <CardDescription>Days Past Due (DPD) indicate how late payments were made on your accounts. Lower DPD is better for your credit score.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+                    <DpdSummaryBox label="On Time" subtext="(000)" count={dpdSummary.onTime} colorClass="bg-green-500" />
+                    <DpdSummaryBox label="1-30 Days" subtext="Late" count={dpdSummary.days1_30} colorClass="bg-yellow-400" />
+                    <DpdSummaryBox label="31-60 Days" subtext="Late" count={dpdSummary.days31_60} colorClass="bg-yellow-500" />
+                    <DpdSummaryBox label="61-90 Days" subtext="Late" count={dpdSummary.days61_90} colorClass="bg-orange-500" />
+                    <DpdSummaryBox label="90+ Days" subtext="Late" count={dpdSummary.days90plus} colorClass="bg-red-500" />
+                    <DpdSummaryBox label="Default" subtext="(999)" count={dpdSummary.default} colorClass="bg-red-700" />
+                  </div>
+                  <h4 className="text-lg font-semibold mt-6 mb-4">Account DPD Status</h4>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Account Type</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Highest DPD</TableHead>
+                          <TableHead>Payment History</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {accountDpdStatus.map((account, index) => (
+                          <TableRow key={index}>
+                            <TableCell>{account.accountType}</TableCell>
+                            <TableCell className="capitalize">{account.status}</TableCell>
+                            <TableCell>
+                              <span className={cn(
+                                'px-2 py-1 rounded-full text-xs font-semibold text-white',
+                                account.highestDpd === 0 && 'bg-green-500',
+                                account.highestDpd > 0 && account.highestDpd <= 30 && 'bg-yellow-400',
+                                account.highestDpd > 30 && account.highestDpd <= 60 && 'bg-yellow-500',
+                                account.highestDpd > 60 && account.highestDpd <= 90 && 'bg-orange-500',
+                                account.highestDpd > 90 && 'bg-red-500',
+                              )}>
+                                {account.highestDpd}
+                              </span>
+                            </TableCell>
+                            <TableCell className="font-mono text-xs truncate max-w-xs">{account.paymentHistory}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </CardContent>
               </Card>
 
