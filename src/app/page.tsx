@@ -506,26 +506,32 @@ export default function CreditWiseAIPage() {
           
           const paymentHistory = loan.paymentHistory;
           const dpdValues = (paymentHistory.match(/\b(\d{1,3}|STD|SUB|DBT|LSS)\b/g) || []).map(val => {
-              if (/\d+/.test(val)) return parseInt(val, 10);
               if (val === 'STD' || val === '000') return 0;
               if (val === 'SUB') return 90; // Standard to map SUB to 90+
               if (val === 'DBT') return 999; // Doubtful
               if (val === 'LSS') return 999; // Loss
-              return 0;
+              if (/\d+/.test(val)) return parseInt(val, 10);
+              return 0; // Default case for anything else
           });
 
           let highestDpd = 0;
-          if (dpdValues.length > 0) {
-            highestDpd = Math.max(...dpdValues);
-            
-            if (highestDpd === 0) dpdCounts.onTime += 1;
-            else if (highestDpd <= 30) dpdCounts.days1_30 += 1;
-            else if (highestDpd <= 60) dpdCounts.days31_60 += 1;
-            else if (highestDpd <= 90) dpdCounts.days61_90 += 1;
-            else if (highestDpd < 999) dpdCounts.days90plus += 1;
-            else if (highestDpd >= 999) dpdCounts.default += 1;
+          let accountHadDpd = false;
+          dpdValues.forEach(dpd => {
+              highestDpd = Math.max(highestDpd, dpd);
+              if (dpd > 0) {
+                accountHadDpd = true;
+              }
+          });
+
+          if(accountHadDpd) {
+              if (highestDpd === 0) dpdCounts.onTime += 1; // Should not happen if accountHadDpd is true, but for safety
+              else if (highestDpd <= 30) dpdCounts.days1_30 += 1;
+              else if (highestDpd <= 60) dpdCounts.days31_60 += 1;
+              else if (highestDpd <= 90) dpdCounts.days61_90 += 1;
+              else if (highestDpd < 999) dpdCounts.days90plus += 1;
+              else if (highestDpd >= 999) dpdCounts.default += 1;
           } else {
-             dpdCounts.onTime += 1; // Assume on-time if no DPD values found
+             dpdCounts.onTime += 1; // Assume on-time if no DPD values > 0 found
           }
 
           accountDpdDetails.push({
@@ -552,14 +558,20 @@ export default function CreditWiseAIPage() {
       setCreditSummary(summary);
       setTotalEmi(String(totalEMI));
 
-      const currentInquiries: Inquiry[] = (text.match(/(\d{2}-\d{2}-\d{4})\s+([A-Z\s]+?)\s+(.+)/g) || [])
-          .map(line => {
-              const parts = line.match(/(\d{2}-\d{2}-\d{4})\s+([A-Z\s]+?)\s+(.+)/);
-              if (parts) {
-                  return { date: parts[1], lender: parts[2].trim(), purpose: parts[3].trim() };
-              }
-              return null;
-          }).filter((inq): inq is Inquiry => inq !== null);
+      const inquirySectionMatch = text.match(/ENQUIRY INFORMATION([\s\S]+?)(\n\n[A-Z]|$)/);
+      const inquiryText = inquirySectionMatch ? inquirySectionMatch[1] : '';
+      
+      const currentInquiries: Inquiry[] = [];
+      const inquiryRegex = /(\d{2}-\d{2}-\d{4})\s+([A-Z\s.,()-]+?)\s+(Consumer Loan|Personal Loan|Credit Card|Auto Loan|Business Loan|Housing Loan|Other|Two-wheeler Loan|Loan Against Property)[\s\S]*?(?=\d{2}-\d{2}-\d{4}|$)/g;
+
+      let match;
+      while ((match = inquiryRegex.exec(inquiryText)) !== null) {
+          currentInquiries.push({
+              date: match[1].trim(),
+              lender: match[2].trim().replace(/\s\s+/g, ' '),
+              purpose: match[3].trim()
+          });
+      }
       
       setInquiries(currentInquiries);
 
