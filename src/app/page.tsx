@@ -19,6 +19,7 @@ import {
   BrainCircuit,
   FileSearch,
   Book,
+  FileSymlink,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -39,6 +40,22 @@ import {
 } from "@/components/ui/alert"
 
 type QuestionnaireAnswers = { [key: string]: string };
+type CreditSummary = {
+  totalAccounts: number;
+  totalCreditLimit: number;
+  totalOutstanding: number;
+  totalDebt: number;
+  creditUtilization: number;
+  debtToLimitRatio: number;
+  activeAccounts: number;
+  closedAccounts: number;
+  writtenOff: number;
+  settled: number;
+  doubtful: number;
+  totalMonthlyEMI: number;
+  maxSingleEMI: number;
+  creditCardPayments: number;
+};
 
 const questionnaireItems = [
     { id: 'paymentHistory', label: 'Payment History (Highest DPD in last 12 months)', options: ["No DPD in last 12 months", "1–2 DPD <30 days", "Frequent 30 DPD (3–4 times)", "1 DPD = 60 days", "2+ DPDs 60+ or 1 DPD 90+", "180+/999 DPD or default once", "Multiple 999 / Write-off"] },
@@ -74,6 +91,23 @@ const scoringMaps = {
     emiRatio: { "<30%": 4, "30–40%": 3, "40–50%": 2, ">50%": 1 },
 };
 
+const initialCreditSummary: CreditSummary = {
+  totalAccounts: 0,
+  totalCreditLimit: 0,
+  totalOutstanding: 0,
+  totalDebt: 0,
+  creditUtilization: 0,
+  debtToLimitRatio: 0,
+  activeAccounts: 0,
+  closedAccounts: 0,
+  writtenOff: 0,
+  settled: 0,
+  doubtful: 0,
+  totalMonthlyEMI: 0,
+  maxSingleEMI: 0,
+  creditCardPayments: 0,
+};
+
 export default function CreditWiseAIPage() {
   const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState('No file chosen');
@@ -98,6 +132,8 @@ export default function CreditWiseAIPage() {
   const [theme, setTheme] = useState('light');
   const [customScore, setCustomScore] = useState<number | null>(null);
   const [customScoreRating, setCustomScoreRating] = useState<string | null>(null);
+  const [creditSummary, setCreditSummary] = useState<CreditSummary>(initialCreditSummary);
+
 
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -151,6 +187,7 @@ export default function CreditWiseAIPage() {
     setCustomScore(null);
     setCustomScoreRating(null);
     setShowRawText(false);
+    setCreditSummary(initialCreditSummary);
     if(fileInputRef.current) {
         fileInputRef.current.value = '';
     }
@@ -192,25 +229,86 @@ export default function CreditWiseAIPage() {
   };
   
   const parseCibilData = (text: string) => {
-    const scoreMatch = text.match(/(?:CIBIL SCORE|CREDIT SCORE)\s*:?\s*(\d{3})/i);
-    if (scoreMatch) {
-      setCreditScore(parseInt(scoreMatch[1], 10));
-    }
-    const nameMatch = text.match(/(?:Name)\s*:\s*(.*?)(?:Date of Birth)/i);
-    const dobMatch = text.match(/(?:Date of Birth)\s*:\s*(\d{2}-\d{2}-\d{4})/i);
-    const panMatch = text.match(/(?:PAN)\s*:\s*([A-Z]{5}[0-9]{4}[A-Z]{1})/i);
-    
-    let info: Record<string, string> = {};
-    if(nameMatch) info['Name'] = nameMatch[1].trim();
-    if(dobMatch) info['Date of Birth'] = dobMatch[1];
-    if(panMatch) info['PAN'] = panMatch[1];
-    setConsumerInfo(info);
-    
-    const emiMatch = text.match(/TOTAL MONTHLY PAYMENT AMOUNT\s*:\s*Rs\. ([\d,]+)/i);
-    if(emiMatch) {
-        setTotalEmi(emiMatch[1].replace(/,/g, ''));
-    }
+      const scoreMatch = text.match(/(?:CIBIL SCORE|CREDIT SCORE)\s*:?\s*(\d{3})/i);
+      if (scoreMatch) {
+        setCreditScore(parseInt(scoreMatch[1], 10));
+      }
+      
+      const nameMatch = text.match(/(?:Name)\s*:\s*(.*?)(?:Date of Birth)/i);
+      const dobMatch = text.match(/(?:Date of Birth)\s*:\s*(\d{2}-\d{2}-\d{4})/i);
+      const panMatch = text.match(/(?:PAN)\s*:\s*([A-Z]{5}[0-9]{4}[A-Z]{1})/i);
+      
+      let info: Record<string, string> = {};
+      if (nameMatch) info['Name'] = nameMatch[1].trim();
+      if (dobMatch) info['Date of Birth'] = dobMatch[1];
+      if (panMatch) info['PAN'] = panMatch[1];
+      setConsumerInfo(info);
+      
+      const emiMatch = text.match(/TOTAL MONTHLY PAYMENT AMOUNT\s*:\s*Rs\. ([\d,]+)/i);
+      if (emiMatch) {
+          setTotalEmi(emiMatch[1].replace(/,/g, ''));
+      }
+
+      // Enhanced summary extraction
+      const accountSections = text.split(/ACCOUNT DETAILS/i)[1]?.split(/ACCOUNT /i) || [];
+      
+      let summary: CreditSummary = { ...initialCreditSummary };
+      summary.totalAccounts = accountSections.length;
+
+      let totalLimit = 0;
+      let totalOutstanding = 0;
+      let totalDebt = 0;
+      let totalEMI = 0;
+      let maxEMI = 0;
+      let ccPayments = 0;
+
+      accountSections.forEach(section => {
+          const statusMatch = section.match(/Account Status\s*:\s*([A-Za-z\s]+)/i);
+          const accountStatus = statusMatch ? statusMatch[1].trim().toLowerCase() : '';
+
+          if (accountStatus.includes('active') || accountStatus.includes('open')) {
+              summary.activeAccounts += 1;
+          } else if (accountStatus.includes('closed')) {
+              summary.closedAccounts += 1;
+          }
+          if (accountStatus.includes('written off')) summary.writtenOff += 1;
+          if (accountStatus.includes('settled')) summary.settled += 1;
+          if (accountStatus.includes('doubtful')) summary.doubtful += 1;
+
+          const limitMatch = section.match(/(?:Credit Limit|Sanctioned Amount)\s*:\s*Rs\. ([\d,]+)/i);
+          const limit = limitMatch ? parseInt(limitMatch[1].replace(/,/g, '')) : 0;
+          totalLimit += limit;
+
+          const outstandingMatch = section.match(/Current Balance\s*:\s*Rs\. ([\d,]+)/i);
+          const outstanding = outstandingMatch ? parseInt(outstandingMatch[1].replace(/,/g, '')) : 0;
+          totalOutstanding += outstanding;
+          totalDebt += outstanding;
+
+          const emiMatch = section.match(/EMI Amount\s*:\s*Rs\. ([\d,]+)/i);
+          const emi = emiMatch ? parseInt(emiMatch[1].replace(/,/g, '')) : 0;
+          totalEMI += emi;
+          if (emi > maxEMI) {
+              maxEMI = emi;
+          }
+
+          if (section.toLowerCase().includes('credit card')) {
+              ccPayments += Math.max(outstanding * 0.05, 1000); // 5% or 1000
+          }
+      });
+      
+      summary.totalCreditLimit = totalLimit;
+      summary.totalOutstanding = totalOutstanding;
+      summary.totalDebt = totalDebt;
+      summary.creditUtilization = totalLimit > 0 ? Math.round((totalOutstanding / totalLimit) * 100) : 0;
+      summary.debtToLimitRatio = totalLimit > 0 ? Math.round((totalDebt / totalLimit) * 100) : 0;
+      summary.totalMonthlyEMI = totalEMI;
+      summary.maxSingleEMI = maxEMI;
+      summary.creditCardPayments = Math.round(ccPayments);
+      
+      setCreditSummary(summary);
+      setTotalEmi(String(totalEMI));
   };
+
 
   const handleAnalyze = async () => {
     if (!rawText) return;
@@ -345,6 +443,13 @@ export default function CreditWiseAIPage() {
 
   const scoreProgress = creditScore ? (creditScore - 300) / 6 : 0;
 
+  const SummaryItem = ({ label, value }: { label: string; value: string | number }) => (
+    <div className="bg-muted/50 rounded-lg p-4 text-center">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="text-xl font-bold text-primary">{value}</p>
+    </div>
+  );
+
   return (
     <div className={cn("min-h-screen bg-background font-body text-foreground", theme)}>
        <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm">
@@ -422,6 +527,29 @@ export default function CreditWiseAIPage() {
                           </ul>
                       </div>
                   </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center"><FileSymlink className="mr-3 h-6 w-6 text-primary" />Credit Summary</CardTitle>
+                  <CardDescription>A detailed overview of your credit accounts and metrics.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <SummaryItem label="Total Accounts" value={creditSummary.totalAccounts} />
+                  <SummaryItem label="Total Credit Limit" value={`₹${creditSummary.totalCreditLimit.toLocaleString('en-IN')}`} />
+                  <SummaryItem label="Total Outstanding" value={`₹${creditSummary.totalOutstanding.toLocaleString('en-IN')}`} />
+                  <SummaryItem label="Total Debt" value={`₹${creditSummary.totalDebt.toLocaleString('en-IN')}`} />
+                  <SummaryItem label="Credit Utilization" value={`${creditSummary.creditUtilization}%`} />
+                  <SummaryItem label="Debt-to-Limit Ratio" value={`${creditSummary.debtToLimitRatio}%`} />
+                  <SummaryItem label="Active Accounts" value={creditSummary.activeAccounts} />
+                  <SummaryItem label="Closed Accounts" value={creditSummary.closedAccounts} />
+                  <SummaryItem label="Written Off" value={creditSummary.writtenOff} />
+                  <SummaryItem label="Settled" value={creditSummary.settled} />
+                  <SummaryItem label="Doubtful" value={creditSummary.doubtful} />
+                  <SummaryItem label="Total Monthly EMI" value={`₹${creditSummary.totalMonthlyEMI.toLocaleString('en-IN')}`} />
+                  <SummaryItem label="Max Single EMI" value={`₹${creditSummary.maxSingleEMI.toLocaleString('en-IN')}`} />
+                  <SummaryItem label="Credit Card Payments" value={`₹${creditSummary.creditCardPayments.toLocaleString('en-IN')}`} />
+                </CardContent>
               </Card>
 
               <Card>
