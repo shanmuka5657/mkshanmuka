@@ -398,7 +398,7 @@ export default function CreditWiseAIPage() {
           const highCreditMatch = summaryText.match(/HIGH CR\/SANC\. AMT:\s*([\d,]+)/i);
           if (highCreditMatch) summary.totalCreditLimit = parseInt(highCreditMatch[1].replace(/,/g, ''), 10);
           
-          const currentBalanceMatch = summaryText.match(/CURRENT:\s*([\d,]+)/i);
+          const currentBalanceMatch = summaryText.match(/(?:CURRENT BALANCE|CURRENT|BALANCES):\s*([\d,]+)/i);
           if (currentBalanceMatch) summary.totalOutstanding = parseInt(currentBalanceMatch[1].replace(/,/g, ''), 10);
           
           const zeroBalanceMatch = summaryText.match(/ZERO-BALANCE:\s*([\d,]+)/i);
