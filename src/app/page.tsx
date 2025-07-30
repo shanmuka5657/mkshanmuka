@@ -329,7 +329,7 @@ export default function CreditWiseAIPage() {
     }
   };
   
-    const assessCreditRisk = (loans: LoanAccount[], currentInquiries: Inquiry[]): RiskAssessment => {
+    const assessCreditRisk = (loans: LoanAccount[], currentInquiries: Inquiry[], summary: CreditSummary): RiskAssessment => {
         let riskScore = 100; // Start with perfect score
         const riskFactors: RiskAssessment['factors'] = [];
         const mitigations: RiskAssessment['mitigations'] = [];
@@ -360,9 +360,7 @@ export default function CreditWiseAIPage() {
         }
 
         // 2. High Credit Utilization
-        const totalLimit = creditSummary.totalCreditLimit;
-        const totalOutstanding = creditSummary.totalOutstanding;
-        const utilization = totalLimit > 0 ? Math.round((totalOutstanding / totalLimit) * 100) : 0;
+        const utilization = summary.creditUtilization;
         if (utilization > 30) {
             let severity = 'Low';
             if (utilization > 80) { severity = 'High'; riskScore -= 25; }
@@ -373,10 +371,10 @@ export default function CreditWiseAIPage() {
         }
         
         // 3. Negative Accounts (Written Off, Settled, Doubtful)
-        const negativeAccounts = creditSummary.writtenOff + creditSummary.settled + creditSummary.doubtful;
+        const negativeAccounts = summary.writtenOff + summary.settled + summary.doubtful;
         if (negativeAccounts > 0) {
-            riskScore -= (creditSummary.writtenOff * 20 + creditSummary.settled * 10 + creditSummary.doubtful * 15);
-            riskFactors.push({ factor: 'Negative Accounts', severity: 'High', details: `Found ${creditSummary.writtenOff} written-off, ${creditSummary.settled} settled, and ${creditSummary.doubtful} doubtful accounts.` });
+            riskScore -= (summary.writtenOff * 20 + summary.settled * 10 + summary.doubtful * 15);
+            riskFactors.push({ factor: 'Negative Accounts', severity: 'High', details: `Found ${summary.writtenOff} written-off, ${summary.settled} settled, and ${summary.doubtful} doubtful accounts.` });
             mitigations.push({ factor: 'Negative Accounts', action: 'Address these accounts by negotiating settlements or payment plans with lenders. This is a top priority.' });
         }
 
@@ -404,222 +402,234 @@ export default function CreditWiseAIPage() {
     };
 
 
-  const parseCibilData = (text: string) => {
-      // More robust regex patterns
-      const scoreMatch = text.match(/(?:CIBIL SCORE|CREDIT SCORE|SCORE)\s*:?\s*(\d{3})/i);
-      if (scoreMatch) {
-        setCreditScore(parseInt(scoreMatch[1], 10));
-      }
-      
-      const nameMatch = text.match(/(?:Name|CONSUMER NAME)\s*:?\s*(.*?)(?:Date of Birth|DOB)/i);
-      const dobMatch = text.match(/(?:Date of Birth|DOB)\s*:?\s*(\d{2}-\d{2}-\d{4})/i);
-      const panMatch = text.match(/(?:PAN|Permanent Account Number)\s*:?\s*([A-Z]{5}[0-9]{4}[A-Z]{1})/i);
-      const genderMatch = text.match(/Gender\s*:?\s*(Male|Female)/i);
-      const addressMatch = text.match(/(?:ADDRESS\(ES\)|Address)\s*:\s*([\s\S]*?)(?:CATEGORY|PERMANENT ADDRESS|IDENTIFICATION|CONTACT)/i);
+    const parseCibilData = (text: string) => {
+        // Normalize text
+        const normalizedText = text.replace(/\s+/g, ' ');
 
-      let info: Record<string, string> = {};
-      if (nameMatch) info['Name'] = nameMatch[1].trim();
-      if (dobMatch) info['Date of Birth'] = dobMatch[1];
-      if (panMatch) info['PAN'] = panMatch[1];
-      if (genderMatch) info['Gender'] = genderMatch[1];
-      if (addressMatch) info['Address'] = addressMatch[1].replace(/\s+/g, ' ').trim();
+        const scoreMatch = normalizedText.match(/(?:CIBIL TRANSUNION SCORE\(S\): SCORE NAME SCORE SCORING FACTORS CREDITVISION® SCORE|CREDITVISION® SCORE|CIBIL SCORE)\s*(\d{3})/i);
+        if (scoreMatch) {
+            setCreditScore(parseInt(scoreMatch[1], 10));
+        }
 
-      setConsumerInfo(info);
-      
-      const emiMatch = text.match(/TOTAL MONTHLY PAYMENT AMOUNT\s*:?\s*Rs\.?\s*([\d,]+)/i);
-      if (emiMatch) {
-          setTotalEmi(emiMatch[1].replace(/,/g, ''));
-      }
+        let info: Record<string, string> = {};
+        const nameMatch = normalizedText.match(/NAME:\s*([\w\s]+?)\s*(DATE OF BIRTH|DOB)/i);
+        if (nameMatch) info['Name'] = nameMatch[1].trim();
 
-      const accountSections = text.split(/ACCOUNT DETAILS|ACCOUNT INFORMATION/i)[1]?.split(/ACCOUNT\s+\d+|MEMBER NAME/) || [];
-      const loans: LoanAccount[] = [];
-      const currentFlaggedAccounts: FlaggedAccount[] = [];
-      
-      let summary: CreditSummary = { ...initialCreditSummary };
-      summary.totalAccounts = accountSections.length > 1 ? accountSections.length - 1 : 0;
+        const dobMatch = normalizedText.match(/(?:DATE OF BIRTH|DOB):\s*(\d{2}-\d{2}-\d{4})/i);
+        if (dobMatch) info['Date of Birth'] = dobMatch[1];
+        
+        const panMatch = normalizedText.match(/(?:INCOME TAX ID NUMBER \(PAN\)|PAN)\s*([A-Z]{5}[0-9]{4}[A-Z]{1})/i);
+        if (panMatch) info['PAN'] = panMatch[1];
+        
+        const genderMatch = normalizedText.match(/GENDER:\s*(Male|Female|MALE|FEMALE)/i);
+        if (genderMatch) info['Gender'] = genderMatch[1].charAt(0).toUpperCase() + genderMatch[1].slice(1).toLowerCase();
 
-      let totalLimit = 0;
-      let totalOutstanding = 0;
-      let totalDebt = 0;
-      let totalEMI = 0;
-      let maxEMI = 0;
-      let ccPayments = 0;
-      
-      const dpdCounts: DpdSummary = { ...initialDpdSummary };
-      const accountDpdDetails: AccountDpdStatus[] = [];
+        const addressMatch = normalizedText.match(/ADDRESS\s*:(.*?)(?:CATEGORY|PERMANENT ADDRESS|IDENTIFICATION|CONTACT)/i);
+        if (addressMatch) info['Address'] = addressMatch[1].replace(/\s+/g, ' ').trim();
+        
+        setConsumerInfo(info);
 
-      accountSections.slice(1).forEach(section => {
-          const typeMatch = section.match(/(?:Account Type|Type)\s*:\s*(.+)/i);
-          const accountType = typeMatch ? typeMatch[1].trim() : "N/A";
+        const summarySectionMatch = normalizedText.match(/SUMMARY: ACCOUNT\(S\) ACCOUNT TYPE ACCOUNTS ADVANCES BALANCES DATE OPENED(.*?)ENQUIRIES/i);
+        const summaryText = summarySectionMatch ? summarySectionMatch[1] : '';
+        
+        const highCreditMatch = summaryText.match(/HIGH CR\/SANC\. AMT:\s*([\d,]+)/i);
+        const overdueMatchSummary = summaryText.match(/OVERDUE:\s*([\d,]+)/i);
 
-          const statusMatch = section.match(/(?:Account Status|Status)\s*:?\s*([A-Za-z\s]+)/i);
-          const accountStatus = statusMatch ? statusMatch[1].trim().toLowerCase() : '';
+        let summary: CreditSummary = { ...initialCreditSummary };
+        summary.totalCreditLimit = highCreditMatch ? parseInt(highCreditMatch[1].replace(/,/g, ''), 10) : 0;
+        
+        const accountSections = normalizedText.split(/ACCOUNT DATES AMOUNTS STATUS/);
+        const loans: LoanAccount[] = [];
+        const currentFlaggedAccounts: FlaggedAccount[] = [];
+
+        let totalOutstanding = 0;
+        let totalEMI = 0;
+        let maxEMI = 0;
+        let ccPayments = 0;
+        let totalLimit = 0; // Recalculate from accounts
+
+        const dpdCounts: DpdSummary = { ...initialDpdSummary };
+        const accountDpdDetails: AccountDpdStatus[] = [];
+
+        accountSections.slice(1).forEach(section => {
+            const typeMatch = section.match(/TYPE:\s*([A-Za-z\s-]+)/i);
+            const accountType = typeMatch ? typeMatch[1].trim() : "N/A";
+            
+            const statusText = section.match(/STATUS(.*?)(?:MEMBER NAME|ACCOUNT NUMBER|TYPE)/i)?.[0] || section;
+            let accountStatus = (statusText.match(/(?:Written Off|Settled|Closed|Active|Open)/i)?.[0] || 'Active').toLowerCase();
+            
+            if(statusText.includes("Written Off")) accountStatus = "written off";
+            if(statusText.includes("Settled")) accountStatus = "settled";
+
+            const sanctionedMatch = section.match(/(?:SANCTIONED|CREDIT LIMIT):\s*([\d,]+)/i);
+            const balanceMatch = section.match(/(?:CURRENT BALANCE|BALANCE):\s*([\d,]+)/i);
+            const overdueMatch = section.match(/OVERDUE:\s*([\d,]+)/i);
+            const emiMatchS = section.match(/EMI:\s*([\d,]+)/i);
+            const openedMatch = section.match(/OPENED:\s*(\d{2}-\d{2}-\d{4})/i);
+            const closedMatch = section.match(/CLOSED:\s*(\d{2}-\d{2}-\d{4})/i);
+            const paymentHistoryMatch = section.match(/DAYS PAST DUE\/ASSET CLASSIFICATION \(UP TO 36 MONTHS; LEFT TO RIGHT\)([\s\S]+?)(?=ACCOUNT DATES AMOUNTS STATUS|INFORMATION UNDER DISPUTE|END OF REPORT|$)/i);
+            
+            const loan: LoanAccount = {
+                type: accountType,
+                ownership: section.match(/OWNERSHIP:\s*(.+?)(?=OPENED|REPORTED)/i)?.[1].trim() || 'N/A',
+                status: accountStatus,
+                sanctioned: sanctionedMatch ? sanctionedMatch[1].replace(/,/g, '') : '0',
+                balance: balanceMatch ? balanceMatch[1].replace(/,/g, '') : '0',
+                overdue: overdueMatch ? overdueMatch[1].replace(/,/g, '') : '0',
+                emi: emiMatchS ? emiMatchS[1].replace(/,/g, '') : '0',
+                opened: openedMatch ? openedMatch[1] : 'N/A',
+                closed: closedMatch ? closedMatch[1] : 'N/A',
+                paymentHistory: paymentHistoryMatch ? paymentHistoryMatch[1].trim().replace(/\s+/g, ' ') : 'N/A',
+            };
+            
+            if(loan.type === "N/A" && loan.sanctioned === '0' && loan.balance === '0') return;
+
+            loans.push(loan);
+
+            let isFlagged = false;
+            let issue = '';
+
+            if (accountStatus.includes('active') || accountStatus.includes('open')) {
+                summary.activeAccounts += 1;
+            } else if (accountStatus.includes('closed')) {
+                summary.closedAccounts += 1;
+            }
+            if (accountStatus.includes('written off')) { summary.writtenOff += 1; issue = 'Written Off'; isFlagged = true; }
+            if (accountStatus.includes('settled')) { summary.settled += 1; issue = 'Settled'; isFlagged = true; }
+            if (accountStatus.includes('doubtful') || loan.paymentHistory.includes('DBT')) { summary.doubtful += 1; issue = 'Doubtful'; isFlagged = true; }
+             if (loan.paymentHistory.includes('SUB')) { issue = 'Sub-standard Account'; isFlagged = true; }
+            
+            const overdueAmount = parseInt(loan.overdue, 10);
+            if (overdueAmount > 0) {
+                issue = `Overdue amount of ₹${overdueAmount.toLocaleString()}`;
+                isFlagged = true;
+            }
+            
+            if (isFlagged) {
+                currentFlaggedAccounts.push({ ...loan, issue });
+            }
+
+            const limit = parseInt(loan.sanctioned, 10) || 0;
+            if(limit > 0) totalLimit += limit;
+            
+            const outstanding = parseInt(loan.balance, 10) || 0;
+            totalOutstanding += outstanding;
+            
+            const emi = parseInt(loan.emi, 10) || 0;
+            totalEMI += emi;
+            if (emi > maxEMI) maxEMI = emi;
+
+            if (accountType.toLowerCase().includes('credit card')) {
+                ccPayments += Math.max(outstanding * 0.05, 1000); // 5% or 1000
+            }
           
-          const sanctionedMatch = section.match(/(?:Credit Limit|Sanctioned Amount)\s*:?\s*Rs\.?\s*([\d,]+)/i);
-          const balanceMatch = section.match(/(?:Current Balance|Outstanding Balance)\s*:?\s*Rs\.?\s*([\d,]+)/i);
-          const overdueMatch = section.match(/(?:Amount Overdue|OVERDUE)\s*:?\s*Rs\.?\s*([\d,]+)/i);
-          const emiMatchS = section.match(/EMI Amount\s*:?\s*Rs\.?\s*([\d,]+)/i);
-          const openedMatch = section.match(/(?:Date Opened|OPENED ON)\s*:?\s*(\d{2}-\d{2}-\d{4})/i);
-          const closedMatch = section.match(/(?:Date Closed|CLOSED ON)\s*:?\s*(\d{2}-\d{2}-\d{4})/i);
-          const paymentHistoryMatch = section.match(/Payment History\s*:([\s\S]+?)(?=Written-off Status|$|ACCOUNT DETAILS|ACCOUNT INFORMATION)/i);
-
-          const loan: LoanAccount = {
-              type: accountType,
-              ownership: section.match(/Ownership\s*:\s*(.+)/i)?.[1].trim() || 'N/A',
-              status: accountStatus,
-              sanctioned: sanctionedMatch ? sanctionedMatch[1].replace(/,/g, '') : '0',
-              balance: balanceMatch ? balanceMatch[1].replace(/,/g, '') : '0',
-              overdue: overdueMatch ? overdueMatch[1].replace(/,/g, '') : '0',
-              emi: emiMatchS ? emiMatchS[1].replace(/,/g, '') : '0',
-              opened: openedMatch ? openedMatch[1] : 'N/A',
-              closed: closedMatch ? closedMatch[1] : 'N/A',
-              paymentHistory: paymentHistoryMatch ? paymentHistoryMatch[1].trim().replace(/\s+/g, ' ') : 'N/A',
-          };
-          
-          if(loan.type === "N/A" && loan.sanctioned === '0' && loan.balance === '0') return; // Skip empty/invalid sections
-          
-          loans.push(loan);
-
-          let isFlagged = false;
-          let issue = '';
-
-          if (accountStatus.includes('active') || accountStatus.includes('open')) {
-              summary.activeAccounts += 1;
-          } else if (accountStatus.includes('closed')) {
-              summary.closedAccounts += 1;
-          }
-          if (accountStatus.includes('written off')) { summary.writtenOff += 1; issue = 'Written Off'; isFlagged = true; }
-          if (accountStatus.includes('settled')) { summary.settled += 1; issue = 'Settled'; isFlagged = true; }
-          if (accountStatus.includes('doubtful')) { summary.doubtful += 1; issue = 'Doubtful'; isFlagged = true; }
-          
-          const overdueAmount = parseInt(loan.overdue, 10);
-          if (overdueAmount > 0) {
-              issue = `Overdue amount of ₹${overdueAmount.toLocaleString()}`;
-              isFlagged = true;
-          }
-          
-          if (isFlagged) {
-              currentFlaggedAccounts.push({ ...loan, issue });
-          }
-
-
-          const limit = parseInt(loan.sanctioned, 10) || 0;
-          totalLimit += limit;
-
-          const outstanding = parseInt(loan.balance, 10) || 0;
-          totalOutstanding += outstanding;
-          totalDebt += outstanding;
-
-          const emi = parseInt(loan.emi, 10) || 0;
-          totalEMI += emi;
-          if (emi > maxEMI) maxEMI = emi;
-          
-
-          if (section.toLowerCase().includes('credit card')) {
-              ccPayments += Math.max(outstanding * 0.05, 1000); // 5% or 1000
-          }
-          
-          const paymentHistory = loan.paymentHistory;
-          const dpdValues = (paymentHistory.match(/\b(\d{1,3}|STD|SUB|DBT|LSS|XXX)\b/g) || []).map(val => {
-              if (val === 'STD' || val === '000' || val === 'XXX') return 0;
-              if (val === 'SUB') return 90; // Standard to map SUB to 90+
-              if (val === 'DBT') return 999; // Doubtful
-              if (val === 'LSS') return 999; // Loss
-              if (/\d+/.test(val)) return parseInt(val, 10);
-              return 0; // Default case for anything else
-          });
-
-          let highestDpd = 0;
-          dpdValues.forEach(dpd => {
-              highestDpd = Math.max(highestDpd, dpd);
-          });
-          
-          if (dpdValues.length > 0) {
-            const hasDpd = dpdValues.some(dpd => dpd > 0);
-            if (!hasDpd) {
-                dpdCounts.onTime += 1;
+            const paymentHistory = loan.paymentHistory;
+            const dpdValues = (paymentHistory.match(/\b(\d{1,3}|STD|SUB|DBT|LSS|XXX)\b/g) || []).map(val => {
+                if (val === 'STD' || val === '000' || val === 'XXX') return 0;
+                if (val === 'SUB') return 90; 
+                if (val === 'DBT') return 999;
+                if (val === 'LSS') return 999;
+                if (/\d+/.test(val)) return parseInt(val, 10);
+                return 0;
+            });
+            
+            let highestDpd = 0;
+            let hasRealDpd = false;
+            if (dpdValues.length > 0) {
+                dpdValues.forEach(dpd => {
+                  highestDpd = Math.max(highestDpd, dpd);
+                  if (dpd > 0) hasRealDpd = true;
+                });
             } else {
+                 const overdueVal = parseInt(loan.overdue, 10);
+                 if(overdueVal > 0 && emi > 0) {
+                     highestDpd = Math.floor((overdueVal/emi) * 30);
+                 }
+            }
+            
+            if(hasRealDpd || highestDpd > 0){
                  if (highestDpd === 0) dpdCounts.onTime += 1;
                  else if (highestDpd <= 30) dpdCounts.days1_30 += 1;
                  else if (highestDpd <= 60) dpdCounts.days31_60 += 1;
                  else if (highestDpd <= 90) dpdCounts.days61_90 += 1;
                  else if (highestDpd < 999) dpdCounts.days90plus += 1;
                  else if (highestDpd >= 999) dpdCounts.default += 1;
+            } else {
+                dpdCounts.onTime += 1;
             }
-          }
-         
-          accountDpdDetails.push({
-              accountType: accountType,
-              status: accountStatus || 'N/A',
-              highestDpd,
-              paymentHistory,
-          });
-      });
-      
-      setFlaggedAccounts(currentFlaggedAccounts);
-      setDpdSummary(dpdCounts);
-      setAccountDpdStatus(accountDpdDetails);
-      
-      summary.totalCreditLimit = totalLimit;
-      summary.totalOutstanding = totalOutstanding;
-      summary.totalDebt = totalDebt;
-      summary.creditUtilization = totalLimit > 0 ? Math.round((totalOutstanding / totalLimit) * 100) : 0;
-      summary.debtToLimitRatio = totalLimit > 0 ? Math.round((totalDebt / totalLimit) * 100) : 0;
-      summary.totalMonthlyEMI = totalEMI;
-      summary.maxSingleEMI = maxEMI;
-      summary.creditCardPayments = Math.round(ccPayments);
-      
-      setCreditSummary(summary);
-      setTotalEmi(String(totalEMI));
 
-      const inquirySectionMatch = text.match(/ENQUIRY INFORMATION([\s\S]+?)(\n\n[A-Z]|$|OTHER INFORMATION|END OF REPORT)/i);
-      const inquiryText = inquirySectionMatch ? inquirySectionMatch[1] : '';
-      
-      const currentInquiries: Inquiry[] = [];
-      const inquiryRegex = /(\d{2}-\d{2}-\d{4})\s+([A-Z\s.,()-]+?)\s+(Consumer Loan|Personal Loan|Credit Card|Auto Loan|Business Loan|Housing Loan|Other|Two-wheeler Loan|Loan Against Property)/g;
+            accountDpdDetails.push({
+                accountType: accountType,
+                status: accountStatus || 'N/A',
+                highestDpd,
+                paymentHistory,
+            });
+        });
 
-      let match;
-      while ((match = inquiryRegex.exec(inquiryText)) !== null) {
-          currentInquiries.push({
-              date: match[1].trim(),
-              lender: match[2].trim().replace(/\s\s+/g, ' '),
-              purpose: match[3].trim()
-          });
-      }
-      
-      setInquiries(currentInquiries);
+        summary.totalAccounts = loans.length;
+        summary.totalCreditLimit = totalLimit;
+        summary.totalOutstanding = totalOutstanding;
+        summary.totalDebt = totalOutstanding;
+        summary.creditUtilization = totalLimit > 0 ? Math.round((totalOutstanding / totalLimit) * 100) : 0;
+        summary.debtToLimitRatio = totalLimit > 0 ? Math.round((totalOutstanding / totalLimit) * 100) : 0;
+        summary.totalMonthlyEMI = totalEMI;
+        summary.maxSingleEMI = maxEMI;
+        summary.creditCardPayments = Math.round(ccPayments);
+        
+        setCreditSummary(summary);
+        setFlaggedAccounts(currentFlaggedAccounts);
+        setDpdSummary(dpdCounts);
+        setAccountDpdStatus(accountDpdDetails);
+        setTotalEmi(String(totalEMI));
 
-      const risk = assessCreditRisk(loans, currentInquiries);
-      setRiskAssessment(risk);
+        const inquirySectionMatch = normalizedText.match(/ENQUIRIES:(.*?)END OF REPORT/i);
+        const inquiryText = inquirySectionMatch ? inquirySectionMatch[1] : '';
+        
+        const currentInquiries: Inquiry[] = [];
+        const inquiryRegex = /(\d{2}-\d{2}-\d{4})\s+([A-Z\s.,()-]+?)\s+(Consumer Loan|Personal Loan|Credit Card|Auto Loan|Business Loan|Housing Loan|Other|Two-wheeler Loan|Loan Against Property|LOAN AGAINST SHARES\/ SECURITIES|BUSINESS LOAN - GENERAL)/gi;
 
-      const issues = [];
-      if (summary.writtenOff > 0) issues.push(`${summary.writtenOff} account(s) are Written Off. This severely impacts your score.`);
-      if (summary.settled > 0) issues.push(`${summary.settled} account(s) are Settled. This negatively impacts your score.`);
-      if (summary.doubtful > 0) issues.push(`${summary.doubtful} account(s) are Doubtful. This is a very negative mark.`);
-      if (summary.creditUtilization > 30) issues.push(`Your credit utilization is high at ${summary.creditUtilization}%. It's recommended to keep it below 30%.`);
-      const totalOverdue = loans.reduce((acc, loan) => acc + parseInt(loan.overdue, 10), 0);
-      if (totalOverdue > 0) issues.push(`You have a total overdue amount of ₹${totalOverdue.toLocaleString()}.`);
+        let match;
+        while ((match = inquiryRegex.exec(inquiryText)) !== null) {
+            currentInquiries.push({
+                date: match[1].trim(),
+                lender: match[2].trim().replace(/\s\s+/g, ' '),
+                purpose: match[3].trim()
+            });
+        }
+        
+        setInquiries(currentInquiries);
 
-      setPotentialIssues(issues);
+        const risk = assessCreditRisk(loans, currentInquiries, summary);
+        setRiskAssessment(risk);
 
-      const timeline: DebtPaydown[] = loans
-          .filter(loan => parseInt(loan.balance, 10) > 0 && parseInt(loan.emi, 10) > 0)
-          .map(loan => {
-              const balance = parseInt(loan.balance, 10);
-              const emi = parseInt(loan.emi, 10);
-              const monthsRemaining = Math.ceil(balance / emi);
-              const payoffDate = new Date();
-              payoffDate.setMonth(payoffDate.getMonth() + monthsRemaining);
-              return {
-                  type: loan.type,
-                  balance,
-                  emi,
-                  monthsRemaining,
-                  payoffDate: payoffDate.toLocaleDateString('en-IN', { year: 'numeric', month: 'long' }),
-              };
-          });
-      setDebtPaydownTimeline(timeline);
-  };
+        const issues = [];
+        if (summary.writtenOff > 0) issues.push(`${summary.writtenOff} account(s) are Written Off. This severely impacts your score.`);
+        if (summary.settled > 0) issues.push(`${summary.settled} account(s) are Settled. This negatively impacts your score.`);
+        if (summary.doubtful > 0) issues.push(`${summary.doubtful} account(s) are Doubtful. This is a very negative mark.`);
+        if (summary.creditUtilization > 30) issues.push(`Your credit utilization is high at ${summary.creditUtilization}%. It's recommended to keep it below 30%.`);
+        const totalOverdue = loans.reduce((acc, loan) => acc + (parseInt(loan.overdue, 10) || 0), 0);
+        if (totalOverdue > 0) issues.push(`You have a total overdue amount of ₹${totalOverdue.toLocaleString()}.`);
+
+        setPotentialIssues(issues);
+
+        const timeline: DebtPaydown[] = loans
+            .filter(loan => parseInt(loan.balance, 10) > 0 && parseInt(loan.emi, 10) > 0)
+            .map(loan => {
+                const balance = parseInt(loan.balance, 10);
+                const emi = parseInt(loan.emi, 10);
+                const monthsRemaining = Math.ceil(balance / emi);
+                const payoffDate = new Date();
+                payoffDate.setMonth(payoffDate.getMonth() + monthsRemaining);
+                return {
+                    type: loan.type,
+                    balance,
+                    emi,
+                    monthsRemaining,
+                    payoffDate: payoffDate.toLocaleDateString('en-IN', { year: 'numeric', month: 'long' }),
+                };
+            });
+        setDebtPaydownTimeline(timeline);
+    };
 
 
   const handleAnalyze = async () => {
@@ -1030,73 +1040,71 @@ export default function CreditWiseAIPage() {
                 </CardContent>
               </Card>
               
-               {aiRating && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Banknote className="mr-3 h-6 w-6 text-primary" />
-                      AI Loan Eligibility
-                    </CardTitle>
-                    <CardDescription>
-                      Estimate your potential loan eligibility based on your AI
-                      rating and financial details.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <TooltipProvider>
-                      <UiTooltip>
-                        <TooltipTrigger asChild>
-                           <div className="inline-block">
-                              <Button
-                                onClick={handleGetLoanEligibility}
-                                disabled={isCalculatingEligibility || estimatedIncome === null}
-                              >
-                                {isCalculatingEligibility ? (
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Sparkles className="mr-2 h-4 w-4" />
-                                )}
-                                Calculate Loan Eligibility
-                              </Button>
-                           </div>
-                        </TooltipTrigger>
-                         {estimatedIncome === null && (
-                           <TooltipContent>
-                             <p>Please estimate your income first using the calculator below.</p>
-                           </TooltipContent>
-                         )}
-                      </UiTooltip>
-                    </TooltipProvider>
+               <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Banknote className="mr-3 h-6 w-6 text-primary" />
+                    AI Loan Eligibility
+                  </CardTitle>
+                  <CardDescription>
+                    Estimate your potential loan eligibility based on your AI
+                    rating and financial details.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <TooltipProvider>
+                    <UiTooltip>
+                      <TooltipTrigger asChild>
+                         <div className="inline-block">
+                            <Button
+                              onClick={handleGetLoanEligibility}
+                              disabled={isCalculatingEligibility || !aiRating || estimatedIncome === null}
+                            >
+                              {isCalculatingEligibility ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              ) : (
+                                <Sparkles className="mr-2 h-4 w-4" />
+                              )}
+                              Calculate Loan Eligibility
+                            </Button>
+                         </div>
+                      </TooltipTrigger>
+                       {(!aiRating || estimatedIncome === null) && (
+                         <TooltipContent>
+                           <p>Please get your AI Rating and estimate your income first.</p>
+                         </TooltipContent>
+                       )}
+                    </UiTooltip>
+                  </TooltipProvider>
 
-                    {loanEligibility && (
-                      <div className="mt-6 p-4 bg-muted rounded-lg">
-                        <h4 className="font-semibold">
-                          Estimated Loan Eligibility:
-                        </h4>
-                        <p className="text-2xl font-bold text-primary">
-                          ₹
-                          {loanEligibility.eligibleLoanAmount.toLocaleString(
-                            'en-IN'
-                          )}
-                        </p>
-                        <p className="text-muted-foreground">
-                          at an estimated interest rate of{' '}
-                          <strong>
-                            {loanEligibility.estimatedInterestRate}% p.a.
-                          </strong>
-                        </p>
-                        <Alert className="mt-4">
-                          <AlertCircle className="h-4 w-4" />
-                          <AlertTitle>Eligibility Summary</AlertTitle>
-                          <AlertDescription>
-                            {loanEligibility.eligibilitySummary}
-                          </AlertDescription>
-                        </Alert>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
+                  {loanEligibility && (
+                    <div className="mt-6 p-4 bg-muted rounded-lg">
+                      <h4 className="font-semibold">
+                        Estimated Loan Eligibility:
+                      </h4>
+                      <p className="text-2xl font-bold text-primary">
+                        ₹
+                        {loanEligibility.eligibleLoanAmount.toLocaleString(
+                          'en-IN'
+                        )}
+                      </p>
+                      <p className="text-muted-foreground">
+                        at an estimated interest rate of{' '}
+                        <strong>
+                          {loanEligibility.estimatedInterestRate}% p.a.
+                        </strong>
+                      </p>
+                      <Alert className="mt-4">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Eligibility Summary</AlertTitle>
+                        <AlertDescription>
+                          {loanEligibility.eligibilitySummary}
+                        </AlertDescription>
+                      </Alert>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
               <Card>
                 <CardHeader>
