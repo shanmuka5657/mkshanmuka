@@ -1104,6 +1104,29 @@ export default function CreditWiseAIPage() {
                       <SummaryItem label="Credit Card Payments" value={`₹${creditSummary.creditCardPayments.toLocaleString('en-IN')}`} />
                     </CardContent>
                   </Card>
+                  
+                  <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center"><BrainCircuit className="mr-3 h-6 w-6 text-primary" />AI Credit Report Analysis</CardTitle>
+                        <CardDescription>An AI-generated breakdown of your credit strengths and weaknesses.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button onClick={handleAnalyze} disabled={isAnalyzing || !rawText}>
+                            {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                            Analyze with AI
+                        </Button>
+                        {aiAnalysis && (
+                          <Card className="mt-6 bg-muted/50">
+                              <CardHeader>
+                                  <CardTitle className="flex items-center text-primary"><Sparkles className="mr-2 h-6 w-6"/>AI Analysis</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <div className="prose dark:prose-invert max-w-none prose-p:text-foreground/80 prose-headings:text-foreground prose-strong:text-foreground">{aiAnalysis}</div>
+                              </CardContent>
+                          </Card>
+                        )}
+                    </CardContent>
+                  </Card>
 
                   <Card>
                     <CardHeader>
