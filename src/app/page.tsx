@@ -41,7 +41,7 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useToast } from "@/hooks/use-toast"
-import { analyzeCreditReport } from '@/ai/flows/credit-report-analysis';
+import { analyzeCreditReport, AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
 import { getCreditImprovementSuggestions } from '@/ai/flows/credit-improvement-suggestions';
 import { getDebtManagementAdvice } from '@/ai/flows/debt-management-advice';
 import { getAiRating, AiRatingOutput } from '@/ai/flows/ai-rating';
@@ -168,6 +168,15 @@ const initialRiskAssessment: RiskAssessment = {
   mitigations: [],
 };
 
+const initialAiAnalysis: AnalyzeCreditReportOutput = {
+  strengths: '',
+  weaknesses: '',
+  activeAccounts: '',
+  closedAccounts: '',
+  dpdAnalysis: '',
+  emiAnalysis: ''
+};
+
 export default function CreditWiseAIPage() {
   const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState('');
@@ -183,7 +192,7 @@ export default function CreditWiseAIPage() {
   const [progress, setProgress] = useState(0);
   const [creditScore, setCreditScore] = useState<number | null>(null);
   const [consumerInfo, setConsumerInfo] = useState<Record<string, string>>({});
-  const [aiAnalysis, setAiAnalysis] = useState('');
+  const [aiAnalysis, setAiAnalysis] = useState<AnalyzeCreditReportOutput | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState('');
   const [isSuggesting, setIsSuggesting] = useState(false);
@@ -290,7 +299,7 @@ export default function CreditWiseAIPage() {
     setProgress(0);
     setCreditScore(null);
     setConsumerInfo({});
-    setAiAnalysis('');
+    setAiAnalysis(null);
     setIsAnalyzing(false);
     setAiSuggestions('');
     setIsSuggesting(false);
@@ -564,10 +573,10 @@ export default function CreditWiseAIPage() {
   const handleAnalyze = async () => {
     if (!rawText) return;
     setIsAnalyzing(true);
-    setAiAnalysis('');
+    setAiAnalysis(null);
     try {
       const result = await analyzeCreditReport({ creditReportText: rawText });
-      setAiAnalysis(result.analysis);
+      setAiAnalysis(result);
       toast({
         title: "AI Analysis Complete",
         description: "Your credit report has been analyzed.",
@@ -1137,11 +1146,36 @@ export default function CreditWiseAIPage() {
                             </Button>
                             {aiAnalysis && (
                                 <Card className="mt-6 bg-muted/50">
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center text-primary"><Sparkles className="mr-2 h-6 w-6"/>AI Analysis</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="prose dark:prose-invert max-w-none prose-p:text-foreground/80 prose-headings:text-foreground prose-strong:text-foreground">{aiAnalysis}</div>
+                                    <CardContent className="pt-6 space-y-6">
+                                      <div>
+                                        <h3 className="font-semibold text-lg mb-2">Strengths in CIBIL</h3>
+                                        <p className="text-sm text-foreground/80">{aiAnalysis.strengths}</p>
+                                      </div>
+                                      <hr className="border-border" />
+                                      <div>
+                                        <h3 className="font-semibold text-lg mb-2">Weaknesses in CIBIL</h3>
+                                        <p className="text-sm text-foreground/80">{aiAnalysis.weaknesses}</p>
+                                      </div>
+                                      <hr className="border-border" />
+                                      <div>
+                                        <h3 className="font-semibold text-lg mb-2">Active Accounts Analysis</h3>
+                                        <p className="text-sm text-foreground/80">{aiAnalysis.activeAccounts}</p>
+                                      </div>
+                                      <hr className="border-border" />
+                                      <div>
+                                        <h3 className="font-semibold text-lg mb-2">Closed Accounts Analysis</h3>
+                                        <p className="text-sm text-foreground/80">{aiAnalysis.closedAccounts}</p>
+                                      </div>
+                                       <hr className="border-border" />
+                                      <div>
+                                        <h3 className="font-semibold text-lg mb-2">DPD (Days Past Due) Analysis</h3>
+                                        <p className="text-sm text-foreground/80">{aiAnalysis.dpdAnalysis}</p>
+                                      </div>
+                                       <hr className="border-border" />
+                                      <div>
+                                        <h3 className="font-semibold text-lg mb-2">EMI Paying for Loan Analysis</h3>
+                                        <p className="text-sm text-foreground/80">{aiAnalysis.emiAnalysis}</p>
+                                      </div>
                                     </CardContent>
                                 </Card>
                             )}

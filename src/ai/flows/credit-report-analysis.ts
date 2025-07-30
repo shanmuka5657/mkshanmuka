@@ -17,7 +17,22 @@ const AnalyzeCreditReportInputSchema = z.object({
 export type AnalyzeCreditReportInput = z.infer<typeof AnalyzeCreditReportInputSchema>;
 
 const AnalyzeCreditReportOutputSchema = z.object({
-  analysis: z.string().describe('A detailed analysis of the credit report, including strengths and weaknesses.'),
+  strengths: z
+    .string()
+    .describe('A detailed explanation of the strengths found in the CIBIL report.'),
+  weaknesses: z
+    .string()
+    .describe('A detailed explanation of the weaknesses found in the CIBIL report.'),
+  activeAccounts: z
+    .string()
+    .describe('An analysis of the active accounts in the report.'),
+  closedAccounts: z
+    .string()
+    .describe('An analysis of the closed accounts in the report.'),
+  dpdAnalysis: z
+    .string()
+    .describe('An analysis of the Days Past Due (DPD) information.'),
+  emiAnalysis: z.string().describe('An analysis of the EMIs being paid for loans.'),
 });
 export type AnalyzeCreditReportOutput = z.infer<typeof AnalyzeCreditReportOutputSchema>;
 
@@ -29,7 +44,20 @@ const prompt = ai.definePrompt({
   name: 'analyzeCreditReportPrompt',
   input: {schema: AnalyzeCreditReportInputSchema},
   output: {schema: AnalyzeCreditReportOutputSchema},
-  prompt: `You are a credit analysis expert. Analyze the following credit report text and provide a detailed breakdown of the user's credit strengths and weaknesses.\n\nCredit Report Text:\n{{{creditReportText}}}`,
+  prompt: `You are a credit analysis expert. Analyze the following credit report text and provide a detailed breakdown of the user's credit profile. Structure your response into the following sections, providing a detailed explanation for each:
+
+- **strengths**: What are the positive aspects of this credit report? (e.g., long credit history, timely payments, low utilization).
+- **weaknesses**: What are the negative aspects? (e.g., late payments, high number of inquiries, written-off accounts).
+- **activeAccounts**: Summarize the current active loans and credit cards.
+- **closedAccounts**: Summarize the accounts that have been closed.
+- **dpdAnalysis**: Analyze the Days Past Due (DPD) history. Explain any patterns of late payments.
+- **emiAnalysis**: Analyze the EMIs being paid for various loans.
+
+Credit Report Text:
+\`\`\`
+{{{creditReportText}}}
+\`\`\`
+`,
 });
 
 const analyzeCreditReportFlow = ai.defineFlow(
