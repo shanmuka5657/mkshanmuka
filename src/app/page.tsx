@@ -30,6 +30,7 @@ import {
   Banknote,
   Printer,
   LogIn,
+  AreaChart,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -123,6 +124,19 @@ type DebtPaydown = {
 };
 type FlaggedAccount = LoanAccount & { issue: string };
 
+type ActiveView = 
+  | 'aiMeter' 
+  | 'aiAnalysis' 
+  | 'creditSummary' 
+  | 'loanEligibility' 
+  | 'inquiryAnalysis' 
+  | 'dpdAnalysis'
+  | 'incomeEstimator'
+  | 'creditImprovement'
+  | 'visualizations'
+  | null;
+
+
 const initialCreditSummary: CreditSummary = {
   totalAccounts: 0,
   totalCreditLimit: 0,
@@ -195,6 +209,7 @@ export default function CreditWiseAIPage() {
   const [isRating, setIsRating] = useState(false);
   const [loanEligibility, setLoanEligibility] = useState<LoanEligibilityOutput | null>(null);
   const [isCalculatingEligibility, setIsCalculatingEligibility] = useState(false);
+  const [activeView, setActiveView] = useState<ActiveView>(null);
 
 
   const { toast } = useToast()
@@ -300,6 +315,7 @@ export default function CreditWiseAIPage() {
     setIsRating(false);
     setLoanEligibility(null);
     setIsCalculatingEligibility(false);
+    setActiveView(null);
     if(fileInputRef.current) {
         fileInputRef.current.value = '';
     }
@@ -841,6 +857,25 @@ export default function CreditWiseAIPage() {
     window.print();
   }
 
+  const NavButton = ({
+    view,
+    label,
+    icon,
+  }: {
+    view: ActiveView;
+    label: string;
+    icon: React.ReactNode;
+  }) => (
+    <Button
+      variant={activeView === view ? 'default' : 'outline'}
+      onClick={() => setActiveView(activeView === view ? null : view)}
+      className="flex flex-col h-24 text-center justify-center items-center gap-2"
+    >
+      {icon}
+      <span className="text-xs font-normal">{label}</span>
+    </Button>
+  );
+
   return (
     <div className={cn("min-h-screen bg-background font-body text-foreground", theme)}>
        <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm print:hidden">
@@ -982,225 +1017,255 @@ export default function CreditWiseAIPage() {
 
                   <Card>
                     <CardHeader>
-                      <CardTitle className="flex items-center"><Bot className="mr-3 h-6 w-6 text-primary" />AI Credit Analysis Meter</CardTitle>
-                      <CardDescription>A holistic rating based on a comprehensive AI analysis of your report.</CardDescription>
+                      <CardTitle>Analysis Dashboard</CardTitle>
+                      <CardDescription>Select a section to view its detailed analysis.</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <Button onClick={handleGetAiRating} disabled={isRating}>
-                        {isRating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                        Get AI Rating
-                      </Button>
-                      
-                      {aiRating && (
-                        <div className="mt-6">
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-                            <div className="text-center">
-                              <div className={cn("text-7xl font-bold", getRatingColorClass(aiRating.rating))}>
-                                {aiRating.aiScore}
+                    <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      <NavButton view="aiMeter" label="AI Credit Analysis Meter" icon={<Bot size={24} />} />
+                      <NavButton view="aiAnalysis" label="AI Credit Report Analysis" icon={<BrainCircuit size={24} />} />
+                      <NavButton view="creditSummary" label="Credit Summary" icon={<FileSymlink size={24} />} />
+                      <NavButton view="loanEligibility" label="AI Loan Eligibility" icon={<Banknote size={24} />} />
+                      <NavButton view="inquiryAnalysis" label="Credit Enquiry Analysis" icon={<Search size={24} />} />
+                      <NavButton view="dpdAnalysis" label="DPD Analysis" icon={<LineChart size={24} />} />
+                      <NavButton view="incomeEstimator" label="Income Estimator & Debt Management" icon={<Calculator size={24} />} />
+                       <NavButton view="creditImprovement" label="AI Credit Improvement" icon={<Lightbulb size={24} />} />
+                      <NavButton view="visualizations" label="Credit Visualisation" icon={<AreaChart size={24} />} />
+                    </CardContent>
+                  </Card>
+                  
+                  {activeView === 'aiMeter' && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center"><Bot className="mr-3 h-6 w-6 text-primary" />AI Credit Analysis Meter</CardTitle>
+                        <CardDescription>A holistic rating based on a comprehensive AI analysis of your report.</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <Button onClick={handleGetAiRating} disabled={isRating}>
+                          {isRating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                          Get AI Rating
+                        </Button>
+                        
+                        {aiRating && (
+                          <div className="mt-6">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                              <div className="text-center">
+                                <div className={cn("text-7xl font-bold", getRatingColorClass(aiRating.rating))}>
+                                  {aiRating.aiScore}
+                                </div>
+                                <div className={cn("text-2xl font-semibold", getRatingColorClass(aiRating.rating))}>
+                                  {aiRating.rating}
+                                </div>
+                                <p className="text-sm text-muted-foreground mt-1">AI Score / 100</p>
                               </div>
-                              <div className={cn("text-2xl font-semibold", getRatingColorClass(aiRating.rating))}>
-                                {aiRating.rating}
-                              </div>
-                              <p className="text-sm text-muted-foreground mt-1">AI Score / 100</p>
-                            </div>
-                            <div className="md:col-span-2">
-                              <p className="text-sm text-muted-foreground">{aiRating.summary}</p>
-                              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                  <div>
-                                    <h4 className="font-semibold flex items-center mb-2"><ThumbsUp className="h-5 w-5 mr-2 text-green-500" />Positive Factors</h4>
-                                    <ul className="list-disc list-inside space-y-1 text-sm">
-                                      {aiRating.positiveFactors.map((factor, i) => <li key={i}>{factor}</li>)}
-                                    </ul>
-                                  </div>
-                                  <div>
-                                    <h4 className="font-semibold flex items-center mb-2"><ThumbsDown className="h-5 w-5 mr-2 text-red-500" />Negative Factors</h4>
-                                    <ul className="list-disc list-inside space-y-1 text-sm">
-                                      {aiRating.negativeFactors.map((factor, i) => <li key={i}>{factor}</li>)}
-                                    </ul>
-                                  </div>
+                              <div className="md:col-span-2">
+                                <p className="text-sm text-muted-foreground">{aiRating.summary}</p>
+                                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                      <h4 className="font-semibold flex items-center mb-2"><ThumbsUp className="h-5 w-5 mr-2 text-green-500" />Positive Factors</h4>
+                                      <ul className="list-disc list-inside space-y-1 text-sm">
+                                        {aiRating.positiveFactors.map((factor, i) => <li key={i}>{factor}</li>)}
+                                      </ul>
+                                    </div>
+                                    <div>
+                                      <h4 className="font-semibold flex items-center mb-2"><ThumbsDown className="h-5 w-5 mr-2 text-red-500" />Negative Factors</h4>
+                                      <ul className="list-disc list-inside space-y-1 text-sm">
+                                        {aiRating.negativeFactors.map((factor, i) => <li key={i}>{factor}</li>)}
+                                      </ul>
+                                    </div>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
                   
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center">
-                        <Banknote className="mr-3 h-6 w-6 text-primary" />
-                        AI Loan Eligibility
-                      </CardTitle>
-                      <CardDescription>
-                        Estimate your potential loan eligibility based on your AI
-                        rating and financial details.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <TooltipProvider>
-                        <UiTooltip>
-                          <TooltipTrigger asChild>
-                            <div className="inline-block">
-                                <Button
-                                  onClick={handleGetLoanEligibility}
-                                  disabled={isCalculatingEligibility || !aiRating || estimatedIncome === null}
-                                >
-                                  {isCalculatingEligibility ? (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Sparkles className="mr-2 h-4 w-4" />
-                                  )}
-                                  Calculate Loan Eligibility
-                                </Button>
-                            </div>
-                          </TooltipTrigger>
-                          {(!aiRating || estimatedIncome === null) && (
-                            <TooltipContent>
-                              <p>Please get your AI Rating and estimate your income first.</p>
-                            </TooltipContent>
-                          )}
-                        </UiTooltip>
-                      </TooltipProvider>
-
-                      {loanEligibility && (
-                        <div className="mt-6 p-4 bg-muted rounded-lg">
-                          <h4 className="font-semibold">
-                            Estimated Loan Eligibility:
-                          </h4>
-                          <p className="text-2xl font-bold text-primary">
-                            ₹
-                            {loanEligibility.eligibleLoanAmount.toLocaleString(
-                              'en-IN'
-                            )}
-                          </p>
-                          <p className="text-muted-foreground">
-                            at an estimated interest rate of{' '}
-                            <strong>
-                              {loanEligibility.estimatedInterestRate}% p.a.
-                            </strong>
-                          </p>
-                          <Alert className="mt-4">
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>Eligibility Summary</AlertTitle>
-                            <AlertDescription>
-                              {loanEligibility.eligibilitySummary}
-                            </AlertDescription>
-                          </Alert>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center"><FileSymlink className="mr-3 h-6 w-6 text-primary" />Credit Summary</CardTitle>
-                      <CardDescription>A detailed overview of your credit accounts and metrics.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                      <SummaryItem label="Total Accounts" value={creditSummary.totalAccounts} />
-                      <SummaryItem label="Total Credit Limit" value={`₹${creditSummary.totalCreditLimit.toLocaleString('en-IN')}`} />
-                      <SummaryItem label="Total Outstanding" value={`₹${creditSummary.totalOutstanding.toLocaleString('en-IN')}`} />
-                      <SummaryItem label="Total Debt" value={`₹${creditSummary.totalDebt.toLocaleString('en-IN')}`} />
-                      <SummaryItem label="Credit Utilization" value={`${creditSummary.creditUtilization}%`} />
-                      <SummaryItem label="Debt-to-Limit Ratio" value={`${creditSummary.debtToLimitRatio}%`} />
-                      <SummaryItem label="Active Accounts" value={creditSummary.activeAccounts} />
-                      <SummaryItem label="Closed Accounts" value={creditSummary.closedAccounts} />
-                      <SummaryItem label="Written Off" value={creditSummary.writtenOff} />
-                      <SummaryItem label="Settled" value={creditSummary.settled} />
-                      <SummaryItem label="Doubtful" value={creditSummary.doubtful} />
-                      <SummaryItem label="Total Monthly EMI" value={`₹${creditSummary.totalMonthlyEMI.toLocaleString('en-IN')}`} />
-                      <SummaryItem label="Max Single EMI" value={`₹${creditSummary.maxSingleEMI.toLocaleString('en-IN')}`} />
-                      <SummaryItem label="Credit Card Payments" value={`₹${creditSummary.creditCardPayments.toLocaleString('en-IN')}`} />
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
+                  {activeView === 'loanEligibility' && (
+                    <Card>
                       <CardHeader>
-                          <CardTitle className="flex items-center"><BrainCircuit className="mr-3 h-6 w-6 text-primary" />AI Credit Report Analysis</CardTitle>
-                          <CardDescription>An AI-generated breakdown of your credit strengths and weaknesses.</CardDescription>
+                        <CardTitle className="flex items-center">
+                          <Banknote className="mr-3 h-6 w-6 text-primary" />
+                          AI Loan Eligibility
+                        </CardTitle>
+                        <CardDescription>
+                          Estimate your potential loan eligibility based on your AI
+                          rating and financial details.
+                        </CardDescription>
                       </CardHeader>
                       <CardContent>
-                          <Button onClick={handleAnalyze} disabled={isAnalyzing || !rawText}>
-                              {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                              Analyze with AI
-                          </Button>
-                          {aiAnalysis && (
-                              <Card className="mt-6 bg-muted/50">
-                                  <CardHeader>
-                                      <CardTitle className="flex items-center text-primary"><Sparkles className="mr-2 h-6 w-6"/>AI Analysis</CardTitle>
-                                  </CardHeader>
-                                  <CardContent>
-                                      <div className="prose dark:prose-invert max-w-none prose-p:text-foreground/80 prose-headings:text-foreground prose-strong:text-foreground">{aiAnalysis}</div>
-                                  </CardContent>
-                              </Card>
-                          )}
+                        <TooltipProvider>
+                          <UiTooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-block">
+                                  <Button
+                                    onClick={handleGetLoanEligibility}
+                                    disabled={isCalculatingEligibility || !aiRating || estimatedIncome === null}
+                                  >
+                                    {isCalculatingEligibility ? (
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Sparkles className="mr-2 h-4 w-4" />
+                                    )}
+                                    Calculate Loan Eligibility
+                                  </Button>
+                              </div>
+                            </TooltipTrigger>
+                            {(!aiRating || estimatedIncome === null) && (
+                              <TooltipContent>
+                                <p>Please get your AI Rating and estimate your income first.</p>
+                              </TooltipContent>
+                            )}
+                          </UiTooltip>
+                        </TooltipProvider>
+
+                        {loanEligibility && (
+                          <div className="mt-6 p-4 bg-muted rounded-lg">
+                            <h4 className="font-semibold">
+                              Estimated Loan Eligibility:
+                            </h4>
+                            <p className="text-2xl font-bold text-primary">
+                              ₹
+                              {loanEligibility.eligibleLoanAmount.toLocaleString(
+                                'en-IN'
+                              )}
+                            </p>
+                            <p className="text-muted-foreground">
+                              at an estimated interest rate of{' '}
+                              <strong>
+                                {loanEligibility.estimatedInterestRate}% p.a.
+                              </strong>
+                            </p>
+                            <Alert className="mt-4">
+                              <AlertCircle className="h-4 w-4" />
+                              <AlertTitle>Eligibility Summary</AlertTitle>
+                              <AlertDescription>
+                                {loanEligibility.eligibilitySummary}
+                              </AlertDescription>
+                            </Alert>
+                          </div>
+                        )}
                       </CardContent>
-                  </Card>
+                    </Card>
+                  )}
+                  
+                  {activeView === 'creditSummary' && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center"><FileSymlink className="mr-3 h-6 w-6 text-primary" />Credit Summary</CardTitle>
+                        <CardDescription>A detailed overview of your credit accounts and metrics.</CardDescription>
+                      </CardHeader>
+                      <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        <SummaryItem label="Total Accounts" value={creditSummary.totalAccounts} />
+                        <SummaryItem label="Total Credit Limit" value={`₹${creditSummary.totalCreditLimit.toLocaleString('en-IN')}`} />
+                        <SummaryItem label="Total Outstanding" value={`₹${creditSummary.totalOutstanding.toLocaleString('en-IN')}`} />
+                        <SummaryItem label="Total Debt" value={`₹${creditSummary.totalDebt.toLocaleString('en-IN')}`} />
+                        <SummaryItem label="Credit Utilization" value={`${creditSummary.creditUtilization}%`} />
+                        <SummaryItem label="Debt-to-Limit Ratio" value={`${creditSummary.debtToLimitRatio}%`} />
+                        <SummaryItem label="Active Accounts" value={creditSummary.activeAccounts} />
+                        <SummaryItem label="Closed Accounts" value={creditSummary.closedAccounts} />
+                        <SummaryItem label="Written Off" value={creditSummary.writtenOff} />
+                        <SummaryItem label="Settled" value={creditSummary.settled} />
+                        <SummaryItem label="Doubtful" value={creditSummary.doubtful} />
+                        <SummaryItem label="Total Monthly EMI" value={`₹${creditSummary.totalMonthlyEMI.toLocaleString('en-IN')}`} />
+                        <SummaryItem label="Max Single EMI" value={`₹${creditSummary.maxSingleEMI.toLocaleString('en-IN')}`} />
+                        <SummaryItem label="Credit Card Payments" value={`₹${creditSummary.creditCardPayments.toLocaleString('en-IN')}`} />
+                      </CardContent>
+                    </Card>
+                  )}
+                  
+                  {activeView === 'aiAnalysis' && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center"><BrainCircuit className="mr-3 h-6 w-6 text-primary" />AI Credit Report Analysis</CardTitle>
+                            <CardDescription>An AI-generated breakdown of your credit strengths and weaknesses.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Button onClick={handleAnalyze} disabled={isAnalyzing || !rawText}>
+                                {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                                Analyze with AI
+                            </Button>
+                            {aiAnalysis && (
+                                <Card className="mt-6 bg-muted/50">
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center text-primary"><Sparkles className="mr-2 h-6 w-6"/>AI Analysis</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="prose dark:prose-invert max-w-none prose-p:text-foreground/80 prose-headings:text-foreground prose-strong:text-foreground">{aiAnalysis}</div>
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </CardContent>
+                    </Card>
+                  )}
 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center"><Search className="mr-3 h-6 w-6 text-primary" />Credit Inquiries Analysis</CardTitle>
-                      <CardDescription>An overview of recent credit inquiries on your report.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <SummaryItem label="Total Inquiries" value={inquiries.length} />
-                      <SummaryItem label="Past 30 Days" value={inquiryCounts.thirtyDays} />
-                      <SummaryItem label="Past 12 Months" value={inquiryCounts.oneYear} />
-                      <SummaryItem label="Past 24 Months" value={inquiryCounts.twoYears} />
-                    </CardContent>
-                  </Card>
+                  {activeView === 'inquiryAnalysis' && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center"><Search className="mr-3 h-6 w-6 text-primary" />Credit Inquiries Analysis</CardTitle>
+                        <CardDescription>An overview of recent credit inquiries on your report.</CardDescription>
+                      </CardHeader>
+                      <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <SummaryItem label="Total Inquiries" value={inquiries.length} />
+                        <SummaryItem label="Past 30 Days" value={inquiryCounts.thirtyDays} />
+                        <SummaryItem label="Past 12 Months" value={inquiryCounts.oneYear} />
+                        <SummaryItem label="Past 24 Months" value={inquiryCounts.twoYears} />
+                      </CardContent>
+                    </Card>
+                  )}
 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center"><LineChart className="mr-3 h-6 w-6 text-primary" />DPD (Days Past Due) Analysis</CardTitle>
-                      <CardDescription>Days Past Due (DPD) indicate how late payments were made on your accounts. Lower DPD is better for your credit score.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-                        <DpdSummaryBox label="On Time" subtext="(000)" count={dpdSummary.onTime} colorClass="bg-green-500" />
-                        <DpdSummaryBox label="1-30 Days" subtext="Late" count={dpdSummary.days1_30} colorClass="bg-yellow-400" />
-                        <DpdSummaryBox label="31-60 Days" subtext="Late" count={dpdSummary.days31_60} colorClass="bg-yellow-500" />
-                        <DpdSummaryBox label="61-90 Days" subtext="Late" count={dpdSummary.days61_90} colorClass="bg-orange-500" />
-                        <DpdSummaryBox label="90+ Days" subtext="Late" count={dpdSummary.days90plus} colorClass="bg-red-500" />
-                        <DpdSummaryBox label="Default" subtext="(SUB/DBT)" count={dpdSummary.default} colorClass="bg-red-700" />
-                      </div>
-                      <h4 className="text-lg font-semibold mt-6 mb-4">Account DPD Status</h4>
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Account Type</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead>Highest DPD</TableHead>
-                              <TableHead>Payment History</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {accountDpdStatus.map((account, index) => (
-                              <TableRow key={index}>
-                                <TableCell>{account.accountType}</TableCell>
-                                <TableCell className="capitalize">{account.status}</TableCell>
-                                <TableCell>
-                                  <span className={cn(
-                                    'px-2 py-1 rounded-full text-xs font-semibold text-white',
-                                    account.highestDpd === 0 && 'bg-green-500',
-                                    account.highestDpd > 0 && account.highestDpd <= 30 && 'bg-yellow-400',
-                                    account.highestDpd > 30 && account.highestDpd <= 60 && 'bg-yellow-500',
-                                    account.highestDpd > 60 && account.highestDpd <= 90 && 'bg-orange-500',
-                                    account.highestDpd > 90 && 'bg-red-500',
-                                  )}>
-                                    {account.highestDpd}
-                                  </span>
-                                </TableCell>
-                                <TableCell className="font-mono text-xs truncate max-w-xs">{account.paymentHistory}</TableCell>
+                  {activeView === 'dpdAnalysis' && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center"><LineChart className="mr-3 h-6 w-6 text-primary" />DPD (Days Past Due) Analysis</CardTitle>
+                        <CardDescription>Days Past Due (DPD) indicate how late payments were made on your accounts. Lower DPD is better for your credit score.</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+                          <DpdSummaryBox label="On Time" subtext="(000)" count={dpdSummary.onTime} colorClass="bg-green-500" />
+                          <DpdSummaryBox label="1-30 Days" subtext="Late" count={dpdSummary.days1_30} colorClass="bg-yellow-400" />
+                          <DpdSummaryBox label="31-60 Days" subtext="Late" count={dpdSummary.days31_60} colorClass="bg-yellow-500" />
+                          <DpdSummaryBox label="61-90 Days" subtext="Late" count={dpdSummary.days61_90} colorClass="bg-orange-500" />
+                          <DpdSummaryBox label="90+ Days" subtext="Late" count={dpdSummary.days90plus} colorClass="bg-red-500" />
+                          <DpdSummaryBox label="Default" subtext="(SUB/DBT)" count={dpdSummary.default} colorClass="bg-red-700" />
+                        </div>
+                        <h4 className="text-lg font-semibold mt-6 mb-4">Account DPD Status</h4>
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Account Type</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Highest DPD</TableHead>
+                                <TableHead>Payment History</TableHead>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </CardContent>
-                  </Card>
+                            </TableHeader>
+                            <TableBody>
+                              {accountDpdStatus.map((account, index) => (
+                                <TableRow key={index}>
+                                  <TableCell>{account.accountType}</TableCell>
+                                  <TableCell className="capitalize">{account.status}</TableCell>
+                                  <TableCell>
+                                    <span className={cn(
+                                      'px-2 py-1 rounded-full text-xs font-semibold text-white',
+                                      account.highestDpd === 0 && 'bg-green-500',
+                                      account.highestDpd > 0 && account.highestDpd <= 30 && 'bg-yellow-400',
+                                      account.highestDpd > 30 && account.highestDpd <= 60 && 'bg-yellow-500',
+                                      account.highestDpd > 60 && account.highestDpd <= 90 && 'bg-orange-500',
+                                      account.highestDpd > 90 && 'bg-red-500',
+                                    )}>
+                                      {account.highestDpd}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="font-mono text-xs truncate max-w-xs">{account.paymentHistory}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
 
                   <Card>
                     <CardHeader>
@@ -1310,65 +1375,32 @@ export default function CreditWiseAIPage() {
                     </Card>
                   )}
 
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center"><ShieldCheck className="mr-3 h-6 w-6 text-primary" />AI Credit Improvement Suggestions</CardTitle>
-                      <CardDescription>Get personalized credit improvement advice based on your full report.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <Button onClick={handleGetSuggestions} disabled={isSuggesting || !rawText}>
-                        {isSuggesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lightbulb className="mr-2 h-4 w-4" />}
-                        Get AI Credit Improvement Suggestions
-                      </Button>
-                      {aiSuggestions && (
-                        <Card className="mt-6 bg-muted/50">
-                            <CardHeader>
-                                <CardTitle className="flex items-center text-primary"><Sparkles className="mr-2 h-6 w-6"/>Your Personalized Suggestions</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="prose dark:prose-invert max-w-none prose-p:text-foreground/80 prose-headings:text-foreground prose-strong:text-foreground">{aiSuggestions}</div>
-                            </CardContent>
-                        </Card>
-                      )}
-                    </CardContent>
-                  </Card>
+                  {activeView === 'creditImprovement' && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center"><ShieldCheck className="mr-3 h-6 w-6 text-primary" />AI Credit Improvement Suggestions</CardTitle>
+                        <CardDescription>Get personalized credit improvement advice based on your full report.</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <Button onClick={handleGetSuggestions} disabled={isSuggesting || !rawText}>
+                          {isSuggesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lightbulb className="mr-2 h-4 w-4" />}
+                          Get AI Credit Improvement Suggestions
+                        </Button>
+                        {aiSuggestions && (
+                          <Card className="mt-6 bg-muted/50">
+                              <CardHeader>
+                                  <CardTitle className="flex items-center text-primary"><Sparkles className="mr-2 h-6 w-6"/>Your Personalized Suggestions</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <div className="prose dark:prose-invert max-w-none prose-p:text-foreground/80 prose-headings:text-foreground prose-strong:text-foreground">{aiSuggestions}</div>
+                              </CardContent>
+                          </Card>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
                   
-                  <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 print:hidden">
-                    <div className="lg:col-span-3">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center"><BarChartBig className="mr-3 h-6 w-6 text-primary" />Credit Visualizations</CardTitle>
-                          <CardDescription>Visual breakdown of your credit report.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                          <div>
-                            <h4 className="font-semibold text-center mb-2">Loan Type Distribution</h4>
-                            {loanTypeData.length > 0 ? (
-                                <ResponsiveContainer width="100%" height={200}>
-                                    <PieChart>
-                                    <Pie data={loanTypeData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                                        {loanTypeData.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
-                                    </Pie>
-                                    <Tooltip />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            ) : (<p className="text-center text-muted-foreground">No loan data to display.</p>)}
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-center mb-2">Outstanding Loan Amounts</h4>
-                            <ResponsiveContainer width="100%" height={200}>
-                                <BarChart data={[{name: 'Outstanding', value: creditSummary.totalOutstanding}, {name: 'Limit', value: creditSummary.totalCreditLimit}]}>
-                                <XAxis dataKey="name" />
-                                <YAxis />
-                                <Tooltip />
-                                <Bar dataKey="value" fill="hsl(var(--primary))" />
-                                </BarChart>
-                            </ResponsiveContainer>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
+                  {activeView === 'incomeEstimator' && (
                     <div className="lg:col-span-2">
                       <Card>
                         <CardHeader>
@@ -1430,7 +1462,45 @@ export default function CreditWiseAIPage() {
                         </CardContent>
                       </Card>
                     </div>
-                  </div>
+                  )}
+
+                  {activeView === 'visualizations' && (
+                    <div className="lg:col-span-3">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center"><BarChartBig className="mr-3 h-6 w-6 text-primary" />Credit Visualizations</CardTitle>
+                          <CardDescription>Visual breakdown of your credit report.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          <div>
+                            <h4 className="font-semibold text-center mb-2">Loan Type Distribution</h4>
+                            {loanTypeData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height={200}>
+                                    <PieChart>
+                                    <Pie data={loanTypeData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                                        {loanTypeData.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
+                                    </Pie>
+                                    <Tooltip />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            ) : (<p className="text-center text-muted-foreground">No loan data to display.</p>)}
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-center mb-2">Outstanding Loan Amounts</h4>
+                            <ResponsiveContainer width="100%" height={200}>
+                                <BarChart data={[{name: 'Outstanding', value: creditSummary.totalOutstanding}, {name: 'Limit', value: creditSummary.totalCreditLimit}]}>
+                                <XAxis dataKey="name" />
+                                <YAxis />
+                                <Tooltip />
+                                <Bar dataKey="value" fill="hsl(var(--primary))" />
+                                </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+                  
                   
                   <Card className="print:hidden">
                     <CardHeader>
@@ -1511,3 +1581,5 @@ export default function CreditWiseAIPage() {
     </div>
   );
 }
+
+    
