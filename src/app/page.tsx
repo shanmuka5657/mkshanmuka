@@ -484,7 +484,7 @@ export default function CreditWiseAIPage() {
           const sanctionedMatch = section.match(/(?:SANCTIONED|CREDIT LIMIT|HIGH CREDIT):\s*([\d,]+)/i);
           const balanceMatch = section.match(/(?:CURRENT BALANCE|BALANCE):\s*([\d,]+)/i);
           const overdueMatch = section.match(/OVERDUE:\s*([\d,]+)/i);
-          const emiMatch = section.match(/EMI:\s*([\d,]+)/i);
+          const emiMatch = section.match(/(?:EMI|REPAYMENT\s*AMOUNT|INSTALLMENT\s*AMT):\s*([\d,]+)/i);
           const openedMatch = section.match(/OPENED:\s*(\d{2}-\d{2}-\d{4})/i);
           const closedMatch = section.match(/CLOSED:\s*(\d{2}-\d{2}-\d{4})/i);
           const paymentHistoryMatch = section.match(/DAYS PAST DUE\/ASSET CLASSIFICATION \(UP TO 36 MONTHS; LEFT TO RIGHT\)([\s\S]+?)(?=ACCOUNT DATES AMOUNTS STATUS|INFORMATION UNDER DISPUTE|END OF REPORT|$)/i);
