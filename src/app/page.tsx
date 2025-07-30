@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -986,7 +987,7 @@ export default function CreditWiseAIPage() {
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center"><Bot className="mr-3 h-6 w-6 text-primary" />AI Credit Analysis Meter</CardTitle>
-                        <CardDescription>A holistic rating based on a comprehensive AI analysis of your report.</CardDescription>
+                        <CardDescription>This AI model provides a holistic score of your overall credit health, balancing both positive and negative factors in your report.</CardDescription>
                       </CardHeader>
                       <CardContent>
                         <Button onClick={handleGetAiRating} disabled={isRating || !riskAssessment}>
@@ -1220,6 +1221,7 @@ export default function CreditWiseAIPage() {
                     <Card>
                       <CardHeader>
                           <CardTitle className="flex items-center"><ShieldAlert className="mr-3 h-6 w-6 text-primary" />AI Risk Assessment</CardTitle>
+                          <CardDescription>This AI model acts as a risk analyst, focusing on identifying potential negative factors that could pose a risk to lenders. A higher score means lower risk.</CardDescription>
                       </CardHeader>
                       <CardContent>
                           {isAssessingRisk ? (
