@@ -250,6 +250,17 @@ export default function CreditWiseAIPage() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
+      if (selectedFile.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({
+          variant: "destructive",
+          title: "File Too Large",
+          description: "Please upload a PDF file smaller than 5MB.",
+        });
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        return;
+      }
       resetState();
       setFile(selectedFile);
       setFileName(selectedFile.name);
@@ -440,7 +451,7 @@ export default function CreditWiseAIPage() {
           const highCreditMatch = summaryText.match(/HIGH CR\/SANC\. AMT:\s*([\d,]+)/i);
           if (highCreditMatch) summary.totalCreditLimit = parseInt(highCreditMatch[1].replace(/,/g, ''), 10);
           
-          const currentBalanceMatch = summaryText.match(/(?:CURRENT BALANCE|CURRENT|BALANCES):\s*([\d,]+)/i);
+          const currentBalanceMatch = normalizedText.match(/(?:CURRENT BALANCE|CURRENT|BALANCES):\s*([\d,]+)/i);
           if (currentBalanceMatch) summary.totalOutstanding = parseInt(currentBalanceMatch[1].replace(/,/g, ''), 10);
           
           const zeroBalanceMatch = summaryText.match(/ZERO-BALANCE:\s*([\d,]+)/i);
@@ -526,16 +537,15 @@ export default function CreditWiseAIPage() {
 
           const emi = parseInt(loan.emi, 10) || 0;
           if (!loan.status.includes('closed') && !loan.status.includes('written off') && !loan.status.includes('settled')) {
-            totalEMI += emi;
-            if (emi > maxEMI) maxEMI = emi;
-          }
-
-
-          if (accountType.toLowerCase().includes('credit card') && !loan.status.includes('closed')) {
-              const outstanding = parseInt(loan.balance, 10) || 0;
-              if(outstanding > 0) {
-                ccPayments += Math.max(outstanding * 0.05, 500); 
-              }
+            if (accountType.toLowerCase().includes('credit card')) {
+                const outstanding = parseInt(loan.balance, 10) || 0;
+                if(outstanding > 0) {
+                  ccPayments += Math.max(outstanding * 0.05, 500); 
+                }
+            } else {
+              totalEMI += emi;
+              if (emi > maxEMI) maxEMI = emi;
+            }
           }
           
           let highestDpd = 0;
@@ -570,7 +580,7 @@ export default function CreditWiseAIPage() {
       setFlaggedAccounts(currentFlaggedAccounts);
       setAccountDpdStatus(currentDpdStatus);
       setDpdSummary(tempDpdSummary);
-      setTotalEmi(String(totalEMI));
+      setTotalEmi(String(totalEMI + ccPayments));
 
       const inquirySectionMatch = normalizedText.match(/ENQUIRIES:(.*?)END OF REPORT/i);
       const inquiryText = inquirySectionMatch ? inquirySectionMatch[1] : '';
@@ -1411,7 +1421,7 @@ export default function CreditWiseAIPage() {
                             <Card className="mt-6 bg-muted/50">
                                 <CardHeader>
                                     <CardTitle className="flex items-center text-primary"><Sparkles className="mr-2 h-6 w-6"/>Your Debt Management Plan</CardTitle>
-                                </CardHeader>
+                                </Header>
                                 <CardContent>
                                   <div className="prose dark:prose-invert max-w-none prose-p:text-foreground/80 prose-headings:text-foreground prose-strong:text-foreground">{aiDebtAdvice}</div>
                                 </CardContent>
