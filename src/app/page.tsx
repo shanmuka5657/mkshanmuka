@@ -30,6 +30,7 @@ import {
   ThumbsUp,
   ThumbsDown,
   Banknote,
+  Printer,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -406,13 +407,13 @@ export default function CreditWiseAIPage() {
         // Normalize text
         const normalizedText = text.replace(/\s+/g, ' ');
 
-        const scoreMatch = normalizedText.match(/(?:CIBIL TRANSUNION SCORE\(S\): SCORE NAME SCORE SCORING FACTORS CREDITVISION® SCORE|CREDITVISION® SCORE|CIBIL SCORE)\s*(\d{3})/i);
+        const scoreMatch = normalizedText.match(/(?:CIBIL (?:TRANSUNION )?SCORE|CREDITVISION. SCORE)\s*(\d{3})/i);
         if (scoreMatch) {
             setCreditScore(parseInt(scoreMatch[1], 10));
         }
 
         let info: Record<string, string> = {};
-        const nameMatch = normalizedText.match(/NAME:\s*([\w\s]+?)\s*(DATE OF BIRTH|DOB)/i);
+        const nameMatch = normalizedText.match(/NAME:\s*([\w\s]+?)\s*(?:DATE OF BIRTH|DOB)/i);
         if (nameMatch) info['Name'] = nameMatch[1].trim();
 
         const dobMatch = normalizedText.match(/(?:DATE OF BIRTH|DOB):\s*(\d{2}-\d{2}-\d{4})/i);
@@ -433,7 +434,6 @@ export default function CreditWiseAIPage() {
         const summaryText = summarySectionMatch ? summarySectionMatch[1] : '';
         
         const highCreditMatch = summaryText.match(/HIGH CR\/SANC\. AMT:\s*([\d,]+)/i);
-        const overdueMatchSummary = summaryText.match(/OVERDUE:\s*([\d,]+)/i);
 
         let summary: CreditSummary = { ...initialCreditSummary };
         summary.totalCreditLimit = highCreditMatch ? parseInt(highCreditMatch[1].replace(/,/g, ''), 10) : 0;
@@ -446,20 +446,21 @@ export default function CreditWiseAIPage() {
         let totalEMI = 0;
         let maxEMI = 0;
         let ccPayments = 0;
-        let totalLimit = 0; // Recalculate from accounts
+        let totalLimit = 0;
 
         const dpdCounts: DpdSummary = { ...initialDpdSummary };
         const accountDpdDetails: AccountDpdStatus[] = [];
 
         accountSections.slice(1).forEach(section => {
-            const typeMatch = section.match(/TYPE:\s*([A-Za-z\s-]+)/i);
+            const typeMatch = section.match(/TYPE:\s*([A-Za-z\s-]+?)(?=OWNERSHIP|COLLATERAL|OPENED)/i);
             const accountType = typeMatch ? typeMatch[1].trim() : "N/A";
             
-            const statusText = section.match(/STATUS(.*?)(?:MEMBER NAME|ACCOUNT NUMBER|TYPE)/i)?.[0] || section;
+            const statusText = section.match(/STATUS(.*?)(?:MEMBER NAME|ACCOUNT NUMBER|TYPE|OWNERSHIP)/i)?.[0] || section;
             let accountStatus = (statusText.match(/(?:Written Off|Settled|Closed|Active|Open)/i)?.[0] || 'Active').toLowerCase();
             
             if(statusText.includes("Written Off")) accountStatus = "written off";
             if(statusText.includes("Settled")) accountStatus = "settled";
+            if(statusText.includes("SUB")) accountStatus = "sub-standard";
 
             const sanctionedMatch = section.match(/(?:SANCTIONED|CREDIT LIMIT):\s*([\d,]+)/i);
             const balanceMatch = section.match(/(?:CURRENT BALANCE|BALANCE):\s*([\d,]+)/i);
@@ -471,7 +472,7 @@ export default function CreditWiseAIPage() {
             
             const loan: LoanAccount = {
                 type: accountType,
-                ownership: section.match(/OWNERSHIP:\s*(.+?)(?=OPENED|REPORTED)/i)?.[1].trim() || 'N/A',
+                ownership: section.match(/OWNERSHIP:\s*(.+?)(?=OPENED|REPORTED|COLLATERAL)/i)?.[1].trim() || 'N/A',
                 status: accountStatus,
                 sanctioned: sanctionedMatch ? sanctionedMatch[1].replace(/,/g, '') : '0',
                 balance: balanceMatch ? balanceMatch[1].replace(/,/g, '') : '0',
@@ -497,7 +498,7 @@ export default function CreditWiseAIPage() {
             if (accountStatus.includes('written off')) { summary.writtenOff += 1; issue = 'Written Off'; isFlagged = true; }
             if (accountStatus.includes('settled')) { summary.settled += 1; issue = 'Settled'; isFlagged = true; }
             if (accountStatus.includes('doubtful') || loan.paymentHistory.includes('DBT')) { summary.doubtful += 1; issue = 'Doubtful'; isFlagged = true; }
-             if (loan.paymentHistory.includes('SUB')) { issue = 'Sub-standard Account'; isFlagged = true; }
+             if (accountStatus.includes('sub-standard') || loan.paymentHistory.includes('SUB')) { issue = 'Sub-standard Account'; isFlagged = true; }
             
             const overdueAmount = parseInt(loan.overdue, 10);
             if (overdueAmount > 0) {
@@ -524,36 +525,28 @@ export default function CreditWiseAIPage() {
             }
           
             const paymentHistory = loan.paymentHistory;
-            const dpdValues = (paymentHistory.match(/\b(\d{1,3}|STD|SUB|DBT|LSS|XXX)\b/g) || []).map(val => {
-                if (val === 'STD' || val === '000' || val === 'XXX') return 0;
-                if (val === 'SUB') return 90; 
-                if (val === 'DBT') return 999;
-                if (val === 'LSS') return 999;
-                if (/\d+/.test(val)) return parseInt(val, 10);
-                return 0;
-            });
+            const dpdValues = (paymentHistory.match(/\b(\d{1,3}|STD|SUB|DBT|LSS|XXX)\b/g) || []);
             
             let highestDpd = 0;
-            let hasRealDpd = false;
+
             if (dpdValues.length > 0) {
-                dpdValues.forEach(dpd => {
-                  highestDpd = Math.max(highestDpd, dpd);
-                  if (dpd > 0) hasRealDpd = true;
+                const numericDpds = dpdValues.map(val => {
+                    if (val === 'STD' || val === '000' || val === 'XXX') return 0;
+                    if (val === 'SUB') return 91; 
+                    if (val === 'DBT') return 999;
+                    if (val === 'LSS') return 999;
+                    if (/\d+/.test(val)) return parseInt(val, 10);
+                    return 0;
                 });
-            } else {
-                 const overdueVal = parseInt(loan.overdue, 10);
-                 if(overdueVal > 0 && emi > 0) {
-                     highestDpd = Math.floor((overdueVal/emi) * 30);
-                 }
+                highestDpd = Math.max(...numericDpds);
             }
             
-            if(hasRealDpd || highestDpd > 0){
-                 if (highestDpd === 0) dpdCounts.onTime += 1;
-                 else if (highestDpd <= 30) dpdCounts.days1_30 += 1;
-                 else if (highestDpd <= 60) dpdCounts.days31_60 += 1;
-                 else if (highestDpd <= 90) dpdCounts.days61_90 += 1;
-                 else if (highestDpd < 999) dpdCounts.days90plus += 1;
-                 else if (highestDpd >= 999) dpdCounts.default += 1;
+            if (highestDpd > 0) {
+              if (highestDpd <= 30) dpdCounts.days1_30 += 1;
+              else if (highestDpd <= 60) dpdCounts.days31_60 += 1;
+              else if (highestDpd <= 90) dpdCounts.days61_90 += 1;
+              else if (highestDpd < 999) dpdCounts.days90plus += 1;
+              else dpdCounts.default += 1;
             } else {
                 dpdCounts.onTime += 1;
             }
@@ -904,9 +897,13 @@ export default function CreditWiseAIPage() {
 
   const inquiryCounts = getInquiryCounts();
 
+  const handlePrint = () => {
+    window.print();
+  }
+
   return (
-    <div className={cn("min-h-screen bg-background font-body text-foreground", theme)}>
-       <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm">
+    <div className={cn("min-h-screen bg-background font-body text-foreground", theme, 'print-container')}>
+       <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm print:hidden">
         <div className="container flex h-16 items-center">
             <div className="mr-4 flex items-center">
               <Sparkles className="h-6 w-6 mr-2 text-primary" />
@@ -922,13 +919,13 @@ export default function CreditWiseAIPage() {
         </div>
       </header>
 
-      <main className="container mx-auto p-4 md:p-8">
-        <div className="text-center mb-12">
+      <main className="container mx-auto p-4 md:p-8 print:p-0">
+        <div className="text-center mb-12 print:hidden">
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">Advanced AI Credit Score Analyzer</h1>
             <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">Upload your CIBIL report PDF to unlock instant AI-powered insights, personalized scoring, and actionable advice.</p>
         </div>
 
-        <Card className="mb-8 shadow-lg hover:shadow-xl transition-shadow">
+        <Card className="mb-8 shadow-lg hover:shadow-xl transition-shadow print:hidden">
             <CardHeader>
                 <CardTitle className="flex items-center text-xl"><UploadCloud className="mr-3 h-6 w-6 text-primary" />Upload Your CIBIL Report (PDF)</CardTitle>
             </CardHeader>
@@ -952,7 +949,7 @@ export default function CreditWiseAIPage() {
         </Card>
         
         {isLoading && (
-            <Card className="text-center p-8 my-8">
+            <Card className="text-center p-8 my-8 print:hidden">
                 <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary mb-4" />
                 <h3 className="text-xl font-semibold">Processing your CIBIL report...</h3>
                 <p className="text-muted-foreground">This may take a moment.</p>
@@ -961,8 +958,8 @@ export default function CreditWiseAIPage() {
         )}
         
         {rawText && !isLoading && (
-            <div className="space-y-8">
-              <Card>
+            <div className="space-y-8 print:space-y-0">
+              <Card className="print:hidden">
                   <CardHeader>
                       <CardTitle className="flex items-center"><FileText className="mr-3 h-6 w-6 text-primary" />Credit Score &amp; Consumer Information</CardTitle>
                   </CardHeader>
@@ -994,7 +991,7 @@ export default function CreditWiseAIPage() {
                   </CardContent>
               </Card>
 
-              <Card>
+              <Card className="print:hidden">
                 <CardHeader>
                   <CardTitle className="flex items-center"><Bot className="mr-3 h-6 w-6 text-primary" />AI Credit Analysis Meter</CardTitle>
                   <CardDescription>A holistic rating based on a comprehensive AI analysis of your report.</CardDescription>
@@ -1040,7 +1037,7 @@ export default function CreditWiseAIPage() {
                 </CardContent>
               </Card>
               
-               <Card>
+               <Card className="print:hidden">
                 <CardHeader>
                   <CardTitle className="flex items-center">
                     <Banknote className="mr-3 h-6 w-6 text-primary" />
@@ -1106,7 +1103,7 @@ export default function CreditWiseAIPage() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="print:hidden">
                 <CardHeader>
                   <CardTitle className="flex items-center"><FileSymlink className="mr-3 h-6 w-6 text-primary" />Credit Summary</CardTitle>
                   <CardDescription>A detailed overview of your credit accounts and metrics.</CardDescription>
@@ -1129,7 +1126,7 @@ export default function CreditWiseAIPage() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="print:hidden">
                 <CardHeader>
                   <CardTitle className="flex items-center"><Search className="mr-3 h-6 w-6 text-primary" />Credit Inquiries Analysis</CardTitle>
                   <CardDescription>An overview of recent credit inquiries on your report.</CardDescription>
@@ -1142,7 +1139,7 @@ export default function CreditWiseAIPage() {
                 </CardContent>
               </Card>
 
-               <Card>
+               <Card className="print:hidden">
                 <CardHeader>
                   <CardTitle className="flex items-center"><LineChart className="mr-3 h-6 w-6 text-primary" />DPD (Days Past Due) Analysis</CardTitle>
                   <CardDescription>Days Past Due (DPD) indicate how late payments were made on your accounts. Lower DPD is better for your credit score.</CardDescription>
@@ -1193,7 +1190,7 @@ export default function CreditWiseAIPage() {
                 </CardContent>
               </Card>
 
-               <Card>
+               <Card className="print:hidden">
                 <CardHeader>
                     <CardTitle className="flex items-center"><ShieldAlert className="mr-3 h-6 w-6 text-primary" />Risk Assessment</CardTitle>
                 </CardHeader>
@@ -1222,7 +1219,7 @@ export default function CreditWiseAIPage() {
               </Card>
               
               {potentialIssues.length > 0 && (
-                <Card>
+                <Card className="print:hidden">
                   <CardHeader>
                     <CardTitle className="flex items-center"><AlertCircle className="mr-3 h-6 w-6 text-yellow-500" />Potential Issues</CardTitle>
                   </CardHeader>
@@ -1240,7 +1237,7 @@ export default function CreditWiseAIPage() {
               )}
               
               {flaggedAccounts.length > 0 && (
-                 <Card>
+                 <Card className="print:hidden">
                   <CardHeader>
                     <CardTitle className="flex items-center"><Flag className="mr-3 h-6 w-6 text-red-500" />Flagged Accounts</CardTitle>
                     <CardDescription>These accounts have potential issues that may negatively impact your score.</CardDescription>
@@ -1269,7 +1266,7 @@ export default function CreditWiseAIPage() {
               )}
 
               {debtPaydownTimeline.length > 0 && (
-                <Card>
+                <Card className="print:hidden">
                   <CardHeader>
                     <CardTitle className="flex items-center"><CalendarDays className="mr-3 h-6 w-6 text-primary" />Debt Paydown Timeline</CardTitle>
                     <CardDescription>Based on current EMIs and outstanding balances. Does not include interest calculations.</CardDescription>
@@ -1302,7 +1299,7 @@ export default function CreditWiseAIPage() {
               )}
 
 
-              <Card>
+              <Card className="print:hidden">
                 <CardHeader>
                   <CardTitle className="flex items-center"><ShieldCheck className="mr-3 h-6 w-6 text-primary" />AI-Based Credit Health Scoring</CardTitle>
                   <CardDescription>Complete this questionnaire for a comprehensive credit health assessment.</CardDescription>
@@ -1345,7 +1342,7 @@ export default function CreditWiseAIPage() {
               </Card>
               
               {aiSuggestions && (
-                <Card>
+                <Card className="print:hidden">
                   <CardHeader>
                     <CardTitle className="flex items-center text-primary"><Sparkles className="mr-3 h-6 w-6"/>AI-Powered Credit Improvement Suggestions</CardTitle>
                   </CardHeader>
@@ -1355,7 +1352,7 @@ export default function CreditWiseAIPage() {
                 </Card>
               )}
               
-              <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 print:hidden">
                 <div className="lg:col-span-3">
                   <Card>
                     <CardHeader>
@@ -1437,7 +1434,7 @@ export default function CreditWiseAIPage() {
               </div>
               
               {aiDebtAdvice && (
-                <Card>
+                <Card className="print:hidden">
                   <CardHeader>
                     <CardTitle className="flex items-center text-primary"><Sparkles className="mr-3 h-6 w-6"/>AI-Powered Debt Management Advice</CardTitle>
                   </CardHeader>
@@ -1447,7 +1444,7 @@ export default function CreditWiseAIPage() {
                 </Card>
               )}
 
-              <Card>
+              <Card className="print:hidden">
                 <CardHeader>
                   <CardTitle className="flex items-center"><BrainCircuit className="mr-3 h-6 w-6 text-primary" />Full AI Credit Report Analysis</CardTitle>
                   <CardDescription>Get a detailed analysis of your credit report with personalized recommendations.</CardDescription>
@@ -1466,25 +1463,49 @@ export default function CreditWiseAIPage() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="print:hidden">
                 <CardHeader>
                   <CardTitle className="flex items-center"><FileSearch className="mr-3 h-6 w-6 text-primary" />Raw Report Text</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <Button onClick={() => setShowRawText(!showRawText)} variant="outline">{showRawText ? 'Hide' : 'Show'} Raw Text</Button>
-                    {showRawText && (
-                        <div className="mt-4 p-4 border rounded-lg bg-muted/50 max-h-96 overflow-y-auto">
-                            <pre className="text-xs whitespace-pre-wrap font-mono">{rawText}</pre>
-                        </div>
-                    )}
+                    <div className="flex gap-2">
+                      <Button onClick={() => setShowRawText(!showRawText)} variant="outline">{showRawText ? 'Hide' : 'Show'} Raw Text</Button>
+                      {showRawText && (
+                        <Button onClick={handlePrint} variant="outline">
+                          <Printer className="mr-2 h-4 w-4" />
+                          Print
+                        </Button>
+                      )}
+                    </div>
                 </CardContent>
               </Card>
+              {showRawText && (
+                <div id="printable-text" className="hidden print:block bg-white text-black p-8 shadow-lg">
+                    <pre className="text-xs whitespace-pre-wrap font-mono">{rawText}</pre>
+                </div>
+              )}
             </div>
         )}
       </main>
-      <footer className="container py-8 text-center text-muted-foreground">
+      <footer className="container py-8 text-center text-muted-foreground print:hidden">
           <p>&copy; {new Date().getFullYear()} CreditWise AI. All rights reserved.</p>
       </footer>
+      <style jsx global>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #printable-text, #printable-text * {
+            visibility: visible;
+          }
+          #printable-text {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+        }
+      `}</style>
     </div>
   );
 }
