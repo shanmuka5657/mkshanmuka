@@ -232,6 +232,7 @@ export default function CreditWiseAIPage() {
   const [loanType, setLoanType] = useState('Personal Loan');
   const [desiredLoanAmount, setDesiredLoanAmount] = useState('');
   const [desiredTenure, setDesiredTenure] = useState('');
+  const [desiredInterestRate, setDesiredInterestRate] = useState('');
 
 
   const { toast } = useToast()
@@ -344,6 +345,7 @@ export default function CreditWiseAIPage() {
     setLoanType('Personal Loan');
     setDesiredLoanAmount('');
     setDesiredTenure('');
+    setDesiredInterestRate('');
 
     if(fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -755,11 +757,11 @@ export default function CreditWiseAIPage() {
       });
       return;
     }
-    if (!desiredLoanAmount || !desiredTenure) {
+    if (!desiredLoanAmount || !desiredTenure || !desiredInterestRate) {
       toast({
         variant: 'destructive',
         title: 'Missing Loan Details',
-        description: 'Please enter the desired loan amount and tenure.',
+        description: 'Please enter the desired loan amount, tenure, and interest rate.',
       });
       return;
     }
@@ -774,6 +776,7 @@ export default function CreditWiseAIPage() {
         loanType: loanType as any,
         desiredLoanAmount: parseFloat(desiredLoanAmount),
         desiredTenure: parseInt(desiredTenure),
+        desiredInterestRate: parseFloat(desiredInterestRate),
       });
       setUnderwritingResult(result);
       toast({
@@ -1361,7 +1364,7 @@ export default function CreditWiseAIPage() {
                       </CardHeader>
                       <form onSubmit={handleGetUnderwriting}>
                         <CardContent className="space-y-4">
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div>
                                 <Label htmlFor="loanType">Loan Type</Label>
                                 <Select value={loanType} onValueChange={setLoanType}>
@@ -1398,6 +1401,17 @@ export default function CreditWiseAIPage() {
                                 required
                                 />
                             </div>
+                            <div>
+                                <Label htmlFor="desiredInterestRate">Desired Interest Rate (%)</Label>
+                                <Input
+                                id="desiredInterestRate"
+                                type="number"
+                                placeholder="e.g., 12.5"
+                                value={desiredInterestRate}
+                                onChange={(e) => setDesiredInterestRate(e.target.value)}
+                                required
+                                />
+                            </div>
                           </div>
                           <Alert>
                             <AlertCircle className="h-4 w-4" />
@@ -1430,7 +1444,7 @@ export default function CreditWiseAIPage() {
                           <div className="space-y-4">
                             <div>
                               <h5 className="font-semibold text-lg mb-2">Underwriting Summary</h5>
-                              <p className="text-sm text-foreground/80">{underwritingResult.underwritingSummary}</p>
+                              <p className="text-sm text-foreground/80 whitespace-pre-line">{underwritingResult.underwritingSummary}</p>
                             </div>
                             
                             {underwritingResult.conditions.length > 0 && (

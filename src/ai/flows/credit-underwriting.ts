@@ -36,6 +36,9 @@ const CreditUnderwritingInputSchema = z.object({
   desiredTenure: z
     .number()
     .describe('The desired loan tenure in months.'),
+  desiredInterestRate: z
+    .number()
+    .describe('The desired annual interest rate for the loan (e.g., 12.5).'),
 });
 export type CreditUnderwritingInput = z.infer<
   typeof CreditUnderwritingInputSchema
@@ -62,7 +65,7 @@ const CreditUnderwritingOutputSchema = z.object({
   underwritingSummary: z
     .string()
     .describe(
-      'A comprehensive, multi-paragraph summary explaining the decision. It should detail the factors (positive and negative) from the credit report that influenced the outcome.'
+      'A comprehensive, multi-paragraph summary explaining the decision. It should detail the factors (positive and negative) from the credit report that influenced the outcome, leaving no questions unanswered.'
     ),
   requiredDocuments: z
     .array(z.string())
@@ -87,12 +90,13 @@ const prompt = ai.definePrompt({
   name: 'creditUnderwritingPrompt',
   input: {schema: CreditUnderwritingInputSchema},
   output: {schema: CreditUnderwritingOutputSchema},
-  prompt: `You are a senior credit underwriter for a major bank in India. Your task is to perform a comprehensive underwriting analysis for a loan application. You must be thorough, fair, and follow standard banking risk policies.
+  prompt: `You are a senior credit underwriter for a major bank in India. Your task is to perform an exceptionally comprehensive and exhaustive underwriting analysis for a loan application. Your response must be so thorough that it preempts any potential questions from the applicant. You must be fair and follow standard banking risk policies.
 
 **Applicant's Profile:**
 - **Loan Type Requested:** {{{loanType}}}
 - **Desired Loan Amount:** ₹{{{desiredLoanAmount}}}
 - **Desired Tenure:** {{{desiredTenure}}} months
+- **Desired Interest Rate:** {{{desiredInterestRate}}}%
 - **Estimated Monthly Income:** ₹{{{estimatedIncome}}}
 - **AI Credit Score:** {{{aiRating.aiScore}}}/100 (Rating: {{{aiRating.rating}}})
 - **AI Credit Summary:** {{{aiRating.summary}}}
@@ -104,15 +108,19 @@ const prompt = ai.definePrompt({
 
 **Your Underwriting Task:**
 
-1.  **Analyze the Entire Profile:** Scrutinize the full credit report and all provided data. Pay close attention to payment history (DPD), credit utilization, age of credit lines, recent inquiries, written-off/settled accounts, and the mix of credit types.
-2.  **Determine Debt-to-Income (DTI) Ratio:** A key factor is that total EMIs (including the proposed new loan) should not exceed 50-60% of the applicant's monthly income. You will need to estimate the EMI for the requested loan to calculate this.
-3.  **Make a Decision:** Based on your analysis, decide on one of the following outcomes: 'Approved', 'Conditionally Approved', 'Declined', or 'Requires Manual Review'.
-4.  **Determine Loan Terms:** If approved or conditionally approved, determine a realistic 'approvedLoanAmount', 'recommendedInterestRate', and 'recommendedTenure'. The approved amount can be less than the desired amount if the risk is too high. The interest rate should be based on the AI score and rating (higher score = lower rate).
-5.  **Write a Comprehensive Summary:** Explain your decision in detail. Reference specific positive factors (e.g., "consistent on-time payments for home loan") and negative factors (e.g., "high utilization on two credit cards and a recent written-off personal loan") from the report to justify your conclusion.
-6.  **List Required Documents:** Provide a standard list of documents required for the specified 'loanType'.
-7.  **List Conditions:** If the decision is 'Conditionally Approved', list the specific conditions required for final approval.
+1.  **Holistic Analysis:** Scrutinize every detail of the full credit report and all provided data. Pay extremely close attention to payment history (DPD patterns, frequency, and severity), credit utilization on each account and overall, age of all credit lines (oldest, newest, average), the mix and quality of credit types (secured vs. unsecured), and the pattern/frequency of recent inquiries.
+2.  **Debt-to-Income (DTI) Calculation and Impact:** A critical factor is the DTI ratio. Total existing EMIs from the report plus the EMI of the proposed new loan should not exceed 50-60% of the applicant's monthly income. You must estimate the EMI for the requested loan to calculate this and explicitly state the calculated DTI ratio and how it impacted your decision.
+3.  **Make a Decision:** Based on your exhaustive analysis, decide on one of the following outcomes: 'Approved', 'Conditionally Approved', 'Declined', or 'Requires Manual Review'.
+4.  **Determine and Justify Loan Terms:** If approved or conditionally approved, determine a realistic 'approvedLoanAmount', 'recommendedInterestRate', and 'recommendedTenure'. The approved amount can be less than the desired amount if the risk is high. The interest rate must be justified based on the AI score, risk factors, and market standards. Explain *why* the recommended terms might differ from what the user desired.
+5.  **Write a Comprehensive, Unquestionable Summary:** This is the most critical part. Your summary must be multi-paragraph and leave no stone unturned.
+    - Start with a clear statement of the decision.
+    - Explain *exactly* how the applicant's profile (income, DTI, AI score) led to the decision.
+    - Reference specific positive factors (e.g., "consistent on-time payments for a home loan of 5 years shows credit discipline") and negative factors (e.g., "high utilization of 95% on two credit cards and a recent written-off personal loan of ₹50,000 indicates high credit risk and poor financial management").
+    - Connect these specific factors directly to the approved loan amount, interest rate, and tenure. For example, if declining, state "The application was declined due to a high DTI of 65% and a recent history of late payments on a personal loan, which makes further credit extension too risky at this time."
+6.  **List Required Documents:** Provide a standard, comprehensive list of documents required for the specified 'loanType'.
+7.  **List Conditions:** If the decision is 'Conditionally Approved', list the specific, actionable conditions required for final approval (e.g., "Clearance of the outstanding balance on the settled credit card account," "Submission of last 6 months of bank statements for income verification").
 
-Generate the final, structured output based on this complete and thorough analysis.`,
+Generate the final, structured output based on this complete and thoroughly justified analysis.`,
 });
 
 const creditUnderwritingFlow = ai.defineFlow(
