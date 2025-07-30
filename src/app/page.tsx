@@ -433,23 +433,31 @@ export default function CreditWiseAIPage() {
         const summarySectionMatch = normalizedText.match(/SUMMARY: ACCOUNT\(S\) ACCOUNT TYPE ACCOUNTS ADVANCES BALANCES DATE OPENED(.*?)ENQUIRIES/i);
         const summaryText = summarySectionMatch ? summarySectionMatch[1] : '';
         
-        const highCreditMatch = summaryText.match(/HIGH CR\/SANC\. AMT:\s*([\d,]+)/i);
-
         let summary: CreditSummary = { ...initialCreditSummary };
+        const totalAcMatch = summaryText.match(/TOTAL:\s*(\d+)/i);
+        summary.totalAccounts = totalAcMatch ? parseInt(totalAcMatch[1], 10) : 0;
+        
+        const highCreditMatch = summaryText.match(/HIGH CR\/SANC\. AMT:\s*([\d,]+)/i);
         summary.totalCreditLimit = highCreditMatch ? parseInt(highCreditMatch[1].replace(/,/g, ''), 10) : 0;
+        
+        const currentBalanceMatch = summaryText.match(/CURRENT:\s*([\d,]+)/i);
+        summary.totalOutstanding = currentBalanceMatch ? parseInt(currentBalanceMatch[1].replace(/,/g, ''), 10) : 0;
+        summary.totalDebt = summary.totalOutstanding;
+
+        const zeroBalanceMatch = summaryText.match(/ZERO-BALANCE:\s*(\d+)/i);
+        summary.closedAccounts = zeroBalanceMatch ? parseInt(zeroBalanceMatch[1], 10) : 0;
+        summary.activeAccounts = summary.totalAccounts - summary.closedAccounts;
+
+        summary.creditUtilization = summary.totalCreditLimit > 0 ? Math.round((summary.totalOutstanding / summary.totalCreditLimit) * 100) : 0;
+        summary.debtToLimitRatio = summary.creditUtilization;
         
         const accountSections = normalizedText.split(/ACCOUNT DATES AMOUNTS STATUS/);
         const loans: LoanAccount[] = [];
         const currentFlaggedAccounts: FlaggedAccount[] = [];
 
-        let totalOutstanding = 0;
         let totalEMI = 0;
         let maxEMI = 0;
         let ccPayments = 0;
-        let totalLimit = 0;
-
-        const dpdCounts: DpdSummary = { ...initialDpdSummary };
-        const accountDpdDetails: AccountDpdStatus[] = [];
 
         accountSections.slice(1).forEach(section => {
             const typeMatch = section.match(/TYPE:\s*([A-Za-z\s-]+?)(?=OWNERSHIP|COLLATERAL|OPENED)/i);
@@ -490,11 +498,6 @@ export default function CreditWiseAIPage() {
             let isFlagged = false;
             let issue = '';
 
-            if (accountStatus.includes('active') || accountStatus.includes('open')) {
-                summary.activeAccounts += 1;
-            } else if (accountStatus.includes('closed')) {
-                summary.closedAccounts += 1;
-            }
             if (accountStatus.includes('written off')) { summary.writtenOff += 1; issue = 'Written Off'; isFlagged = true; }
             if (accountStatus.includes('settled')) { summary.settled += 1; issue = 'Settled'; isFlagged = true; }
             if (accountStatus.includes('doubtful') || loan.paymentHistory.includes('DBT')) { summary.doubtful += 1; issue = 'Doubtful'; isFlagged = true; }
@@ -510,69 +513,24 @@ export default function CreditWiseAIPage() {
                 currentFlaggedAccounts.push({ ...loan, issue });
             }
 
-            const limit = parseInt(loan.sanctioned, 10) || 0;
-            if(limit > 0) totalLimit += limit;
-            
-            const outstanding = parseInt(loan.balance, 10) || 0;
-            totalOutstanding += outstanding;
-            
             const emi = parseInt(loan.emi, 10) || 0;
-            totalEMI += emi;
-            if (emi > maxEMI) maxEMI = emi;
+            if (accountStatus.includes('active') || accountStatus.includes('open')) {
+                totalEMI += emi;
+                if (emi > maxEMI) maxEMI = emi;
+            }
 
             if (accountType.toLowerCase().includes('credit card')) {
+                const outstanding = parseInt(loan.balance, 10) || 0;
                 ccPayments += Math.max(outstanding * 0.05, 1000); // 5% or 1000
             }
-          
-            const paymentHistory = loan.paymentHistory;
-            const dpdValues = (paymentHistory.match(/\b(\d{1,3}|STD|SUB|DBT|LSS|XXX)\b/g) || []);
-            
-            let highestDpd = 0;
-
-            if (dpdValues.length > 0) {
-                const numericDpds = dpdValues.map(val => {
-                    if (val === 'STD' || val === '000' || val === 'XXX') return 0;
-                    if (val === 'SUB') return 91; 
-                    if (val === 'DBT') return 999;
-                    if (val === 'LSS') return 999;
-                    if (/\d+/.test(val)) return parseInt(val, 10);
-                    return 0;
-                });
-                highestDpd = Math.max(...numericDpds);
-            }
-            
-            if (highestDpd > 0) {
-              if (highestDpd <= 30) dpdCounts.days1_30 += 1;
-              else if (highestDpd <= 60) dpdCounts.days31_60 += 1;
-              else if (highestDpd <= 90) dpdCounts.days61_90 += 1;
-              else if (highestDpd < 999) dpdCounts.days90plus += 1;
-              else dpdCounts.default += 1;
-            } else {
-                dpdCounts.onTime += 1;
-            }
-
-            accountDpdDetails.push({
-                accountType: accountType,
-                status: accountStatus || 'N/A',
-                highestDpd,
-                paymentHistory,
-            });
         });
 
-        summary.totalAccounts = loans.length;
-        summary.totalCreditLimit = totalLimit;
-        summary.totalOutstanding = totalOutstanding;
-        summary.totalDebt = totalOutstanding;
-        summary.creditUtilization = totalLimit > 0 ? Math.round((totalOutstanding / totalLimit) * 100) : 0;
-        summary.debtToLimitRatio = totalLimit > 0 ? Math.round((totalOutstanding / totalLimit) * 100) : 0;
         summary.totalMonthlyEMI = totalEMI;
         summary.maxSingleEMI = maxEMI;
         summary.creditCardPayments = Math.round(ccPayments);
         
         setCreditSummary(summary);
         setFlaggedAccounts(currentFlaggedAccounts);
-        setDpdSummary(dpdCounts);
-        setAccountDpdStatus(accountDpdDetails);
         setTotalEmi(String(totalEMI));
 
         const inquirySectionMatch = normalizedText.match(/ENQUIRIES:(.*?)END OF REPORT/i);
@@ -591,37 +549,6 @@ export default function CreditWiseAIPage() {
         }
         
         setInquiries(currentInquiries);
-
-        const risk = assessCreditRisk(loans, currentInquiries, summary);
-        setRiskAssessment(risk);
-
-        const issues = [];
-        if (summary.writtenOff > 0) issues.push(`${summary.writtenOff} account(s) are Written Off. This severely impacts your score.`);
-        if (summary.settled > 0) issues.push(`${summary.settled} account(s) are Settled. This negatively impacts your score.`);
-        if (summary.doubtful > 0) issues.push(`${summary.doubtful} account(s) are Doubtful. This is a very negative mark.`);
-        if (summary.creditUtilization > 30) issues.push(`Your credit utilization is high at ${summary.creditUtilization}%. It's recommended to keep it below 30%.`);
-        const totalOverdue = loans.reduce((acc, loan) => acc + (parseInt(loan.overdue, 10) || 0), 0);
-        if (totalOverdue > 0) issues.push(`You have a total overdue amount of ₹${totalOverdue.toLocaleString()}.`);
-
-        setPotentialIssues(issues);
-
-        const timeline: DebtPaydown[] = loans
-            .filter(loan => parseInt(loan.balance, 10) > 0 && parseInt(loan.emi, 10) > 0)
-            .map(loan => {
-                const balance = parseInt(loan.balance, 10);
-                const emi = parseInt(loan.emi, 10);
-                const monthsRemaining = Math.ceil(balance / emi);
-                const payoffDate = new Date();
-                payoffDate.setMonth(payoffDate.getMonth() + monthsRemaining);
-                return {
-                    type: loan.type,
-                    balance,
-                    emi,
-                    monthsRemaining,
-                    payoffDate: payoffDate.toLocaleDateString('en-IN', { year: 'numeric', month: 'long' }),
-                };
-            });
-        setDebtPaydownTimeline(timeline);
     };
 
 
@@ -1509,3 +1436,4 @@ export default function CreditWiseAIPage() {
     </div>
   );
 }
+
