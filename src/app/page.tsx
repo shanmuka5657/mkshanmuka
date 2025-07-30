@@ -1319,18 +1319,11 @@ export default function CreditWiseAIPage() {
                         </Button>
                         <Button variant="outline" onClick={handlePrint}>
                             <Printer className="mr-2"/>
-                            Print Raw Text
+                            Print Report
                         </Button>
                     </div>
                 </CardContent>
               </Card>
-
-              <div className="print-only">
-                <div className="p-8 bg-white shadow-lg a4-paper">
-                    <h2 className="text-2xl font-bold mb-4 border-b pb-2 text-black">Raw Credit Report Text</h2>
-                    <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans">{rawText}</pre>
-                </div>
-              </div>
 
               {showRawText && (
                  <Card className="print:hidden">
@@ -1342,6 +1335,13 @@ export default function CreditWiseAIPage() {
                     </CardContent>
                 </Card>
               )}
+
+              <div className="print-this">
+                <div className="p-8 bg-white shadow-lg a4-paper">
+                    <h2 className="text-2xl font-bold mb-4 border-b pb-2 text-black">Raw Credit Report Text</h2>
+                    <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans">{rawText}</pre>
+                </div>
+              </div>
             </div>
         )}
       </main>
@@ -1354,10 +1354,10 @@ export default function CreditWiseAIPage() {
             body * {
                 visibility: hidden;
             }
-            .print-only, .print-only * {
+            .print-this, .print-this * {
                 visibility: visible;
             }
-            .print-only {
+            .print-this {
                 position: absolute;
                 left: 0;
                 top: 0;
@@ -1369,13 +1369,15 @@ export default function CreditWiseAIPage() {
                 margin: 0 auto;
                 color: #000 !important;
                 background: #fff !important;
+                box-shadow: none;
+                border: none;
             }
         }
-        .print-only {
+        .print-this {
             display: none;
         }
         @media print {
-            .print-only {
+            .print-this {
                 display: block;
             }
         }
