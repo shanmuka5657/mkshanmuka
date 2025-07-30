@@ -338,10 +338,14 @@ export default function CreditWiseAIPage() {
 
       // 4. Recent Inquiries
       const recentInquiries = currentInquiries.filter(inq => {
-          const inqDate = new Date(inq.date.split('-').reverse().join('-'));
-          const sixMonthsAgo = new Date();
-          sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-          return inqDate > sixMonthsAgo;
+          try {
+            const inqDate = new Date(inq.date.split('-').reverse().join('-'));
+            const sixMonthsAgo = new Date();
+            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+            return !isNaN(inqDate.getTime()) && inqDate > sixMonthsAgo;
+          } catch(e) {
+            return false;
+          }
       }).length;
 
       if (recentInquiries > 3) {
@@ -388,8 +392,8 @@ export default function CreditWiseAIPage() {
       const summarySection = normalizedText.match(/SUMMARY:(.*?)ACCOUNT\(S\):/s);
       if (summarySection) {
           const summaryText = summarySection[1];
-          const totalAcMatch = summaryText.match(/TOTAL:\s*(\d+)/i);
-          if (totalAcMatch) summary.totalAccounts = parseInt(totalAcMatch[1], 10);
+          const totalAcMatch = summaryText.match(/TOTAL:\s*([\d,]+)/i);
+          if (totalAcMatch) summary.totalAccounts = parseInt(totalAcMatch[1].replace(/,/g, ''), 10);
           
           const highCreditMatch = summaryText.match(/HIGH CR\/SANC\. AMT:\s*([\d,]+)/i);
           if (highCreditMatch) summary.totalCreditLimit = parseInt(highCreditMatch[1].replace(/,/g, ''), 10);
@@ -397,8 +401,8 @@ export default function CreditWiseAIPage() {
           const currentBalanceMatch = summaryText.match(/CURRENT:\s*([\d,]+)/i);
           if (currentBalanceMatch) summary.totalOutstanding = parseInt(currentBalanceMatch[1].replace(/,/g, ''), 10);
           
-          const zeroBalanceMatch = summaryText.match(/ZERO-BALANCE:\s*(\d+)/i);
-          if (zeroBalanceMatch) summary.closedAccounts = parseInt(zeroBalanceMatch[1], 10);
+          const zeroBalanceMatch = summaryText.match(/ZERO-BALANCE:\s*([\d,]+)/i);
+          if (zeroBalanceMatch) summary.closedAccounts = parseInt(zeroBalanceMatch[1].replace(/,/g, ''), 10);
 
           summary.activeAccounts = summary.totalAccounts - summary.closedAccounts;
           summary.totalDebt = summary.totalOutstanding;
@@ -469,7 +473,7 @@ export default function CreditWiseAIPage() {
           if (accountStatus.includes('sub-standard') || paymentHistory.includes('SUB')) { issue = 'Sub-standard Account'; isFlagged = true; }
           
           const overdueAmount = parseInt(loan.overdue, 10);
-          if (overdueAmount > 0) {
+          if (!isNaN(overdueAmount) && overdueAmount > 0) {
               issue = `Overdue amount of ₹${overdueAmount.toLocaleString()}`;
               isFlagged = true;
           }
@@ -479,39 +483,39 @@ export default function CreditWiseAIPage() {
           }
 
           const emi = parseInt(loan.emi, 10) || 0;
-          if (accountStatus.includes('active') || accountStatus.includes('open')) {
-              totalEMI += emi;
-              if (emi > maxEMI) maxEMI = emi;
+          if (!loan.status.includes('closed') && !loan.status.includes('written off') && !loan.status.includes('settled')) {
+            totalEMI += emi;
+            if (emi > maxEMI) maxEMI = emi;
           }
 
-          if (accountType.toLowerCase().includes('credit card') && (accountStatus.includes('active') || accountStatus.includes('open'))) {
+
+          if (accountType.toLowerCase().includes('credit card') && !loan.status.includes('closed')) {
               const outstanding = parseInt(loan.balance, 10) || 0;
               if(outstanding > 0) {
                 ccPayments += Math.max(outstanding * 0.05, 500); 
               }
           }
           
-          // DPD Analysis
           let highestDpd = 0;
-          if(paymentHistory !== 'N/A') {
-            const dpdValues = paymentHistory.match(/(\d{3})|STD|SUB|DBT|XXX/g) || [];
-            dpdValues.forEach(dpdStr => {
-              if(dpdStr === 'STD' || dpdStr === '000' || dpdStr === 'XXX') {
-                tempDpdSummary.onTime++;
-              } else if (dpdStr === 'SUB' || dpdStr === 'DBT'){
-                tempDpdSummary.default++;
-                highestDpd = Math.max(highestDpd, 999);
-              } else {
-                const dpd = parseInt(dpdStr, 10);
-                if(!isNaN(dpd)) {
-                  highestDpd = Math.max(highestDpd, dpd);
-                  if (dpd >= 1 && dpd <= 30) tempDpdSummary.days1_30++;
-                  else if (dpd >= 31 && dpd <= 60) tempDpdSummary.days31_60++;
-                  else if (dpd >= 61 && dpd <= 90) tempDpdSummary.days61_90++;
-                  else if (dpd > 90) tempDpdSummary.days90plus++;
-                }
-              }
-            });
+          if (paymentHistory !== 'N/A') {
+              const dpdValues = paymentHistory.match(/(\d{3})|STD|SUB|DBT|XXX/g) || [];
+              dpdValues.forEach(dpdStr => {
+                  if (dpdStr === 'STD' || dpdStr === '000' || dpdStr === 'XXX') {
+                      tempDpdSummary.onTime++;
+                  } else if (dpdStr === 'SUB' || dpdStr === 'DBT') {
+                      tempDpdSummary.default++;
+                      highestDpd = Math.max(highestDpd, 999);
+                  } else {
+                      const dpd = parseInt(dpdStr, 10);
+                      if (!isNaN(dpd)) {
+                          highestDpd = Math.max(highestDpd, dpd);
+                          if (dpd >= 1 && dpd <= 30) tempDpdSummary.days1_30++;
+                          else if (dpd >= 31 && dpd <= 60) tempDpdSummary.days31_60++;
+                          else if (dpd >= 61 && dpd <= 90) tempDpdSummary.days61_90++;
+                          else if (dpd > 90) tempDpdSummary.days90plus++;
+                      }
+                  }
+              });
           }
           currentDpdStatus.push({ accountType, status: accountStatus, highestDpd, paymentHistory });
       });
@@ -1217,174 +1221,165 @@ export default function CreditWiseAIPage() {
                       <div>
                         <h4 className="font-semibold text-center mb-2">Loan Type Distribution</h4>
                         {loanTypeData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={250}>
-                          <PieChart>
-                            <Pie data={loanTypeData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                              {loanTypeData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                              ))}
-                            </Pie>
-                            <Tooltip />
-                          </PieChart>
-                        </ResponsiveContainer>
-                        ) : <p className="text-muted-foreground text-center pt-10">No loan data to display.</p>}
+                            <ResponsiveContainer width="100%" height={200}>
+                                <PieChart>
+                                <Pie data={loanTypeData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                                    {loanTypeData.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
+                                </Pie>
+                                <Tooltip />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        ) : (<p className="text-center text-muted-foreground">No loan data to display.</p>)}
                       </div>
-                      <Alert>
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>More Visualizations Coming Soon!</AlertTitle>
-                        <AlertDescription>
-                          We are working on adding more charts for amount comparisons, DPD history, and inquiry timelines.
-                        </AlertDescription>
-                      </Alert>
+                      <div>
+                        <h4 className="font-semibold text-center mb-2">Outstanding Loan Amounts</h4>
+                        <ResponsiveContainer width="100%" height={200}>
+                            <BarChart data={[{name: 'Outstanding', value: creditSummary.totalOutstanding}, {name: 'Limit', value: creditSummary.totalCreditLimit}]}>
+                            <XAxis dataKey="name" />
+                            <YAxis />
+                            <Tooltip />
+                            <Bar dataKey="value" fill="hsl(var(--primary))" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
                 <div className="lg:col-span-2">
                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center"><Calculator className="mr-3 h-6 w-6 text-primary" />AI Income Estimation</CardTitle>
-                        <CardDescription>Estimate monthly income based on credit obligations.</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div>
-                          <label className="text-sm font-medium">Total Monthly EMI (₹)</label>
-                          <Input type="number" value={totalEmi} onChange={(e) => setTotalEmi(e.target.value)} placeholder="Auto-filled or enter manually" />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium">Other Monthly Obligations (₹)</label>
-                          <Input type="number" value={otherObligations} onChange={(e) => setOtherObligations(e.target.value)} placeholder="Rent, utilities, etc." />
-                        </div>
-                         <div>
-                          <label className="text-sm font-medium">Target Debt-to-Income Ratio (%)</label>
-                          <div className="flex gap-2">
-                            <Select value={dtiRatio} onValueChange={(val) => {setDtiRatio(val); if (val !== 'custom') { setCustomDti('') } }}>
-                              <SelectTrigger><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="30">30% (Conservative)</SelectItem>
-                                <SelectItem value="40">40% (Standard)</SelectItem>
-                                <SelectItem value="50">50% (Aggressive)</SelectItem>
-                                <SelectItem value="custom">Custom</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            {dtiRatio === 'custom' && (
-                              <Input type="number" value={customDti} onChange={(e) => setCustomDti(e.target.value)} placeholder="e.g., 35" className="w-24"/>
-                            )}
-                          </div>
-                        </div>
-                        <Button onClick={handleCalculateIncome}>Estimate Income</Button>
-                        {estimatedIncome !== null && (
-                          <div className="mt-4 p-4 bg-muted rounded-lg">
-                            <h4 className="font-semibold">Estimated Monthly Income:</h4>
-                            <p className="text-2xl font-bold text-primary">₹{Math.round(estimatedIncome).toLocaleString('en-IN')}</p>
-                            <Button onClick={handleGetDebtAdvice} disabled={isAdvising} className="mt-4 w-full">
-                                {isAdvising ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lightbulb className="mr-2 h-4 w-4" />}
-                                Get AI Debt Management Advice
-                            </Button>
-                          </div>
+                    <CardHeader>
+                      <CardTitle className="flex items-center"><Calculator className="mr-3 h-6 w-6 text-primary" />AI Income Estimator &amp; Debt Management</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <label className="text-sm font-medium">Total Monthly EMI</label>
+                        <Input type="text" placeholder="e.g. 25000" value={totalEmi} onChange={(e) => setTotalEmi(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Other Monthly Obligations (Rent, etc.)</label>
+                        <Input type="text" placeholder="e.g. 15000" value={otherObligations} onChange={(e) => setOtherObligations(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Target Debt-to-Income (DTI) Ratio</label>
+                         <Select value={dtiRatio} onValueChange={setDtiRatio}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select DTI Ratio" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="30">30% (Ideal)</SelectItem>
+                            <SelectItem value="40">40% (Manageable)</SelectItem>
+                            <SelectItem value="50">50% (High)</SelectItem>
+                            <SelectItem value="custom">Custom</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {dtiRatio === 'custom' && (
+                          <Input type="text" placeholder="Enter custom DTI %" value={customDti} onChange={(e) => setCustomDti(e.target.value)} className="mt-2" />
                         )}
-                      </CardContent>
-                    </Card>
+                      </div>
+                      <Button onClick={handleCalculateIncome}>Estimate My Income</Button>
+                      {estimatedIncome !== null && (
+                        <Alert>
+                           <BrainCircuit className="h-4 w-4"/>
+                           <AlertTitle>Estimated Monthly Income</AlertTitle>
+                           <AlertDescription>
+                            Your estimated income is <strong className="text-primary">₹{Math.round(estimatedIncome).toLocaleString('en-IN')}</strong> per month.
+                           </AlertDescription>
+                        </Alert>
+                      )}
+                      
+                      {estimatedIncome !== null && (
+                        <Button onClick={handleGetDebtAdvice} disabled={isAdvising}>
+                            {isAdvising ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lightbulb className="mr-2 h-4 w-4" />}
+                            Get AI Debt Management Advice
+                        </Button>
+                      )}
+                      {aiDebtAdvice && (
+                         <Card className="mt-6 bg-muted/50">
+                            <CardHeader>
+                                <CardTitle className="flex items-center text-primary"><Sparkles className="mr-2 h-6 w-6"/>Your Debt Management Plan</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                               <div className="prose dark:prose-invert max-w-none prose-p:text-foreground/80 prose-headings:text-foreground prose-strong:text-foreground">{aiDebtAdvice}</div>
+                            </CardContent>
+                        </Card>
+                      )}
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
               
-              {aiDebtAdvice && (
-                <Card className="print:hidden">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-primary"><Sparkles className="mr-3 h-6 w-6"/>AI-Powered Debt Management Advice</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="prose dark:prose-invert max-w-none prose-p:text-foreground/80 prose-headings:text-foreground prose-strong:text-foreground">{aiDebtAdvice}</div>
-                  </CardContent>
-                </Card>
-              )}
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center"><BrainCircuit className="mr-3 h-6 w-6 text-primary" />Full AI Credit Report Analysis</CardTitle>
-                  <CardDescription>Get a detailed analysis of your credit report with personalized recommendations.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button onClick={handleAnalyze} disabled={isAnalyzing}>
-                    {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                    Analyze with AI
-                  </Button>
-                  {aiAnalysis && (
-                      <div className="mt-4 p-4 border rounded-lg bg-muted/50">
-                          <h4 className="font-semibold mb-2">AI Analysis Result:</h4>
-                          <div className="prose dark:prose-invert max-w-none prose-p:text-foreground/80 prose-headings:text-foreground prose-strong:text-foreground">{aiAnalysis}</div>
-                      </div>
-                  )}
-                </CardContent>
-              </Card>
-
               <Card className="print:hidden">
                 <CardHeader>
-                  <CardTitle className="flex items-center"><FileSearch className="mr-3 h-6 w-6 text-primary" />Raw Report Text</CardTitle>
+                    <CardTitle className="flex items-center"><FileSearch className="mr-3 h-6 w-6 text-primary" />Raw Report Text</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex gap-2">
-                    <Button onClick={() => setShowRawText(!showRawText)} variant="outline">{showRawText ? 'Hide' : 'Show'} Raw Text</Button>
-                    <Button onClick={handlePrint} variant="outline">
-                      <Printer className="mr-2 h-4 w-4" />
-                      Print
-                    </Button>
-                  </div>
-                  {showRawText && (
-                    <div className="mt-4 p-8 bg-white text-black shadow-lg rounded-sm a4-paper">
-                        <pre className="text-xs whitespace-pre-wrap font-mono">{rawText}</pre>
+                     <div className="flex gap-4">
+                        <Button variant="outline" onClick={() => setShowRawText(!showRawText)}>
+                            {showRawText ? 'Hide Raw Text' : 'Show Raw Text'}
+                        </Button>
+                        <Button variant="outline" onClick={handlePrint}>
+                            <Printer className="mr-2"/>
+                            Print Raw Text
+                        </Button>
                     </div>
-                  )}
                 </CardContent>
               </Card>
+
+              <div className="print-only">
+                <div className="p-8 bg-white shadow-lg a4-paper">
+                    <h2 className="text-2xl font-bold mb-4 border-b pb-2 text-black">Raw Credit Report Text</h2>
+                    <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans">{rawText}</pre>
+                </div>
+              </div>
+
+              {showRawText && (
+                 <Card className="print:hidden">
+                    <CardHeader>
+                        <CardTitle>Raw Text</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <pre className="whitespace-pre-wrap text-xs bg-muted p-4 rounded-lg max-h-96 overflow-auto">{rawText}</pre>
+                    </CardContent>
+                </Card>
+              )}
             </div>
         )}
       </main>
-      <footer className="container py-8 text-center text-muted-foreground print:hidden">
-          <p>&copy; {new Date().getFullYear()} CreditWise AI. All rights reserved.</p>
+      <footer className="text-center py-6 text-sm text-muted-foreground print:hidden">
+         <p>© {new Date().getFullYear()} CreditWise AI. Built with Firebase and Google AI.</p>
       </footer>
+
       <style jsx global>{`
-        .a4-paper {
-          width: 210mm;
-          min-height: 297mm;
-          padding: 20mm;
-          margin: 1cm auto;
-          border: 1px #D3D3D3 solid;
-          border-radius: 5px;
-          background: white;
-          box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .print-only, .print-only * {
+                visibility: visible;
+            }
+            .print-only {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+            .a4-paper {
+                width: 210mm;
+                min-height: 297mm;
+                margin: 0 auto;
+                color: #000 !important;
+                background: #fff !important;
+            }
+        }
+        .print-only {
+            display: none;
         }
         @media print {
-          body, html {
-            margin: 0;
-            padding: 0;
-            background: #fff;
-          }
-          .page-container > * {
-            display: none;
-          }
-          .printable-area, .printable-area * {
-            visibility: visible;
-          }
-          .printable-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
-          .a4-paper {
-            margin: 0;
-            border: initial;
-            border-radius: initial;
-            width: initial;
-            min-height: initial;
-            box-shadow: initial;
-            background: initial;
-            page-break-after: always;
-          }
+            .print-only {
+                display: block;
+            }
         }
       `}</style>
     </div>
   );
 }
-
-      
