@@ -230,6 +230,7 @@ export default function CreditWiseAIPage() {
   const [underwritingResult, setUnderwritingResult] = useState<CreditUnderwritingOutput | null>(null);
   const [isUnderwriting, setIsUnderwriting] = useState(false);
   const [loanType, setLoanType] = useState('Personal Loan');
+  const [employmentType, setEmploymentType] = useState('Salaried');
   const [desiredLoanAmount, setDesiredLoanAmount] = useState('');
   const [desiredTenure, setDesiredTenure] = useState('');
   const [desiredInterestRate, setDesiredInterestRate] = useState('');
@@ -343,6 +344,7 @@ export default function CreditWiseAIPage() {
     setUnderwritingResult(null);
     setIsUnderwriting(false);
     setLoanType('Personal Loan');
+    setEmploymentType('Salaried');
     setDesiredLoanAmount('');
     setDesiredTenure('');
     setDesiredInterestRate('');
@@ -763,7 +765,7 @@ export default function CreditWiseAIPage() {
       toast({
         variant: 'destructive',
         title: 'Missing Loan Details',
-        description: 'Please enter the desired loan amount, tenure, and interest rate.',
+        description: 'Please enter all the required loan details.',
       });
       return;
     }
@@ -775,6 +777,7 @@ export default function CreditWiseAIPage() {
         creditReportText: rawText,
         aiRating: aiRating,
         estimatedIncome: estimatedIncome,
+        employmentType: employmentType as any,
         loanType: loanType as any,
         desiredLoanAmount: parseFloat(desiredLoanAmount),
         desiredTenure: parseInt(desiredTenure),
@@ -1366,8 +1369,21 @@ export default function CreditWiseAIPage() {
                       </CardHeader>
                       <form onSubmit={handleGetUnderwriting}>
                         <CardContent className="space-y-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div>
+                                <Label htmlFor="employmentType">Employment Type</Label>
+                                <Select value={employmentType} onValueChange={setEmploymentType}>
+                                <SelectTrigger id="employmentType">
+                                    <SelectValue placeholder="Select employment type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Salaried">Salaried</SelectItem>
+                                    <SelectItem value="Self-employed">Self-employed</SelectItem>
+                                    <SelectItem value="Daily Wage Earner">Daily Wage Earner</SelectItem>
+                                </SelectContent>
+                                </Select>
+                            </div>
+                             <div>
                                 <Label htmlFor="loanType">Loan Type</Label>
                                 <Select value={loanType} onValueChange={setLoanType}>
                                 <SelectTrigger id="loanType">
@@ -1408,6 +1424,7 @@ export default function CreditWiseAIPage() {
                                 <Input
                                 id="desiredInterestRate"
                                 type="number"
+                                step="0.1"
                                 placeholder="e.g., 12.5"
                                 value={desiredInterestRate}
                                 onChange={(e) => setDesiredInterestRate(e.target.value)}

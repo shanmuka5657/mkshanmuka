@@ -27,6 +27,9 @@ const CreditUnderwritingInputSchema = z.object({
   estimatedIncome: z
     .number()
     .describe("The user's estimated monthly income in INR."),
+  employmentType: z
+    .enum(['Salaried', 'Self-employed', 'Daily Wage Earner'])
+    .describe('The employment status of the applicant.'),
   loanType: z
     .enum(['Personal Loan', 'Home Loan', 'Auto Loan', 'Loan Against Property'])
     .describe('The type of loan the user is applying for.'),
@@ -69,7 +72,7 @@ const CreditUnderwritingOutputSchema = z.object({
     ),
   requiredDocuments: z
     .array(z.string())
-    .describe('A list of documents required for the specified loan type.'),
+    .describe('A list of documents required for the specified loan type and employment type.'),
   conditions: z
     .array(z.string())
     .describe(
@@ -98,6 +101,7 @@ const prompt = ai.definePrompt({
 - **Desired Tenure:** {{{desiredTenure}}} months
 - **Desired Interest Rate:** {{{desiredInterestRate}}}%
 - **Estimated Monthly Income:** ₹{{{estimatedIncome}}}
+- **Employment Type:** {{{employmentType}}}
 - **AI Credit Score:** {{{aiRating.aiScore}}}/100 (Rating: {{{aiRating.rating}}})
 - **AI Credit Summary:** {{{aiRating.summary}}}
 
@@ -109,16 +113,17 @@ const prompt = ai.definePrompt({
 **Your Underwriting Task:**
 
 1.  **Holistic Analysis:** Scrutinize every detail of the full credit report and all provided data. Pay extremely close attention to payment history (DPD patterns, frequency, and severity), credit utilization on each account and overall, age of all credit lines (oldest, newest, average), the mix and quality of credit types (secured vs. unsecured), and the pattern/frequency of recent inquiries.
-2.  **Debt-to-Income (DTI) Calculation and Impact:** A critical factor is the DTI ratio. Total existing EMIs from the report plus the EMI of the proposed new loan should not exceed 50-60% of the applicant's monthly income. You must estimate the EMI for the requested loan to calculate this and explicitly state the calculated DTI ratio and how it impacted your decision.
-3.  **Make a Decision:** Based on your exhaustive analysis, decide on one of the following outcomes: 'Approved', 'Conditionally Approved', 'Declined', or 'Requires Manual Review'.
-4.  **Determine and Justify Loan Terms:** If approved or conditionally approved, determine a realistic 'approvedLoanAmount', 'recommendedInterestRate', and 'recommendedTenure'. The approved amount can be less than the desired amount if the risk is high. The interest rate must be justified based on the AI score, risk factors, and market standards. Explain *why* the recommended terms might differ from what the user desired.
-5.  **Write a Comprehensive, Unquestionable Summary:** This is the most critical part. Your summary must be multi-paragraph and leave no stone unturned.
+2.  **Income Stability Analysis:** The applicant's 'employmentType' is a critical factor. Salaried individuals have stable income. Self-employed income can be variable and requires more documentation. Daily wage earners have the least stable income and pose the highest risk. Your decision and required documents must reflect this.
+3.  **Debt-to-Income (DTI) Calculation and Impact:** A critical factor is the DTI ratio. Total existing EMIs from the report plus the EMI of the proposed new loan should not exceed 50-60% of the applicant's monthly income. You must estimate the EMI for the requested loan to calculate this and explicitly state the calculated DTI ratio and how it impacted your decision. The acceptable DTI may be lower for less stable employment types.
+4.  **Make a Decision:** Based on your exhaustive analysis, decide on one of the following outcomes: 'Approved', 'Conditionally Approved', 'Declined', or 'Requires Manual Review'.
+5.  **Determine and Justify Loan Terms:** If approved or conditionally approved, determine a realistic 'approvedLoanAmount', 'recommendedInterestRate', and 'recommendedTenure'. The approved amount can be less than the desired amount if the risk is high. The interest rate must be justified based on the AI score, risk factors, employment type, and market standards. Explain *why* the recommended terms might differ from what the user desired.
+6.  **Write a Comprehensive, Unquestionable Summary:** This is the most critical part. Your summary must be multi-paragraph and leave no stone unturned.
     - Start with a clear statement of the decision.
-    - Explain *exactly* how the applicant's profile (income, DTI, AI score) led to the decision.
+    - Explain *exactly* how the applicant's profile (income, DTI, AI score, employment stability) led to the decision.
     - Reference specific positive factors (e.g., "consistent on-time payments for a home loan of 5 years shows credit discipline") and negative factors (e.g., "high utilization of 95% on two credit cards and a recent written-off personal loan of ₹50,000 indicates high credit risk and poor financial management").
-    - Connect these specific factors directly to the approved loan amount, interest rate, and tenure. For example, if declining, state "The application was declined due to a high DTI of 65% and a recent history of late payments on a personal loan, which makes further credit extension too risky at this time."
-6.  **List Required Documents:** Provide a standard, comprehensive list of documents required for the specified 'loanType'.
-7.  **List Conditions:** If the decision is 'Conditionally Approved', list the specific, actionable conditions required for final approval (e.g., "Clearance of the outstanding balance on the settled credit card account," "Submission of last 6 months of bank statements for income verification").
+    - Connect these specific factors directly to the approved loan amount, interest rate, and tenure. For example, if declining, state "The application was declined due to a high DTI of 65% combined with the variable nature of self-employment income, which makes further credit extension too risky at this time."
+7.  **List Required Documents:** Provide a standard, comprehensive list of documents required for the specified 'loanType' AND 'employmentType'. For example, salaried employees need salary slips, while self-employed individuals need ITR and business financials. Daily wage earners might need affidavits or bank statements.
+8.  **List Conditions:** If the decision is 'Conditionally Approved', list the specific, actionable conditions required for final approval (e.g., "Clearance of the outstanding balance on the settled credit card account," "Submission of last 6 months of bank statements for income verification").
 
 Generate the final, structured output based on this complete and thoroughly justified analysis.`,
 });
