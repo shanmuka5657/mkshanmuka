@@ -1126,14 +1126,14 @@ export default function CreditWiseAIPage() {
                               Analyze with AI
                           </Button>
                           {aiAnalysis && (
-                            <Card className="mt-6 bg-muted/50">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center text-primary"><Sparkles className="mr-2 h-6 w-6"/>AI Analysis</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  <div className="prose dark:prose-invert max-w-none prose-p:text-foreground/80 prose-headings:text-foreground prose-strong:text-foreground">{aiAnalysis}</div>
-                                </CardContent>
-                            </Card>
+                              <Card className="mt-6 bg-muted/50">
+                                  <CardHeader>
+                                      <CardTitle className="flex items-center text-primary"><Sparkles className="mr-2 h-6 w-6"/>AI Analysis</CardTitle>
+                                  </CardHeader>
+                                  <CardContent>
+                                      <div className="prose dark:prose-invert max-w-none prose-p:text-foreground/80 prose-headings:text-foreground prose-strong:text-foreground">{aiAnalysis}</div>
+                                  </CardContent>
+                              </Card>
                           )}
                       </CardContent>
                   </Card>
@@ -1511,4 +1511,3 @@ export default function CreditWiseAIPage() {
     </div>
   );
 }
-
