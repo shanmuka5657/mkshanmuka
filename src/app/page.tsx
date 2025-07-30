@@ -32,10 +32,11 @@ import {
   Printer,
   LogIn,
   AreaChart,
+  Gavel,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -47,6 +48,7 @@ import { getDebtManagementAdvice } from '@/ai/flows/debt-management-advice';
 import { getAiRating, AiRatingOutput } from '@/ai/flows/ai-rating';
 import { getLoanEligibility, LoanEligibilityOutput } from '@/ai/flows/loan-eligibility';
 import { getRiskAssessment, RiskAssessmentOutput } from '@/ai/flows/risk-assessment';
+import { getCreditUnderwriting, CreditUnderwritingOutput } from '@/ai/flows/credit-underwriting';
 import { cn } from '@/lib/utils';
 import {
   Alert,
@@ -65,6 +67,7 @@ import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger }
 import { auth } from '@/lib/firebase';
 import type { User } from 'firebase/auth';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { Label } from '@/components/ui/label';
 
 
 type CreditSummary = {
@@ -132,6 +135,7 @@ type ActiveView =
   | 'creditImprovement'
   | 'visualizations'
   | 'riskAssessment'
+  | 'creditUnderwriting'
   | null;
 
 
@@ -174,7 +178,10 @@ const initialAiAnalysis: AnalyzeCreditReportOutput = {
   activeAccounts: '',
   closedAccounts: '',
   dpdAnalysis: '',
-  emiAnalysis: ''
+  emiAnalysis: '',
+  creditUtilization: '',
+  creditHistoryLength: '',
+  creditMix: '',
 };
 
 export default function CreditWiseAIPage() {
@@ -218,6 +225,13 @@ export default function CreditWiseAIPage() {
   const [loanEligibility, setLoanEligibility] = useState<LoanEligibilityOutput | null>(null);
   const [isCalculatingEligibility, setIsCalculatingEligibility] = useState(false);
   const [activeView, setActiveView] = useState<ActiveView>(null);
+
+  // New state for Underwriting
+  const [underwritingResult, setUnderwritingResult] = useState<CreditUnderwritingOutput | null>(null);
+  const [isUnderwriting, setIsUnderwriting] = useState(false);
+  const [loanType, setLoanType] = useState('Personal Loan');
+  const [desiredLoanAmount, setDesiredLoanAmount] = useState('');
+  const [desiredTenure, setDesiredTenure] = useState('');
 
 
   const { toast } = useToast()
@@ -325,6 +339,12 @@ export default function CreditWiseAIPage() {
     setLoanEligibility(null);
     setIsCalculatingEligibility(false);
     setActiveView(null);
+    setUnderwritingResult(null);
+    setIsUnderwriting(false);
+    setLoanType('Personal Loan');
+    setDesiredLoanAmount('');
+    setDesiredTenure('');
+
     if(fileInputRef.current) {
         fileInputRef.current.value = '';
     }
@@ -725,6 +745,53 @@ export default function CreditWiseAIPage() {
     }
   };
   
+  const handleGetUnderwriting = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!aiRating || estimatedIncome === null) {
+      toast({
+        variant: 'destructive',
+        title: 'Missing Information',
+        description: 'Please get your AI Rating and estimate your income first.',
+      });
+      return;
+    }
+    if (!desiredLoanAmount || !desiredTenure) {
+      toast({
+        variant: 'destructive',
+        title: 'Missing Loan Details',
+        description: 'Please enter the desired loan amount and tenure.',
+      });
+      return;
+    }
+
+    setIsUnderwriting(true);
+    setUnderwritingResult(null);
+    try {
+      const result = await getCreditUnderwriting({
+        creditReportText: rawText,
+        aiRating: aiRating,
+        estimatedIncome: estimatedIncome,
+        loanType: loanType as any,
+        desiredLoanAmount: parseFloat(desiredLoanAmount),
+        desiredTenure: parseInt(desiredTenure),
+      });
+      setUnderwritingResult(result);
+      toast({
+        title: 'AI Underwriting Complete',
+        description: 'Your simulated underwriting assessment is ready.',
+      });
+    } catch (error: any) {
+      console.error('Error getting underwriting:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Underwriting Failed',
+        description: error.message?.includes('503') ? "The AI model is currently overloaded. Please try again in a moment." : (error.message || 'Could not get underwriting details. Please try again.'),
+      });
+    } finally {
+      setIsUnderwriting(false);
+    }
+  };
+
   const loanTypeData = [
     { name: 'Personal', value: rawText.match(/PERSONAL LOAN/gi)?.length || 0 },
     { name: 'Credit Card', value: rawText.match(/CREDIT CARD/gi)?.length || 0 },
@@ -779,6 +846,21 @@ export default function CreditWiseAIPage() {
       if (rating.includes('very poor')) return 'text-red-500';
       return 'text-foreground';
   }
+
+  const getUnderwritingDecisionColor = (decision: string = '') => {
+    switch (decision) {
+      case 'Approved':
+        return 'bg-green-100 border-green-500 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-300';
+      case 'Conditionally Approved':
+        return 'bg-yellow-100 border-yellow-500 text-yellow-800 dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-300';
+      case 'Requires Manual Review':
+        return 'bg-blue-100 border-blue-500 text-blue-800 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300';
+      case 'Declined':
+        return 'bg-red-100 border-red-500 text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300';
+      default:
+        return 'bg-muted border-border';
+    }
+  };
 
 
   const getInquiryCounts = useCallback(() => {
@@ -989,6 +1071,7 @@ export default function CreditWiseAIPage() {
                       <NavButton view="creditImprovement" label="AI Credit Improvement" icon={<Lightbulb size={24} />} />
                       <NavButton view="visualizations" label="Credit Visualisation" icon={<AreaChart size={24} />} />
                       <NavButton view="riskAssessment" label="AI Risk Assessment" icon={<ShieldAlert size={24} />} />
+                      <NavButton view="creditUnderwriting" label="AI Credit Underwriting" icon={<Gavel size={24} />} />
                     </CardContent>
                   </Card>
                   
@@ -996,7 +1079,7 @@ export default function CreditWiseAIPage() {
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center"><Bot className="mr-3 h-6 w-6 text-primary" />AI Credit Analysis Meter</CardTitle>
-                        <CardDescription>This AI model provides a holistic score of your overall credit health, balancing both positive and negative factors in your report.</CardDescription>
+                        <CardDescription>This AI acts as a holistic credit advisor. It provides a comprehensive score of your overall credit health by balancing both the positive and negative factors in your report.</CardDescription>
                       </CardHeader>
                       <CardContent>
                         <Button onClick={handleGetAiRating} disabled={isRating || !riskAssessment}>
@@ -1139,46 +1222,65 @@ export default function CreditWiseAIPage() {
                             <CardTitle className="flex items-center"><BrainCircuit className="mr-3 h-6 w-6 text-primary" />AI Credit Report Analysis</CardTitle>
                             <CardDescription>An AI-generated breakdown of your credit strengths and weaknesses.</CardDescription>
                         </CardHeader>
-                        <CardContent>
-                            <Button onClick={handleAnalyze} disabled={isAnalyzing || !rawText}>
-                                {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                                Analyze with AI
-                            </Button>
-                            {aiAnalysis && (
-                                <Card className="mt-6 bg-muted/50">
-                                    <CardContent className="pt-6 space-y-6">
-                                      <div>
-                                        <h3 className="font-semibold text-lg mb-2">Strengths in CIBIL</h3>
-                                        <p className="text-sm text-foreground/80">{aiAnalysis.strengths}</p>
-                                      </div>
-                                      <hr className="border-border" />
-                                      <div>
-                                        <h3 className="font-semibold text-lg mb-2">Weaknesses in CIBIL</h3>
-                                        <p className="text-sm text-foreground/80">{aiAnalysis.weaknesses}</p>
-                                      </div>
-                                      <hr className="border-border" />
-                                      <div>
-                                        <h3 className="font-semibold text-lg mb-2">Active Accounts Analysis</h3>
-                                        <p className="text-sm text-foreground/80">{aiAnalysis.activeAccounts}</p>
-                                      </div>
-                                      <hr className="border-border" />
-                                      <div>
-                                        <h3 className="font-semibold text-lg mb-2">Closed Accounts Analysis</h3>
-                                        <p className="text-sm text-foreground/80">{aiAnalysis.closedAccounts}</p>
-                                      </div>
-                                       <hr className="border-border" />
-                                      <div>
-                                        <h3 className="font-semibold text-lg mb-2">DPD (Days Past Due) Analysis</h3>
-                                        <p className="text-sm text-foreground/80">{aiAnalysis.dpdAnalysis}</p>
-                                      </div>
-                                       <hr className="border-border" />
-                                      <div>
-                                        <h3 className="font-semibold text-lg mb-2">EMI Paying for Loan Analysis</h3>
-                                        <p className="text-sm text-foreground/80">{aiAnalysis.emiAnalysis}</p>
-                                      </div>
-                                    </CardContent>
-                                </Card>
+                         <CardContent>
+                          <Button onClick={handleAnalyze} disabled={isAnalyzing || !rawText}>
+                            {isAnalyzing ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Sparkles className="mr-2 h-4 w-4" />
                             )}
+                            Analyze with AI
+                          </Button>
+                          {aiAnalysis && (
+                            <Card className="mt-6 bg-muted/50">
+                              <CardContent className="pt-6 space-y-6">
+                                <div>
+                                  <h3 className="font-semibold text-lg mb-2">Strengths in CIBIL</h3>
+                                  <p className="text-sm text-foreground/80">{aiAnalysis.strengths}</p>
+                                </div>
+                                <hr className="border-border" />
+                                <div>
+                                  <h3 className="font-semibold text-lg mb-2">Weaknesses in CIBIL</h3>
+                                  <p className="text-sm text-foreground/80">{aiAnalysis.weaknesses}</p>
+                                </div>
+                                <hr className="border-border" />
+                                <div>
+                                  <h3 className="font-semibold text-lg mb-2">Active Accounts Analysis</h3>
+                                  <p className="text-sm text-foreground/80">{aiAnalysis.activeAccounts}</p>
+                                </div>
+                                <hr className="border-border" />
+                                <div>
+                                  <h3 className="font-semibold text-lg mb-2">Closed Accounts Analysis</h3>
+                                  <p className="text-sm text-foreground/80">{aiAnalysis.closedAccounts}</p>
+                                </div>
+                                <hr className="border-border" />
+                                <div>
+                                  <h3 className="font-semibold text-lg mb-2">DPD (Days Past Due) Analysis</h3>
+                                  <p className="text-sm text-foreground/80">{aiAnalysis.dpdAnalysis}</p>
+                                </div>
+                                <hr className="border-border" />
+                                <div>
+                                  <h3 className="font-semibold text-lg mb-2">EMI Paying for Loan Analysis</h3>
+                                  <p className="text-sm text-foreground/80">{aiAnalysis.emiAnalysis}</p>
+                                </div>
+                                 <hr className="border-border" />
+                                <div>
+                                  <h3 className="font-semibold text-lg mb-2">Credit Utilization</h3>
+                                  <p className="text-sm text-foreground/80">{aiAnalysis.creditUtilization}</p>
+                                </div>
+                                 <hr className="border-border" />
+                                <div>
+                                  <h3 className="font-semibold text-lg mb-2">Credit History Length</h3>
+                                  <p className="text-sm text-foreground/80">{aiAnalysis.creditHistoryLength}</p>
+                                </div>
+                                 <hr className="border-border" />
+                                <div>
+                                  <h3 className="font-semibold text-lg mb-2">Credit Mix</h3>
+                                  <p className="text-sm text-foreground/80">{aiAnalysis.creditMix}</p>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          )}
                         </CardContent>
                     </Card>
                   )}
@@ -1250,12 +1352,115 @@ export default function CreditWiseAIPage() {
                       </CardContent>
                     </Card>
                   )}
+                  
+                  {activeView === 'creditUnderwriting' && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center"><Gavel className="mr-3 h-6 w-6 text-primary" />AI Credit Underwriting</CardTitle>
+                        <CardDescription>Get a simulated underwriting decision from our AI. Please provide your loan requirements below.</CardDescription>
+                      </CardHeader>
+                      <form onSubmit={handleGetUnderwriting}>
+                        <CardContent className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <Label htmlFor="loanType">Loan Type</Label>
+                                <Select value={loanType} onValueChange={setLoanType}>
+                                <SelectTrigger id="loanType">
+                                    <SelectValue placeholder="Select loan type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Personal Loan">Personal Loan</SelectItem>
+                                    <SelectItem value="Home Loan">Home Loan</SelectItem>
+                                    <SelectItem value="Auto Loan">Auto Loan</SelectItem>
+                                    <SelectItem value="Loan Against Property">Loan Against Property</SelectItem>
+                                </SelectContent>
+                                </Select>
+                            </div>
+                            <div>
+                                <Label htmlFor="desiredLoanAmount">Desired Loan Amount (₹)</Label>
+                                <Input
+                                id="desiredLoanAmount"
+                                type="number"
+                                placeholder="e.g., 500000"
+                                value={desiredLoanAmount}
+                                onChange={(e) => setDesiredLoanAmount(e.target.value)}
+                                required
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="desiredTenure">Desired Tenure (Months)</Label>
+                                <Input
+                                id="desiredTenure"
+                                type="number"
+                                placeholder="e.g., 60"
+                                value={desiredTenure}
+                                onChange={(e) => setDesiredTenure(e.target.value)}
+                                required
+                                />
+                            </div>
+                          </div>
+                          <Alert>
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>Prerequisites</AlertTitle>
+                            <AlertDescription>
+                              Ensure you have already generated your AI Rating and estimated your income for the most accurate underwriting assessment.
+                            </AlertDescription>
+                          </Alert>
+                        </CardContent>
+                        <CardFooter>
+                           <Button type="submit" disabled={isUnderwriting || !aiRating || estimatedIncome === null}>
+                            {isUnderwriting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Gavel className="mr-2 h-4 w-4" />}
+                            Start AI Underwriting
+                          </Button>
+                        </CardFooter>
+                      </form>
+                      
+                      {underwritingResult && (
+                        <CardContent>
+                          <div className={cn('p-4 rounded-lg border-l-4 mb-6', getUnderwritingDecisionColor(underwritingResult.underwritingDecision))}>
+                            <h4 className="font-bold text-lg">Underwriting Decision: {underwritingResult.underwritingDecision}</h4>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                              <SummaryItem label="Approved Amount" value={`₹${underwritingResult.approvedLoanAmount.toLocaleString('en-IN')}`} />
+                              <SummaryItem label="Interest Rate" value={`${underwritingResult.recommendedInterestRate}`} />
+                              <SummaryItem label="Tenure (Months)" value={underwritingResult.recommendedTenure} />
+                          </div>
+
+                          <div className="space-y-4">
+                            <div>
+                              <h5 className="font-semibold text-lg mb-2">Underwriting Summary</h5>
+                              <p className="text-sm text-foreground/80">{underwritingResult.underwritingSummary}</p>
+                            </div>
+                            
+                            {underwritingResult.conditions.length > 0 && (
+                              <div>
+                                <h5 className="font-semibold text-lg mb-2">Conditions for Approval</h5>
+                                <ul className="list-disc list-inside space-y-1 text-sm">
+                                  {underwritingResult.conditions.map((condition, i) => <li key={i}>{condition}</li>)}
+                                </ul>
+                              </div>
+                            )}
+
+                            <div>
+                              <h5 className="font-semibold text-lg mb-2">Required Documents</h5>
+                               <ul className="list-disc list-inside space-y-1 text-sm">
+                                  {underwritingResult.requiredDocuments.map((doc, i) => <li key={i}>{doc}</li>)}
+                                </ul>
+                            </div>
+                          </div>
+
+                        </CardContent>
+                      )}
+
+                    </Card>
+                  )}
 
                   {activeView === 'riskAssessment' && (
                     <Card>
                       <CardHeader>
                           <CardTitle className="flex items-center"><ShieldAlert className="mr-3 h-6 w-6 text-primary" />AI Risk Assessment</CardTitle>
-                          <CardDescription>This AI model acts as a risk analyst, focusing on identifying potential negative factors that could pose a risk to lenders. A higher score means lower risk.</CardDescription>
+                          <CardDescription>This AI acts as a conservative risk analyst. Its primary job is to identify potential negative factors that could pose a risk to a lender. A higher score means lower risk.</CardDescription>
                       </CardHeader>
                       <CardContent>
                           {isAssessingRisk ? (
@@ -1579,5 +1784,3 @@ export default function CreditWiseAIPage() {
     </div>
   );
 }
-
-    

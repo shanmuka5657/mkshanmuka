@@ -33,6 +33,9 @@ const AnalyzeCreditReportOutputSchema = z.object({
     .string()
     .describe('An analysis of the Days Past Due (DPD) information.'),
   emiAnalysis: z.string().describe('An analysis of the EMIs being paid for loans.'),
+  creditUtilization: z.string().describe('A detailed analysis of credit utilization across all credit cards and credit lines.'),
+  creditHistoryLength: z.string().describe('An analysis of the age of the credit history, including oldest and average account ages.'),
+  creditMix: z.string().describe('An analysis of the mix of credit types (e.g., secured vs. unsecured loans).'),
 });
 export type AnalyzeCreditReportOutput = z.infer<typeof AnalyzeCreditReportOutputSchema>;
 
@@ -52,6 +55,9 @@ const prompt = ai.definePrompt({
 - **closedAccounts**: Summarize the accounts that have been closed.
 - **dpdAnalysis**: Analyze the Days Past Due (DPD) history. Explain any patterns of late payments.
 - **emiAnalysis**: Analyze the EMIs being paid for various loans.
+- **creditUtilization**: Analyze the credit utilization ratio for each credit card and overall. Explain if it's high, low, or healthy.
+- **creditHistoryLength**: Analyze the length of the credit history. Mention the age of the oldest account and the average age of all accounts.
+- **creditMix**: Analyze the mix of credit products. Discuss the balance between secured loans (like home or auto loans) and unsecured loans (like personal loans or credit cards).
 
 Credit Report Text:
 \`\`\`
