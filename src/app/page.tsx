@@ -361,13 +361,10 @@ export default function CreditWiseAIPage() {
 
 
     const parseCibilData = (text: string) => {
-        // Normalize text
         const normalizedText = text.replace(/\s+/g, ' ');
 
         const scoreMatch = normalizedText.match(/(?:CIBIL (?:TRANSUNION )?SCORE|CREDITVISION. SCORE)\s*(\d{3})/i);
-        if (scoreMatch) {
-            setCreditScore(parseInt(scoreMatch[1], 10));
-        }
+        if (scoreMatch) setCreditScore(parseInt(scoreMatch[1], 10));
 
         let info: Record<string, string> = {};
         const nameMatch = normalizedText.match(/NAME:\s*([\w\s]+?)\s*(?:DATE OF BIRTH|DOB)/i);
@@ -387,34 +384,38 @@ export default function CreditWiseAIPage() {
         
         setConsumerInfo(info);
 
-        const summarySectionMatch = normalizedText.match(/SUMMARY: ACCOUNT\(S\) ACCOUNT TYPE ACCOUNTS ADVANCES BALANCES DATE OPENED(.*?)ENQUIRIES/i);
-        const summaryText = summarySectionMatch ? summarySectionMatch[1] : '';
-        
         let summary: CreditSummary = { ...initialCreditSummary };
+        const summarySectionMatch = normalizedText.match(/SUMMARY: ACCOUNT\(S\) (.*?) ENQUIRIES/i);
+        const summaryText = summarySectionMatch ? summarySectionMatch[1] : '';
+
         const totalAcMatch = summaryText.match(/TOTAL:\s*(\d+)/i);
-        summary.totalAccounts = totalAcMatch ? parseInt(totalAcMatch[1], 10) : 0;
+        if(totalAcMatch) summary.totalAccounts = parseInt(totalAcMatch[1], 10);
         
         const highCreditMatch = summaryText.match(/HIGH CR\/SANC\. AMT:\s*([\d,]+)/i);
-        summary.totalCreditLimit = highCreditMatch ? parseInt(highCreditMatch[1].replace(/,/g, ''), 10) : 0;
+        if(highCreditMatch) summary.totalCreditLimit = parseInt(highCreditMatch[1].replace(/,/g, ''), 10);
         
         const currentBalanceMatch = summaryText.match(/CURRENT:\s*([\d,]+)/i);
-        summary.totalOutstanding = currentBalanceMatch ? parseInt(currentBalanceMatch[1].replace(/,/g, ''), 10) : 0;
+        if(currentBalanceMatch) summary.totalOutstanding = parseInt(currentBalanceMatch[1].replace(/,/g, ''), 10);
         summary.totalDebt = summary.totalOutstanding;
 
         const zeroBalanceMatch = summaryText.match(/ZERO-BALANCE:\s*(\d+)/i);
-        summary.closedAccounts = zeroBalanceMatch ? parseInt(zeroBalanceMatch[1], 10) : 0;
+        if(zeroBalanceMatch) summary.closedAccounts = parseInt(zeroBalanceMatch[1], 10);
         summary.activeAccounts = summary.totalAccounts - summary.closedAccounts;
 
         summary.creditUtilization = summary.totalCreditLimit > 0 ? Math.round((summary.totalOutstanding / summary.totalCreditLimit) * 100) : 0;
         summary.debtToLimitRatio = summary.creditUtilization;
         
-        const accountSections = normalizedText.split(/ACCOUNT DATES AMOUNTS STATUS/);
+        const accountSections = normalizedText.split(/ACCOUNT\s+DATES\s+AMOUNTS\s+STATUS/);
         const loans: LoanAccount[] = [];
         const currentFlaggedAccounts: FlaggedAccount[] = [];
 
         let totalEMI = 0;
         let maxEMI = 0;
         let ccPayments = 0;
+        
+        summary.writtenOff = 0;
+        summary.settled = 0;
+        summary.doubtful = 0;
 
         accountSections.slice(1).forEach(section => {
             const typeMatch = section.match(/TYPE:\s*([A-Za-z\s-]+?)(?=OWNERSHIP|COLLATERAL|OPENED)/i);
@@ -426,11 +427,12 @@ export default function CreditWiseAIPage() {
             if(statusText.includes("Written Off")) accountStatus = "written off";
             if(statusText.includes("Settled")) accountStatus = "settled";
             if(statusText.includes("SUB")) accountStatus = "sub-standard";
-
+            if(statusText.includes("DBT")) accountStatus = "doubtful";
+            
             const sanctionedMatch = section.match(/(?:SANCTIONED|CREDIT LIMIT):\s*([\d,]+)/i);
             const balanceMatch = section.match(/(?:CURRENT BALANCE|BALANCE):\s*([\d,]+)/i);
             const overdueMatch = section.match(/OVERDUE:\s*([\d,]+)/i);
-            const emiMatchS = section.match(/EMI:\s*([\d,]+)/i);
+            const emiMatch = section.match(/EMI:\s*([\d,]+)/i);
             const openedMatch = section.match(/OPENED:\s*(\d{2}-\d{2}-\d{4})/i);
             const closedMatch = section.match(/CLOSED:\s*(\d{2}-\d{2}-\d{4})/i);
             const paymentHistoryMatch = section.match(/DAYS PAST DUE\/ASSET CLASSIFICATION \(UP TO 36 MONTHS; LEFT TO RIGHT\)([\s\S]+?)(?=ACCOUNT DATES AMOUNTS STATUS|INFORMATION UNDER DISPUTE|END OF REPORT|$)/i);
@@ -442,7 +444,7 @@ export default function CreditWiseAIPage() {
                 sanctioned: sanctionedMatch ? sanctionedMatch[1].replace(/,/g, '') : '0',
                 balance: balanceMatch ? balanceMatch[1].replace(/,/g, '') : '0',
                 overdue: overdueMatch ? overdueMatch[1].replace(/,/g, '') : '0',
-                emi: emiMatchS ? emiMatchS[1].replace(/,/g, '') : '0',
+                emi: emiMatch ? emiMatch[1].replace(/,/g, '') : '0',
                 opened: openedMatch ? openedMatch[1] : 'N/A',
                 closed: closedMatch ? closedMatch[1] : 'N/A',
                 paymentHistory: paymentHistoryMatch ? paymentHistoryMatch[1].trim().replace(/\s+/g, ' ') : 'N/A',
@@ -458,7 +460,7 @@ export default function CreditWiseAIPage() {
             if (accountStatus.includes('written off')) { summary.writtenOff += 1; issue = 'Written Off'; isFlagged = true; }
             if (accountStatus.includes('settled')) { summary.settled += 1; issue = 'Settled'; isFlagged = true; }
             if (accountStatus.includes('doubtful') || loan.paymentHistory.includes('DBT')) { summary.doubtful += 1; issue = 'Doubtful'; isFlagged = true; }
-             if (accountStatus.includes('sub-standard') || loan.paymentHistory.includes('SUB')) { issue = 'Sub-standard Account'; isFlagged = true; }
+            if (accountStatus.includes('sub-standard') || loan.paymentHistory.includes('SUB')) { issue = 'Sub-standard Account'; isFlagged = true; }
             
             const overdueAmount = parseInt(loan.overdue, 10);
             if (overdueAmount > 0) {
@@ -476,9 +478,12 @@ export default function CreditWiseAIPage() {
                 if (emi > maxEMI) maxEMI = emi;
             }
 
-            if (accountType.toLowerCase().includes('credit card')) {
+            if (accountType.toLowerCase().includes('credit card') && (accountStatus.includes('active') || accountStatus.includes('open'))) {
                 const outstanding = parseInt(loan.balance, 10) || 0;
-                ccPayments += Math.max(outstanding * 0.05, 1000); // 5% or 1000
+                if(outstanding > 0) {
+                  // Standard 5% minimum payment for credit cards
+                  ccPayments += Math.max(outstanding * 0.05, 500); 
+                }
             }
         });
 
