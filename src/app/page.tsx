@@ -534,8 +534,10 @@ export default function CreditWiseAIPage() {
                   ccPayments += Math.max(outstanding * 0.05, 500); 
                 }
             } else {
-              totalEMI += emi;
-              if (emi > maxEMI) maxEMI = emi;
+              if (emi > 0) {
+                totalEMI += emi;
+                if (emi > maxEMI) maxEMI = emi;
+              }
             }
           }
           
