@@ -6,3 +6,4 @@ import '@/ai/flows/debt-management-advice.ts';
 import '@/ai/flows/credit-report-analysis.ts';
 import '@/ai/flows/ai-rating.ts';
 import '@/ai/flows/loan-eligibility.ts';
+import '@/ai/flows/risk-assessment.ts';

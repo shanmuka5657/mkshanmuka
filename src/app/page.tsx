@@ -45,6 +45,7 @@ import { getCreditImprovementSuggestions } from '@/ai/flows/credit-improvement-s
 import { getDebtManagementAdvice } from '@/ai/flows/debt-management-advice';
 import { getAiRating, AiRatingOutput } from '@/ai/flows/ai-rating';
 import { getLoanEligibility, LoanEligibilityOutput } from '@/ai/flows/loan-eligibility';
+import { getRiskAssessment, RiskAssessmentOutput } from '@/ai/flows/risk-assessment';
 import { cn } from '@/lib/utils';
 import {
   Alert,
@@ -109,12 +110,7 @@ type LoanAccount = {
   settlementStatus?: string;
 };
 type Inquiry = { date: string; lender: string; purpose: string };
-type RiskAssessment = {
-  score: number;
-  level: 'Low' | 'Medium' | 'High';
-  factors: { factor: string; severity: string; details: string }[];
-  mitigations: { factor: string; action: string }[];
-};
+type RiskAssessment = RiskAssessmentOutput;
 type DebtPaydown = {
   type: string;
   balance: number;
@@ -134,6 +130,7 @@ type ActiveView =
   | 'incomeEstimator'
   | 'creditImprovement'
   | 'visualizations'
+  | 'riskAssessment'
   | null;
 
 
@@ -200,7 +197,8 @@ export default function CreditWiseAIPage() {
   const [creditSummary, setCreditSummary] = useState<CreditSummary>(initialCreditSummary);
   const [dpdSummary, setDpdSummary] = useState<DpdSummary>(initialDpdSummary);
   const [accountDpdStatus, setAccountDpdStatus] = useState<AccountDpdStatus[]>([]);
-  const [riskAssessment, setRiskAssessment] = useState<RiskAssessment>(initialRiskAssessment);
+  const [riskAssessment, setRiskAssessment] = useState<RiskAssessment | null>(null);
+  const [isAssessingRisk, setIsAssessingRisk] = useState(false);
   const [potentialIssues, setPotentialIssues] = useState<string[]>([]);
   const [debtPaydownTimeline, setDebtPaydownTimeline] = useState<DebtPaydown[]>([]);
   const [flaggedAccounts, setFlaggedAccounts] = useState<FlaggedAccount[]>([]);
@@ -306,7 +304,8 @@ export default function CreditWiseAIPage() {
     setCreditSummary(initialCreditSummary);
     setDpdSummary(initialDpdSummary);
     setAccountDpdStatus([]);
-    setRiskAssessment(initialRiskAssessment);
+    setRiskAssessment(null);
+    setIsAssessingRisk(false);
     setPotentialIssues([]);
     setDebtPaydownTimeline([]);
     setFlaggedAccounts([]);
@@ -341,6 +340,7 @@ export default function CreditWiseAIPage() {
           }
           setRawText(textContent);
           parseCibilData(textContent);
+          handleGetRiskAssessment(textContent); // Trigger AI risk assessment
         }
       };
       reader.readAsArrayBuffer(selectedFile);
@@ -356,80 +356,23 @@ export default function CreditWiseAIPage() {
     }
   };
   
-  const assessCreditRisk = (loans: LoanAccount[], currentInquiries: Inquiry[], summary: CreditSummary): RiskAssessment => {
-      let riskScore = 100; // Start with perfect score
-      const riskFactors: RiskAssessment['factors'] = [];
-      const mitigations: RiskAssessment['mitigations'] = [];
-
-      // 1. Payment History Analysis
-      let latePaymentsCount = 0;
-      let maxDPD = 0;
-      loans.forEach(loan => {
-          if (loan.paymentHistory) {
-              const dpdMatches = loan.paymentHistory.match(/\d+/g) || [];
-              dpdMatches.forEach(match => {
-                  const dpd = parseInt(match, 10);
-                  if (!isNaN(dpd) && dpd > 0) {
-                      latePaymentsCount++;
-                      if (dpd > maxDPD) maxDPD = dpd;
-                  }
-              });
-          }
-      });
-
-      if (maxDPD > 0) {
-          let severity = 'Low';
-          if (maxDPD >= 90) { severity = 'High'; riskScore -= 30; }
-          else if (maxDPD >= 30) { severity = 'Medium'; riskScore -= 20; }
-          else { riskScore -= 10; }
-          riskFactors.push({ factor: 'Late Payments', severity, details: `Detected ${latePaymentsCount} late payment(s), with a maximum of ${maxDPD} days past due.` });
-          mitigations.push({ factor: 'Late Payments', action: 'Ensure all future payments are made on time. Set up automatic payments to avoid missing due dates.' });
-      }
-
-      // 2. High Credit Utilization
-      const utilization = summary.creditUtilization;
-      if (utilization > 30) {
-          let severity = 'Low';
-          if (utilization > 80) { severity = 'High'; riskScore -= 25; }
-          else if (utilization > 50) { severity = 'Medium'; riskScore -= 15; }
-          else { riskScore -= 5; }
-          riskFactors.push({ factor: 'High Credit Utilization', severity, details: `Overall credit utilization is ${utilization}%, which is above the recommended 30%.` });
-          mitigations.push({ factor: 'High Credit Utilization', action: 'Pay down balances on revolving credit lines. Aim to keep utilization below 30%.' });
-      }
-      
-      // 3. Negative Accounts (Written Off, Settled, Doubtful)
-      const negativeAccounts = summary.writtenOff + summary.settled + summary.doubtful;
-      if (negativeAccounts > 0) {
-          riskScore -= (summary.writtenOff * 20 + summary.settled * 10 + summary.doubtful * 15);
-          riskFactors.push({ factor: 'Negative Accounts', severity: 'High', details: `Found ${summary.writtenOff} written-off, ${summary.settled} settled, and ${summary.doubtful} doubtful accounts.` });
-          mitigations.push({ factor: 'Negative Accounts', action: 'Address these accounts by negotiating settlements or payment plans with lenders. This is a top priority.' });
-      }
-
-      // 4. Recent Inquiries
-      const recentInquiries = currentInquiries.filter(inq => {
-          try {
-            const inqDate = new Date(inq.date.split('-').reverse().join('-'));
-            const sixMonthsAgo = new Date();
-            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-            return !isNaN(inqDate.getTime()) && inqDate > sixMonthsAgo;
-          } catch(e) {
-            return false;
-          }
-      }).length;
-
-      if (recentInquiries > 3) {
-          const severity = recentInquiries > 6 ? 'Medium' : 'Low';
-          riskScore -= (severity === 'Medium' ? 15 : 5);
-          riskFactors.push({ factor: 'Multiple Recent Inquiries', severity, details: `${recentInquiries} credit inquiries in the last 6 months can indicate credit-seeking behavior.` });
-          mitigations.push({ factor: 'Multiple Recent Inquiries', action: 'Space out credit applications. Avoid applying for new credit unless necessary.' });
-      }
-
-      riskScore = Math.max(0, Math.min(100, riskScore));
-      let level: RiskAssessment['level'] = 'Low';
-      if (riskScore < 50) level = 'High';
-      else if (riskScore < 75) level = 'Medium';
-      
-      return { score: riskScore, level, factors: riskFactors, mitigations };
+  const handleGetRiskAssessment = async (text: string) => {
+    if (!text) return;
+    setIsAssessingRisk(true);
+    setRiskAssessment(null);
+    try {
+      const result = await getRiskAssessment({ creditReportText: text });
+      setRiskAssessment(result);
+    } catch (error: any) {
+      console.error('Error getting AI risk assessment:', error);
+       toast({
+        variant: "destructive",
+        title: "AI Risk Assessment Failed",
+        description: error.message?.includes('503') ? "The AI model is currently overloaded. Please try again in a moment." : (error.message || "Could not get AI risk assessment. Please try again."),
+      })
+    } finally {
+      setIsAssessingRisk(false);
+    }
   };
 
 
@@ -614,8 +557,6 @@ export default function CreditWiseAIPage() {
       }
       
       setInquiries(currentInquiries);
-      const newRiskAssessment = assessCreditRisk(loans, currentInquiries, summary);
-      setRiskAssessment(newRiskAssessment);
   };
 
 
@@ -643,7 +584,14 @@ export default function CreditWiseAIPage() {
   };
   
   const handleGetAiRating = async () => {
-    if (!rawText) return;
+    if (!rawText || !riskAssessment) {
+      toast({
+        variant: "destructive",
+        title: "Missing Information",
+        description: "Please ensure the report is parsed and the initial risk assessment is complete.",
+      });
+      return;
+    }
     setIsRating(true);
     setAiRating(null);
     try {
@@ -1020,7 +968,7 @@ export default function CreditWiseAIPage() {
                       <CardTitle>Analysis Dashboard</CardTitle>
                       <CardDescription>Select a section to view its detailed analysis.</CardDescription>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                       <NavButton view="aiMeter" label="AI Credit Analysis Meter" icon={<Bot size={24} />} />
                       <NavButton view="aiAnalysis" label="AI Credit Report Analysis" icon={<BrainCircuit size={24} />} />
                       <NavButton view="creditSummary" label="Credit Summary" icon={<FileSymlink size={24} />} />
@@ -1028,8 +976,9 @@ export default function CreditWiseAIPage() {
                       <NavButton view="inquiryAnalysis" label="Credit Enquiry Analysis" icon={<Search size={24} />} />
                       <NavButton view="dpdAnalysis" label="DPD Analysis" icon={<LineChart size={24} />} />
                       <NavButton view="incomeEstimator" label="Income Estimator & Debt Management" icon={<Calculator size={24} />} />
-                       <NavButton view="creditImprovement" label="AI Credit Improvement" icon={<Lightbulb size={24} />} />
+                      <NavButton view="creditImprovement" label="AI Credit Improvement" icon={<Lightbulb size={24} />} />
                       <NavButton view="visualizations" label="Credit Visualisation" icon={<AreaChart size={24} />} />
+                      <NavButton view="riskAssessment" label="AI Risk Assessment" icon={<ShieldAlert size={24} />} />
                     </CardContent>
                   </Card>
                   
@@ -1040,7 +989,7 @@ export default function CreditWiseAIPage() {
                         <CardDescription>A holistic rating based on a comprehensive AI analysis of your report.</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <Button onClick={handleGetAiRating} disabled={isRating}>
+                        <Button onClick={handleGetAiRating} disabled={isRating || !riskAssessment}>
                           {isRating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
                           Get AI Rating
                         </Button>
@@ -1267,33 +1216,46 @@ export default function CreditWiseAIPage() {
                     </Card>
                   )}
 
-                  <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center"><ShieldAlert className="mr-3 h-6 w-6 text-primary" />Risk Assessment</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className={cn('p-4 rounded-lg border-l-4', getRiskColorClass(riskAssessment.level))}>
-                            <h4 className="font-bold text-lg">{riskAssessment.level} Risk</h4>
-                            <p className="text-sm">Your credit risk is {riskAssessment.level.toLowerCase()} (score {riskAssessment.score}/100). You're likely to qualify for credit with favorable terms. Maintain good habits to keep your score strong.</p>
-                        </div>
-                        {riskAssessment.factors.length > 0 && (
-                            <div className="mt-6">
-                                <h5 className="font-semibold mb-2">Key Risk Factors:</h5>
-                                <ul className="list-disc list-inside space-y-1 text-sm">
-                                    {riskAssessment.factors.map((factor, i) => <li key={i}><strong>{factor.factor} ({factor.severity} risk):</strong> {factor.details}</li>)}
-                                </ul>
+                  {activeView === 'riskAssessment' && (
+                    <Card>
+                      <CardHeader>
+                          <CardTitle className="flex items-center"><ShieldAlert className="mr-3 h-6 w-6 text-primary" />AI Risk Assessment</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                          {isAssessingRisk ? (
+                            <div className="flex items-center gap-2">
+                              <Loader2 className="h-5 w-5 animate-spin" />
+                              <span>AI is assessing your credit risk...</span>
                             </div>
-                        )}
-                        {riskAssessment.mitigations.length > 0 && (
-                            <div className="mt-6">
-                                <h5 className="font-semibold mb-2">Risk Mitigation Strategies:</h5>
-                                <ul className="list-disc list-inside space-y-1 text-sm">
-                                    {riskAssessment.mitigations.map((m, i) => <li key={i}><strong>{m.factor}:</strong> {m.action}</li>)}
-                                </ul>
-                            </div>
-                        )}
-                    </CardContent>
-                  </Card>
+                          ) : riskAssessment ? (
+                            <>
+                              <div className={cn('p-4 rounded-lg border-l-4 mb-6', getRiskColorClass(riskAssessment.level))}>
+                                  <h4 className="font-bold text-lg">{riskAssessment.level} Risk</h4>
+                                  <p className="text-sm">Your AI-assessed credit risk score is <strong>{riskAssessment.score}/100</strong>. A higher score indicates lower risk.</p>
+                              </div>
+                              {riskAssessment.factors.length > 0 && (
+                                  <div className="mb-6">
+                                      <h5 className="font-semibold mb-2">Key Risk Factors:</h5>
+                                      <ul className="list-disc list-inside space-y-1 text-sm">
+                                          {riskAssessment.factors.map((factor, i) => <li key={i}><strong>{factor.factor} ({factor.severity} risk):</strong> {factor.details}</li>)}
+                                      </ul>
+                                  </div>
+                              )}
+                              {riskAssessment.mitigations.length > 0 && (
+                                  <div>
+                                      <h5 className="font-semibold mb-2">Risk Mitigation Strategies:</h5>
+                                      <ul className="list-disc list-inside space-y-1 text-sm">
+                                          {riskAssessment.mitigations.map((m, i) => <li key={i}><strong>{m.factor}:</strong> {m.action}</li>)}
+                                      </ul>
+                                  </div>
+                              )}
+                            </>
+                          ) : (
+                            <p className="text-muted-foreground">No risk assessment available. The assessment will be generated automatically when you upload a report.</p>
+                          )}
+                      </CardContent>
+                    </Card>
+                  )}
                   
                   {potentialIssues.length > 0 && (
                     <Card>
