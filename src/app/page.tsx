@@ -16,10 +16,8 @@ import {
   Sun,
   Loader2,
   AlertCircle,
-  TrendingUp,
   BrainCircuit,
   FileSearch,
-  Book,
   FileSymlink,
   LineChart,
   CalendarDays,
@@ -61,7 +59,6 @@ import {
 } from "@/components/ui/table"
 import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-type QuestionnaireAnswers = { [key: string]: string };
 type CreditSummary = {
   totalAccounts: number;
   totalCreditLimit: number;
@@ -121,40 +118,6 @@ type DebtPaydown = {
 };
 type FlaggedAccount = LoanAccount & { issue: string };
 
-const questionnaireItems = [
-    { id: 'paymentHistory', label: 'Payment History (Highest DPD in last 12 months)', options: ["No DPD in last 12 months", "1–2 DPD <30 days", "Frequent 30 DPD (3–4 times)", "1 DPD = 60 days", "2+ DPDs 60+ or 1 DPD 90+", "180+/999 DPD or default once", "Multiple 999 / Write-off"] },
-    { id: 'creditUtilization', label: 'Credit Utilization (%)', options: ["<10%", "10–30%", "30–50%", "50–75%", "75–100%", ">100% or over-limit"] },
-    { id: 'creditAge', label: 'Credit Age (Oldest Account)', options: [">7 years", "5–7 years", "3–5 years", "1–3 years", "<1 year", "All <6 months"] },
-    { id: 'creditMix', label: 'Credit Mix', options: ["Secured + Unsecured", "Only one type but diverse", "Only 1 type", "Only 1 type, short history"] },
-    { id: 'inquiries', label: 'Inquiries (Last 12 months)', options: ["0–1", "2–3", "4–5", "6+"] },
-    { id: 'dpdRecent', label: 'DPD Last 3 Months', options: ["All 000", "1 DPD = 30", "1 DPD = 60+", "Any 90/999"] },
-    { id: 'writtenOff', label: 'Written-off/Settled Accounts', options: ["None ever", "Settled 2+ years ago", "Settled in last 1–2 years", "Active write-off"] },
-    { id: 'activeAccounts', label: 'Active Accounts', options: ["3–5", "6–8", "1–2", "0 or >8", "All closed"] },
-    { id: 'overdue', label: 'Overdue Amount', options: ["₹0", "₹1–1000", "₹1001–5000", ">₹5000"] },
-    { id: 'recentOpenings', label: 'Recent Account Openings (Last 6 months)', options: ["0–1", "2", "3–4", "5+"] },
-    { id: 'loanPurpose', label: 'Loan Purpose', options: ["Home/Education/Business", "Auto/Gold", "Personal/BNPL"] },
-    { id: 'utilTrend', label: 'Utilization Trend (3 months)', options: ["Decreasing", "Stable", "Increasing", "Sudden spike"] },
-    { id: 'institution', label: 'Institution Quality', options: ["PSU/Private Bank", "Tier-1 NBFC", "Small NBFC", "Unknown"] },
-    { id: 'emiRatio', label: 'EMI-to-Income Ratio', options: ["<30%", "30–40%", "40–50%", ">50%"] },
-];
-
-const scoringMaps = {
-    paymentHistory: { "No DPD in last 12 months": 30, "1–2 DPD <30 days": 28, "Frequent 30 DPD (3–4 times)": 24, "1 DPD = 60 days": 20, "2+ DPDs 60+ or 1 DPD 90+": 15, "180+/999 DPD or default once": 8, "Multiple 999 / Write-off": 2 },
-    creditUtilization: { "<10%": 15, "10–30%": 14, "30–50%": 11, "50–75%": 7, "75–100%": 4, ">100% or over-limit": 1 },
-    creditAge: { ">7 years": 7, "5–7 years": 6, "3–5 years": 5, "1–3 years": 3, "<1 year": 1, "All <6 months": 0 },
-    creditMix: { "Secured + Unsecured": 5, "Only one type but diverse": 4, "Only 1 type": 2, "Only 1 type, short history": 0 },
-    inquiries: { "0–1": 5, "2–3": 4, "4–5": 2, "6+": 0 },
-    dpdRecent: { "All 000": 5, "1 DPD = 30": 4, "1 DPD = 60+": 2, "Any 90/999": 0 },
-    writtenOff: { "None ever": 7, "Settled 2+ years ago": 5, "Settled in last 1–2 years": 3, "Active write-off": 1 },
-    activeAccounts: { "3–5": 4, "6–8": 3, "1–2": 2, "0 or >8": 1, "All closed": 0 },
-    overdue: { "₹0": 4, "₹1–1000": 3, "₹1001–5000": 2, ">₹5000": 1 },
-    recentOpenings: { "0–1": 4, "2": 3, "3–4": 2, "5+": 0 },
-    loanPurpose: { "Home/Education/Business": 3, "Auto/Gold": 2, "Personal/BNPL": 1 },
-    utilTrend: { "Decreasing": 3, "Stable": 2, "Increasing": 1, "Sudden spike": 0 },
-    institution: { "PSU/Private Bank": 4, "Tier-1 NBFC": 3, "Small NBFC": 2, "Unknown": 1 },
-    emiRatio: { "<30%": 4, "30–40%": 3, "40–50%": 2, ">50%": 1 },
-};
-
 const initialCreditSummary: CreditSummary = {
   totalAccounts: 0,
   totalCreditLimit: 0,
@@ -199,7 +162,6 @@ export default function CreditWiseAIPage() {
   const [consumerInfo, setConsumerInfo] = useState<Record<string, string>>({});
   const [aiAnalysis, setAiAnalysis] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [questionnaireAnswers, setQuestionnaireAnswers] = useState<QuestionnaireAnswers>({});
   const [aiSuggestions, setAiSuggestions] = useState('');
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [totalEmi, setTotalEmi] = useState('');
@@ -210,8 +172,6 @@ export default function CreditWiseAIPage() {
   const [aiDebtAdvice, setAiDebtAdvice] = useState('');
   const [isAdvising, setIsAdvising] = useState(false);
   const [theme, setTheme] = useState('light');
-  const [customScore, setCustomScore] = useState<number | null>(null);
-  const [customScoreRating, setCustomScoreRating] = useState<string | null>(null);
   const [creditSummary, setCreditSummary] = useState<CreditSummary>(initialCreditSummary);
   const [dpdSummary, setDpdSummary] = useState<DpdSummary>(initialDpdSummary);
   const [accountDpdStatus, setAccountDpdStatus] = useState<AccountDpdStatus[]>([]);
@@ -265,7 +225,6 @@ export default function CreditWiseAIPage() {
     setConsumerInfo({});
     setAiAnalysis('');
     setIsAnalyzing(false);
-    setQuestionnaireAnswers({});
     setAiSuggestions('');
     setIsSuggesting(false);
     setTotalEmi('');
@@ -275,8 +234,6 @@ export default function CreditWiseAIPage() {
     setEstimatedIncome(null);
     setAiDebtAdvice('');
     setIsAdvising(false);
-    setCustomScore(null);
-    setCustomScoreRating(null);
     setShowRawText(false);
     setCreditSummary(initialCreditSummary);
     setDpdSummary(initialDpdSummary);
@@ -563,12 +520,12 @@ export default function CreditWiseAIPage() {
         title: "AI Analysis Complete",
         description: "Your credit report has been analyzed.",
       })
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error analyzing report:', error);
        toast({
         variant: "destructive",
         title: "Analysis Failed",
-        description: "Could not get AI analysis. Please try again.",
+        description: error.message || "Could not get AI analysis. Please try again.",
       })
     } finally {
       setIsAnalyzing(false);
@@ -589,12 +546,12 @@ export default function CreditWiseAIPage() {
         title: "AI Rating Complete",
         description: "Your comprehensive AI credit rating is ready.",
       })
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting AI rating:', error);
        toast({
         variant: "destructive",
         title: "AI Rating Failed",
-        description: "Could not get AI rating. Please try again.",
+        description: error.message || "Could not get AI rating. Please try again.",
       })
     } finally {
       setIsRating(false);
@@ -603,29 +560,25 @@ export default function CreditWiseAIPage() {
 
 
   const handleGetSuggestions = async () => {
-    if (Object.keys(questionnaireAnswers).length !== questionnaireItems.length) {
+    if (!rawText) {
       toast({
         variant: "destructive",
-        title: "Questionnaire Incomplete",
-        description: "Please answer all questions before getting suggestions.",
+        title: "No Report Found",
+        description: "Please upload a credit report first.",
       })
       return;
     }
     setIsSuggesting(true);
     setAiSuggestions('');
     try {
-      const input = {
-          ...questionnaireAnswers,
-          cibilSummary: rawText.substring(0, 4000)
-      } as any;
-      const result = await getCreditImprovementSuggestions(input);
+      const result = await getCreditImprovementSuggestions({ creditReportText: rawText });
       setAiSuggestions(result.suggestions);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting suggestions:', error);
        toast({
         variant: "destructive",
         title: "Failed to get suggestions",
-        description: "Could not get AI suggestions. Please try again.",
+        description: error.message || "Could not get AI suggestions. Please try again.",
       })
     } finally {
       setIsSuggesting(false);
@@ -656,12 +609,12 @@ export default function CreditWiseAIPage() {
             totalEmi: parseFloat(totalEmi || '0'),
             otherObligations: parseFloat(otherObligations || '0'),
             dtiRatio: finalDti,
-            creditReportAnalysis: aiAnalysis || rawText.substring(0, 4000)
+            creditReportText: rawText
         });
         setAiDebtAdvice(result.advice);
-    } catch (error) {
+    } catch (error: any) {
        console.error('Error getting debt advice:', error);
-       toast({ variant: "destructive", title: "Failed to get advice", description: "Could not get AI debt advice. Please try again."})
+       toast({ variant: "destructive", title: "Failed to get advice", description: error.message || "Could not get AI debt advice. Please try again."})
     } finally {
         setIsAdvising(false);
     }
@@ -691,53 +644,19 @@ export default function CreditWiseAIPage() {
         title: 'Loan Eligibility Calculated',
         description: 'Your estimated loan eligibility is ready.',
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error calculating loan eligibility:', error);
       toast({
         variant: 'destructive',
         title: 'Eligibility Calculation Failed',
         description:
-          'Could not calculate your loan eligibility. Please try again.',
+          error.message || 'Could not calculate your loan eligibility. Please try again.',
       });
     } finally {
       setIsCalculatingEligibility(false);
     }
   };
   
-  const calculateCustomScore = useCallback(() => {
-    let totalScore = 0;
-    const maxScore = Object.values(scoringMaps).reduce((acc, map) => acc + Math.max(...Object.values(map)), 0);
-
-    Object.keys(questionnaireAnswers).forEach(key => {
-        const answer = questionnaireAnswers[key];
-        const scoreMap = scoringMaps[key as keyof typeof scoringMaps];
-        if (scoreMap && answer in scoreMap) {
-            totalScore += scoreMap[answer as keyof typeof scoreMap];
-        }
-    });
-
-    const scaledScore = Math.round((totalScore / maxScore) * 600 + 300);
-    setCustomScore(scaledScore);
-
-    if (scaledScore >= 800) setCustomScoreRating("Excellent");
-    else if (scaledScore >= 750) setCustomScoreRating("Very Good");
-    else if (scaledScore >= 700) setCustomScoreRating("Good");
-    else if (scaledScore >= 650) setCustomScoreRating("Fair");
-    else if (scaledScore >= 600) setCustomScoreRating("Poor");
-    else setCustomScoreRating("Very Poor");
-  }, [questionnaireAnswers]);
-
-
-  const handleQuestionnaireChange = (id: string, value: string) => {
-    setQuestionnaireAnswers(prev => ({ ...prev, [id]: value }));
-  };
-
-  useEffect(() => {
-    if (Object.keys(questionnaireAnswers).length === questionnaireItems.length) {
-      calculateCustomScore();
-    }
-  }, [questionnaireAnswers, calculateCustomScore]);
-
   const loanTypeData = [
     { name: 'Personal', value: rawText.match(/PERSONAL LOAN/gi)?.length || 0 },
     { name: 'Credit Card', value: rawText.match(/CREDIT CARD/gi)?.length || 0 },
@@ -1228,56 +1147,26 @@ export default function CreditWiseAIPage() {
 
               <Card className="print:hidden">
                 <CardHeader>
-                  <CardTitle className="flex items-center"><ShieldCheck className="mr-3 h-6 w-6 text-primary" />AI-Based Credit Health Scoring</CardTitle>
-                  <CardDescription>Complete this questionnaire for a comprehensive credit health assessment.</CardDescription>
+                  <CardTitle className="flex items-center"><ShieldCheck className="mr-3 h-6 w-6 text-primary" />AI Credit Improvement Suggestions</CardTitle>
+                  <CardDescription>Get personalized credit improvement advice based on your full report.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {customScore && (
-                    <Card className="mb-6 bg-accent/10 border-accent/50">
-                        <CardHeader>
-                            <CardTitle className="flex items-center text-primary"><TrendingUp className="mr-2 h-6 w-6"/> Your Estimated Credit Score</CardTitle>
-                        </CardHeader>
-                        <CardContent className="text-center">
-                             <div className="text-7xl font-bold text-primary">{customScore}</div>
-                            <p className="text-xl font-semibold text-muted-foreground mt-2">{customScoreRating}</p>
-                            <Progress value={(customScore - 300) / 6} className="mt-4 max-w-sm mx-auto" />
-                        </CardContent>
-                    </Card>
-                  )}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                    {questionnaireItems.map((item) => (
-                      <div key={item.id} className="space-y-2">
-                        <label className="text-sm font-medium">{item.label}</label>
-                        <Select onValueChange={(value) => handleQuestionnaireChange(item.id, value)}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select an option" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {item.options.map((option) => (
-                              <SelectItem key={option} value={option}>{option}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ))}
-                  </div>
-                  <Button onClick={handleGetSuggestions} disabled={isSuggesting || Object.keys(questionnaireAnswers).length !== questionnaireItems.length} className="mt-6">
+                  <Button onClick={handleGetSuggestions} disabled={isSuggesting || !rawText}>
                     {isSuggesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lightbulb className="mr-2 h-4 w-4" />}
                     Get AI Credit Improvement Suggestions
                   </Button>
+                  {aiSuggestions && (
+                    <Card className="mt-6 bg-muted/50">
+                        <CardHeader>
+                            <CardTitle className="flex items-center text-primary"><Sparkles className="mr-2 h-6 w-6"/>Your Personalized Suggestions</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                           <div className="prose dark:prose-invert max-w-none prose-p:text-foreground/80 prose-headings:text-foreground prose-strong:text-foreground">{aiSuggestions}</div>
+                        </CardContent>
+                    </Card>
+                  )}
                 </CardContent>
               </Card>
-              
-              {aiSuggestions && (
-                <Card className="print:hidden">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-primary"><Sparkles className="mr-3 h-6 w-6"/>AI-Powered Credit Improvement Suggestions</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="prose dark:prose-invert max-w-none prose-p:text-foreground/80 prose-headings:text-foreground prose-strong:text-foreground">{aiSuggestions}</div>
-                  </CardContent>
-                </Card>
-              )}
               
               <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 print:hidden">
                 <div className="lg:col-span-3">
@@ -1436,4 +1325,3 @@ export default function CreditWiseAIPage() {
     </div>
   );
 }
-

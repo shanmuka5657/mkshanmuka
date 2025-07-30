@@ -1,4 +1,3 @@
-// src/ai/flows/debt-management-advice.ts
 'use server';
 
 /**
@@ -16,7 +15,7 @@ const DebtManagementAdviceInputSchema = z.object({
   totalEmi: z.number().describe('Total monthly EMI payments.'),
   otherObligations: z.number().describe('Other monthly financial obligations (rent, utilities, etc.).'),
   dtiRatio: z.number().describe('Target debt-to-income ratio (percentage).'),
-  creditReportAnalysis: z.string().describe('AI analysis of the user credit report.'),
+  creditReportText: z.string().describe('The full text of the user credit report.'),
 });
 export type DebtManagementAdviceInput = z.infer<typeof DebtManagementAdviceInputSchema>;
 
@@ -35,13 +34,16 @@ const prompt = ai.definePrompt({
   output: {schema: DebtManagementAdviceOutputSchema},
   prompt: `You are an AI assistant specialized in providing debt management advice.
 
-  Based on the user's financial information and credit report analysis, offer personalized and actionable strategies for optimizing debt repayment and improving their financial health.
+  Based on the user's financial information and their full credit report, offer personalized and actionable strategies for optimizing debt repayment and improving their financial health.
 
   Consider the following details:
   - Total Monthly EMI: {{{totalEmi}}}
   - Other Monthly Obligations: {{{otherObligations}}}
   - Target Debt-to-Income Ratio: {{{dtiRatio}}}%
-  - Credit Report Analysis: {{{creditReportAnalysis}}}
+  - Full Credit Report: 
+  \`\`\`
+  {{{creditReportText}}}
+  \`\`\`
 
   Provide clear, concise, and practical advice that the user can implement to manage their debt effectively.
   `,
@@ -53,7 +55,7 @@ const debtManagementAdviceFlow = ai.defineFlow(
     inputSchema: DebtManagementAdviceInputSchema,
     outputSchema: DebtManagementAdviceOutputSchema,
   },
-  async input => {
+  async (input) => {
     const {output} = await prompt(input);
     return output!;
   }
