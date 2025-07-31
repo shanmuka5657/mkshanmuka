@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
   title: 'CreditWise AI',
-  description: 'Advanced AI Credit Score Analyzer',
+  description: 'Advanced AI Credit Score Analyzer & ML Model Trainer',
 };
 
 export default function RootLayout({

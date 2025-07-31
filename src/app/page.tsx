@@ -72,6 +72,7 @@ import { auth } from '@/lib/firebase';
 import type { User } from 'firebase/auth';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { Label } from '@/components/ui/label';
+import Link from 'next/link';
 
 
 type CreditSummary = {
@@ -1012,6 +1013,20 @@ export default function CreditWiseAIPage() {
               <Sparkles className="h-6 w-6 mr-2 text-primary" />
               <span className="font-bold text-lg">CreditWise AI</span>
             </div>
+            <nav className="flex items-center space-x-4 lg:space-x-6 text-sm font-medium">
+              <Link
+                href="/"
+                className="transition-colors hover:text-foreground/80 text-foreground"
+              >
+                Analyzer
+              </Link>
+              <Link
+                href="/trainer"
+                className="transition-colors hover:text-foreground/80 text-muted-foreground"
+              >
+                AI Model Trainer
+              </Link>
+            </nav>
             <div className="flex flex-1 items-center justify-end space-x-2">
                 <Button variant="ghost" size="icon" onClick={toggleTheme}>
                     <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
