@@ -44,6 +44,9 @@ const LoanEligibilityOutputSchema = z.object({
     .describe(
       'A detailed, multi-sentence summary explaining exactly how the eligible loan amount was calculated. It must reference specific factors from the credit report (payment history, DPD, credit utilization, existing loans) and explain how they influenced the final amount.'
     ),
+  suggestionsToIncreaseEligibility: z
+    .array(z.string())
+    .describe('A list of specific, actionable suggestions for how the user can increase their loan eligibility.'),
 });
 export type LoanEligibilityOutput = z.infer<typeof LoanEligibilityOutputSchema>;
 
@@ -57,7 +60,7 @@ const prompt = ai.definePrompt({
   name: 'loanEligibilityPrompt',
   input: { schema: LoanEligibilityInputSchema },
   output: { schema: LoanEligibilityOutputSchema },
-  prompt: `You are an expert loan officer at a digital bank in India. Your task is to perform a holistic and realistic estimation of a user's eligibility for a personal loan. Do NOT use a simple fixed Debt-to-Income (DTI) ratio. Instead, base your entire calculation on a comprehensive analysis of all provided data.
+  prompt: `You are an expert loan officer at a digital bank in India. Your task is to perform a holistic and realistic estimation of a user's eligibility for a personal loan and provide actionable advice on how to improve it. Do NOT use a simple fixed Debt-to-Income (DTI) ratio. Instead, base your entire calculation on a comprehensive analysis of all provided data.
 
 **User's Financial Profile:**
 - **AI Credit Score:** {{aiScore}}/100
@@ -92,7 +95,13 @@ const prompt = ai.definePrompt({
     - Fair (55-69): 15% - 20%
     - Poor (<55): Likely ineligible, but if eligible, >20%.
 
-5.  **Write a Detailed, Justified Summary:** This is the most critical part. Your summary must clearly explain *why* you arrived at your calculated 'eligibleLoanAmount'. For example: "Based on your consistent on-time payments and low credit utilization of 25%, we determined you can comfortably manage an additional EMI of ₹{{repaymentCapacity}}. This makes you eligible for a loan of approximately ₹{{eligibleLoanAmount}}. While you have several active loans, your perfect repayment history demonstrates strong credit discipline." OR "Although your income is high, your application shows a high credit utilization of 90% on two credit cards and a recent 60-day late payment on your personal loan. This limits your repayment capacity to ₹{{repaymentCapacity}}, resulting in a lower eligible amount of ₹{{eligibleLoanAmount}} to ensure your financial stability."
+5.  **Write a Detailed, Justified Summary:** This is critical. Your summary must clearly explain *why* you arrived at your calculated 'eligibleLoanAmount'. For example: "Based on your consistent on-time payments and low credit utilization of 25%, we determined you can comfortably manage an additional EMI of ₹{{repaymentCapacity}}. This makes you eligible for a loan of approximately ₹{{eligibleLoanAmount}}." OR "Although your income is high, your application shows a high credit utilization of 90% on two credit cards and a recent 60-day late payment. This limits your repayment capacity to ₹{{repaymentCapacity}}, resulting in a lower eligible amount of ₹{{eligibleLoanAmount}}."
+
+6.  **Generate Actionable Suggestions to Increase Eligibility:** This is the most important part. Based on your deep analysis of the report, provide a list of specific, non-generic suggestions.
+    *   **Guarantor Loans:** If you find loans where the user's ownership is 'Guarantor' and the loan is in good standing (DPD is 000/STD), suggest: "You are a guarantor for a loan with an EMI of [Amount]. If this EMI was included in your total debt, you can increase your eligibility by providing the lender with proof (e.g., bank statements) that the primary borrower is making these payments, not you."
+    *   **Loans Nearing Closure:** Scan the report for any loans that will be fully paid off in the next 3-6 months. If you find one, suggest: "Your [Loan Type] with an EMI of [Amount] is scheduled to be closed in the next few months. If you wait to apply for a new loan until after this account is closed, your repayment capacity will increase by that EMI amount, making you eligible for a significantly larger loan."
+    *   **High Utilization Credit Cards:** If any credit card has utilization over 50%, suggest: "Your [Card Name] has a high utilization of [X%]. Paying down this balance to below 30% will not only improve your credit score but also demonstrate better financial management to lenders, which can increase your loan eligibility."
+    *   **Consolidate Small Debts:** If there are multiple small personal loans or credit card debts, you could suggest consolidation.
 
 Generate the final, structured output based on this deep analysis.
 `,
