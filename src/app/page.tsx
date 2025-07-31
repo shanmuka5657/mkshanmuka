@@ -457,34 +457,42 @@ export default function CreditWiseAIPage() {
     setConsumerInfo(info);
 
     // --- Screenshot-based Summary Parsing ---
-    const summarySection = (normalizedText.match(/SUMMARY(.*?)(?=ACCOUNT INFORMATION|ACCOUNT DETAILS|ENQUIRIES|$)/is) || [''])[0];
+    const summarySectionMatch = normalizedText.match(/SUMMARY(.*?)(?=ACCOUNT INFORMATION|ACCOUNT DETAILS|ENQUIRY INFORMATION|$)/is);
+    const summarySection = summarySectionMatch ? summarySectionMatch[1] : '';
 
     const getSummaryValue = (label: RegExp, section: string, isCurrency = false): string => {
         const match = section.match(label);
         if (!match || !match[1]) return 'N/A';
-        const value = match[1].replace(/,/g, '');
-        return isCurrency ? `₹${parseInt(value, 10).toLocaleString('en-IN')}` : value;
+        const value = match[1].replace(/,/g, '').trim();
+        if (value === '') return 'N/A';
+        try {
+            return isCurrency ? `₹${parseInt(value, 10).toLocaleString('en-IN')}` : value;
+        } catch (e) {
+            return value; // Return as is if parsing fails
+        }
     };
     
     const newAccountSummary: AccountSummary = {
-        total: getSummaryValue(/TOTAL: (\d+)/i, summarySection),
-        zeroBalance: getSummaryValue(/ZERO-BALANCE: (\d+)/i, summarySection),
-        highCredit: getSummaryValue(/HIGH CR\/SANC\. AMT: ([\d,]+)/i, summarySection, true),
-        currentBalance: getSummaryValue(/CURRENT: ([\d,]+)/i, summarySection, true),
-        overdue: getSummaryValue(/OVERDUE: ([\d,]+)/i, summarySection, true),
-        recentDate: getSummaryValue(/RECENT: (\d{8})/i, summarySection).replace(/(\d{2})(\d{2})(\d{4})/, '$1-$2-$3'),
-        oldestDate: getSummaryValue(/OLDEST: (\d{8})/i, summarySection).replace(/(\d{2})(\d{2})(\d{4})/, '$1-$2-$3'),
+        total: getSummaryValue(/Total\s*:\s*(\d+)/i, summarySection),
+        zeroBalance: getSummaryValue(/Zero-Balance\s*:\s*(\d+)/i, summarySection),
+        highCredit: getSummaryValue(/High Credit\/Sanc\. Amt\s*:\s*([\d,]+)/i, summarySection, true),
+        currentBalance: getSummaryValue(/Current\s*:\s*([\d,]+)/i, summarySection, true),
+        overdue: getSummaryValue(/Overdue\s*:\s*([\d,]+)/i, summarySection, true),
+        recentDate: getSummaryValue(/Recent\s*:\s*(\d{2}-\d{2}-\d{4})/i, summarySection),
+        oldestDate: getSummaryValue(/Oldest\s*:\s*(\d{2}-\d{2}-\d{4})/i, summarySection),
     };
     setAccountSummary(newAccountSummary);
 
 
-    const enquirySection = (normalizedText.match(/ENQUIRIES(.*?)END OF REPORT/is) || [''])[0];
+    const enquirySectionMatch = normalizedText.match(/ENQUIRY INFORMATION(.*?)(?=END OF REPORT|$)/is);
+    const enquirySection = enquirySectionMatch ? enquirySectionMatch[1] : '';
+
     const newEnquirySummary: EnquirySummary = {
-        total: getSummaryValue(/All Enquiry\s+(\d+)/i, enquirySection),
-        past30Days: getSummaryValue(/All Enquiry\s+\d+\s+(\d+)/i, enquirySection),
-        past12Months: getSummaryValue(/All Enquiry\s+\d+\s+\d+\s+(\d+)/i, enquirySection),
-        past24Months: getSummaryValue(/All Enquiry\s+\d+\s+\d+\s+\d+\s+(\d+)/i, enquirySection),
-        recentDate: getSummaryValue(/RECENT\s+((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun).*?GMT\+\d{4})/i, enquirySection),
+        total: getSummaryValue(/Total\s*:\s*(\d+)/i, enquirySection),
+        past30Days: getSummaryValue(/Past 30 days\s*:\s*(\d+)/i, enquirySection),
+        past12Months: getSummaryValue(/Past 12 months\s*:\s*(\d+)/i, enquirySection),
+        past24Months: getSummaryValue(/Past 24 months\s*:\s*(\d+)/i, enquirySection),
+        recentDate: getSummaryValue(/Recent\s*:\s*(\d{2}-\d{2}-\d{4})/i, enquirySection),
     };
     setEnquirySummary(newEnquirySummary);
 
@@ -1234,34 +1242,64 @@ export default function CreditWiseAIPage() {
                             <CardDescription>A summary of accounts and enquiries from your CIBIL report.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
-                             <div>
-                                <h4 className="font-semibold text-lg mb-2 text-primary">ACCOUNTS</h4>
-                                <div className="border rounded-lg p-4 grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-2">
-                                    <SummaryItem label="Account Type" value="All Accounts" />
-                                    <div className="space-y-2 col-span-2 md:col-span-1">
-                                      <SummaryItem label="Total Accounts" value={accountSummary.total} />
-                                      <SummaryItem label="Zero-Balance" value={accountSummary.zeroBalance} />
-                                    </div>
-                                    <SummaryItem label="Advances (High CR/Sanc. Amt)" value={accountSummary.highCredit} />
-                                    <div className="space-y-2 col-span-2 md:col-span-1">
-                                      <SummaryItem label="Balances (Current)" value={accountSummary.currentBalance} />
-                                      <SummaryItem label="Balances (Overdue)" value={accountSummary.overdue} />
-                                    </div>
-                                    <div className="space-y-2 col-span-2 md:col-span-2">
-                                       <SummaryItem label="Date Opened (Recent)" value={accountSummary.recentDate} />
-                                       <SummaryItem label="Date Opened (Oldest)" value={accountSummary.oldestDate} />
-                                    </div>
+                            <div>
+                                <h4 className="font-semibold text-lg mb-2 text-primary">SUMMARY</h4>
+                                <div className="border rounded-lg p-4">
+                                  <Table>
+                                    <TableBody>
+                                      <TableRow>
+                                        <TableCell className="font-medium">Total Accounts</TableCell>
+                                        <TableCell>{accountSummary.total}</TableCell>
+                                        <TableCell className="font-medium">Overdue Accounts</TableCell>
+                                        <TableCell>0</TableCell>
+                                        <TableCell className="font-medium">Zero Balance Accounts</TableCell>
+                                        <TableCell>{accountSummary.zeroBalance}</TableCell>
+                                      </TableRow>
+                                      <TableRow>
+                                        <TableCell className="font-medium">High Credit/Sanctioned Amount</TableCell>
+                                        <TableCell>{accountSummary.highCredit}</TableCell>
+                                        <TableCell className="font-medium">Current Balance</TableCell>
+                                        <TableCell>{accountSummary.currentBalance}</TableCell>
+                                        <TableCell className="font-medium">Overdue Amount</TableCell>
+                                        <TableCell>{accountSummary.overdue}</TableCell>
+                                      </TableRow>
+                                      <TableRow>
+                                        <TableCell className="font-medium">Date Opened (Recent)</TableCell>
+                                        <TableCell>{accountSummary.recentDate}</TableCell>
+                                        <TableCell className="font-medium">Date Opened (Oldest)</TableCell>
+                                        <TableCell>{accountSummary.oldestDate}</TableCell>
+                                        <TableCell></TableCell>
+                                        <TableCell></TableCell>
+                                      </TableRow>
+                                    </TableBody>
+                                  </Table>
                                 </div>
                             </div>
                              <div>
                                 <h4 className="font-semibold text-lg mb-2 text-primary">ENQUIRIES</h4>
-                                <div className="border rounded-lg p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
-                                    <SummaryItem label="Enquiry Purpose" value="All Enquiry" />
-                                    <SummaryItem label="Total" value={enquirySummary.total} />
-                                    <SummaryItem label="Past 30 Days" value={enquirySummary.past30Days} />
-                                    <SummaryItem label="Past 12 Months" value={enquirySummary.past12Months} />
-                                    <SummaryItem label="Past 24 Months" value={enquirySummary.past24Months} />
-                                    <SummaryItem label="Recent" value={enquirySummary.recentDate} />
+                                 <div className="border rounded-lg p-4">
+                                    <Table>
+                                      <TableBody>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Total</TableCell>
+                                          <TableCell>{enquirySummary.total}</TableCell>
+                                          <TableCell className="font-medium">Past 30 days</TableCell>
+                                          <TableCell>{enquirySummary.past30Days}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell className="font-medium">Past 12 months</TableCell>
+                                          <TableCell>{enquirySummary.past12Months}</TableCell>
+                                          <TableCell className="font-medium">Past 24 months</TableCell>
+                                          <TableCell>{enquirySummary.past24Months}</TableCell>
+                                        </TableRow>
+                                         <TableRow>
+                                          <TableCell className="font-medium">Recent</TableCell>
+                                          <TableCell>{enquirySummary.recentDate}</TableCell>
+                                          <TableCell></TableCell>
+                                          <TableCell></TableCell>
+                                        </TableRow>
+                                      </TableBody>
+                                    </Table>
                                 </div>
                             </div>
                         </CardContent>
