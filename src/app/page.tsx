@@ -1296,49 +1296,33 @@ export default function CreditWiseAIPage() {
                           {aiAnalysis && (
                             <Card className="mt-6 bg-muted/50">
                               <CardContent className="pt-6 space-y-6">
-                                <div>
-                                  <h3 className="font-semibold text-lg mb-2">Strengths in CIBIL</h3>
-                                  <p className="text-sm text-foreground/80">{aiAnalysis.strengths}</p>
-                                </div>
-                                <hr className="border-border" />
-                                <div>
-                                  <h3 className="font-semibold text-lg mb-2">Weaknesses in CIBIL</h3>
-                                  <p className="text-sm text-foreground/80">{aiAnalysis.weaknesses}</p>
-                                </div>
-                                <hr className="border-border" />
-                                <div>
-                                  <h3 className="font-semibold text-lg mb-2">Active Accounts Analysis</h3>
-                                  <p className="text-sm text-foreground/80">{aiAnalysis.activeAccounts}</p>
-                                </div>
-                                <hr className="border-border" />
-                                <div>
-                                  <h3 className="font-semibold text-lg mb-2">Closed Accounts Analysis</h3>
-                                  <p className="text-sm text-foreground/80">{aiAnalysis.closedAccounts}</p>
-                                </div>
-                                <hr className="border-border" />
-                                <div>
-                                  <h3 className="font-semibold text-lg mb-2">DPD (Days Past Due) Analysis</h3>
-                                  <p className="text-sm text-foreground/80">{aiAnalysis.dpdAnalysis}</p>
-                                </div>
-                                <hr className="border-border" />
-                                <div>
-                                  <h3 className="font-semibold text-lg mb-2">EMI Paying for Loan Analysis</h3>
-                                  <p className="text-sm text-foreground/80">{aiAnalysis.emiAnalysis}</p>
-                                </div>
-                                 <hr className="border-border" />
-                                <div>
-                                  <h3 className="font-semibold text-lg mb-2">Credit Utilization</h3>
-                                  <p className="text-sm text-foreground/80">{aiAnalysis.creditUtilization}</p>
-                                </div>
-                                 <hr className="border-border" />
-                                <div>
-                                  <h3 className="font-semibold text-lg mb-2">Credit History Length</h3>
-                                  <p className="text-sm text-foreground/80">{aiAnalysis.creditHistoryLength}</p>
-                                </div>
-                                 <hr className="border-border" />
-                                <div>
-                                  <h3 className="font-semibold text-lg mb-2">Credit Mix</h3>
-                                  <p className="text-sm text-foreground/80">{aiAnalysis.creditMix}</p>
+                                <div className="prose prose-sm dark:prose-invert max-w-none">
+                                    <h3>Strengths in CIBIL</h3>
+                                    <p>{aiAnalysis.strengths}</p>
+                                    <hr />
+                                    <h3>Weaknesses in CIBIL</h3>
+                                    <p>{aiAnalysis.weaknesses}</p>
+                                    <hr />
+                                    <h3>Active Accounts Analysis</h3>
+                                    <p>{aiAnalysis.activeAccounts}</p>
+                                    <hr />
+                                    <h3>Closed Accounts Analysis</h3>
+                                    <p>{aiAnalysis.closedAccounts}</p>
+                                    <hr />
+                                    <h3>DPD (Days Past Due) Analysis</h3>
+                                    <p>{aiAnalysis.dpdAnalysis}</p>
+                                    <hr />
+                                    <h3>EMI Paying for Loan Analysis</h3>
+                                    <p>{aiAnalysis.emiAnalysis}</p>
+                                    <hr />
+                                    <h3>Credit Utilization</h3>
+                                    <p>{aiAnalysis.creditUtilization}</p>
+                                    <hr />
+                                    <h3>Credit History Length</h3>
+                                    <p>{aiAnalysis.creditHistoryLength}</p>
+                                    <hr />
+                                    <h3>Credit Mix</h3>
+                                    <p>{aiAnalysis.creditMix}</p>
                                 </div>
                               </CardContent>
                             </Card>
