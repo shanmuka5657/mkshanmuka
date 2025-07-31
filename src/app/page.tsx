@@ -33,6 +33,7 @@ import {
   LogIn,
   AreaChart,
   Gavel,
+  BadgeCent,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -49,6 +50,7 @@ import { getAiRating, AiRatingOutput } from '@/ai/flows/ai-rating';
 import { getLoanEligibility, LoanEligibilityOutput } from '@/ai/flows/loan-eligibility';
 import { getRiskAssessment, RiskAssessmentOutput } from '@/ai/flows/risk-assessment';
 import { getCreditUnderwriting, CreditUnderwritingOutput } from '@/ai/flows/credit-underwriting';
+import { getFinancialRiskAssessment, FinancialRiskOutput } from '@/ai/flows/financial-risk-assessment';
 import { cn } from '@/lib/utils';
 import {
   Alert,
@@ -136,6 +138,7 @@ type ActiveView =
   | 'visualizations'
   | 'riskAssessment'
   | 'creditUnderwriting'
+  | 'financialRisk'
   | null;
 
 
@@ -236,6 +239,10 @@ export default function CreditWiseAIPage() {
   const [desiredLoanAmount, setDesiredLoanAmount] = useState('');
   const [desiredTenure, setDesiredTenure] = useState('');
   const [desiredInterestRate, setDesiredInterestRate] = useState('');
+
+  // New state for Financial Risk
+  const [financialRisk, setFinancialRisk] = useState<FinancialRiskOutput | null>(null);
+  const [isAssessingFinancialRisk, setIsAssessingFinancialRisk] = useState(false);
 
 
   const { toast } = useToast()
@@ -350,6 +357,9 @@ export default function CreditWiseAIPage() {
     setDesiredLoanAmount('');
     setDesiredTenure('');
     setDesiredInterestRate('');
+    setFinancialRisk(null);
+    setIsAssessingFinancialRisk(false);
+
 
     if(fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -802,6 +812,40 @@ export default function CreditWiseAIPage() {
     }
   };
 
+  const handleGetFinancialRisk = async () => {
+    if (!rawText || estimatedIncome === null) {
+      toast({
+        variant: 'destructive',
+        title: 'Missing Information',
+        description: 'Please upload a report and estimate your income first.',
+      });
+      return;
+    }
+
+    setIsAssessingFinancialRisk(true);
+    setFinancialRisk(null);
+    try {
+      const result = await getFinancialRiskAssessment({
+        creditReportText: rawText,
+        estimatedIncome: estimatedIncome,
+      });
+      setFinancialRisk(result);
+      toast({
+        title: 'Financial Risk Assessment Complete',
+        description: 'Your financial risk analysis is ready.',
+      });
+    } catch (error: any) {
+      console.error('Error getting financial risk:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Financial Risk Assessment Failed',
+        description: error.message?.includes('503') ? "The AI model is currently overloaded. Please try again in a moment." : (error.message || 'Could not get financial risk details. Please try again.'),
+      });
+    } finally {
+      setIsAssessingFinancialRisk(false);
+    }
+  };
+
   const loanTypeData = [
     { name: 'Personal', value: rawText.match(/PERSONAL LOAN/gi)?.length || 0 },
     { name: 'Credit Card', value: rawText.match(/CREDIT CARD/gi)?.length || 0 },
@@ -838,11 +882,12 @@ export default function CreditWiseAIPage() {
     </div>
   );
 
-  const getRiskColorClass = (level: 'Low' | 'Medium' | 'High') => {
+  const getRiskColorClass = (level: string = 'Low') => {
     switch (level) {
       case 'Low': return 'bg-green-100 border-green-500 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-300';
       case 'Medium': return 'bg-yellow-100 border-yellow-500 text-yellow-800 dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-300';
-      case 'High': return 'bg-red-100 border-red-500 text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300';
+      case 'High': return 'bg-orange-100 border-orange-500 text-orange-800 dark:bg-orange-900/30 dark:border-orange-700 dark:text-orange-300';
+      case 'Very High': return 'bg-red-100 border-red-500 text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300';
       default: return 'bg-muted border-border';
     }
   };
@@ -1070,7 +1115,7 @@ export default function CreditWiseAIPage() {
                       <CardTitle>Analysis Dashboard</CardTitle>
                       <CardDescription>Select a section to view its detailed analysis.</CardDescription>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    <CardContent className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                       <NavButton view="aiMeter" label="AI Credit Analysis Meter" icon={<Bot size={24} />} />
                       <NavButton view="aiAnalysis" label="AI Credit Report Analysis" icon={<BrainCircuit size={24} />} />
                       <NavButton view="creditSummary" label="Credit Summary" icon={<FileSymlink size={24} />} />
@@ -1081,6 +1126,7 @@ export default function CreditWiseAIPage() {
                       <NavButton view="creditImprovement" label="AI Credit Improvement" icon={<Lightbulb size={24} />} />
                       <NavButton view="visualizations" label="Credit Visualisation" icon={<AreaChart size={24} />} />
                       <NavButton view="riskAssessment" label="AI Risk Assessment" icon={<ShieldAlert size={24} />} />
+                       <NavButton view="financialRisk" label="AI Financial Risk" icon={<BadgeCent size={24} />} />
                       <NavButton view="creditUnderwriting" label="AI Credit Underwriting" icon={<Gavel size={24} />} />
                     </CardContent>
                   </Card>
@@ -1542,6 +1588,59 @@ export default function CreditWiseAIPage() {
                     </Card>
                   )}
                   
+                  {activeView === 'financialRisk' && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center">
+                          <BadgeCent className="mr-3 h-6 w-6 text-primary" />
+                          AI Financial Risk Assessment
+                        </CardTitle>
+                        <CardDescription>
+                          Get an AI-based analysis of your overall financial stability.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <TooltipProvider>
+                          <UiTooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-block">
+                                <Button
+                                  onClick={handleGetFinancialRisk}
+                                  disabled={isAssessingFinancialRisk || estimatedIncome === null}
+                                >
+                                  {isAssessingFinancialRisk ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Sparkles className="mr-2 h-4 w-4" />
+                                  )}
+                                  Assess Financial Risk
+                                </Button>
+                              </div>
+                            </TooltipTrigger>
+                            {estimatedIncome === null && (
+                              <TooltipContent>
+                                <p>Please estimate your income first to enable this analysis.</p>
+                              </TooltipContent>
+                            )}
+                          </UiTooltip>
+                        </TooltipProvider>
+
+                        {financialRisk && (
+                          <div className="mt-6 space-y-4">
+                            <div className={cn('p-4 rounded-lg border-l-4', getRiskColorClass(financialRisk.financialRiskRating))}>
+                              <h4 className="font-bold text-lg">Financial Risk Rating: {financialRisk.financialRiskRating}</h4>
+                            </div>
+                             <div>
+                                <h5 className="font-semibold mb-2">Financial Risk Summary</h5>
+                                <p className="text-sm text-muted-foreground whitespace-pre-line">{financialRisk.financialRiskSummary}</p>
+                              </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+
+
                   {potentialIssues.length > 0 && (
                     <Card>
                       <CardHeader>

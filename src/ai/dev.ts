@@ -8,3 +8,4 @@ import '@/ai/flows/ai-rating.ts';
 import '@/ai/flows/loan-eligibility.ts';
 import '@/ai/flows/risk-assessment.ts';
 import '@/ai/flows/credit-underwriting.ts';
+import '@/ai/flows/financial-risk-assessment.ts';
