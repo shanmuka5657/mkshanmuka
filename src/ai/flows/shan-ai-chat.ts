@@ -81,8 +81,13 @@ const shanAiChatFlow = ai.defineFlow(
       model: 'googleai/gemini-2.0-flash',
     });
 
+    const responseText = llmResponse.text;
+    if (!responseText) {
+      throw new Error("The AI returned an empty response.");
+    }
+
     return {
-      answer: llmResponse.text,
+      answer: responseText,
     };
   }
 );
