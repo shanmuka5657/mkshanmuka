@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { Bot, BrainCircuit, Plus, Trash2, UploadCloud, Loader2 } from 'lucide-react';
@@ -14,9 +13,11 @@ import Link from 'next/link';
 
 type TrainingExample = {
   id: number;
-  decision: 'Approved' | 'Rejected';
   rawCibilText: string;
-  reason: string;
+  name: string;
+  dob: string;
+  pan: string;
+  address: string;
 };
 
 export default function ModelTrainerPage() {
@@ -29,9 +30,11 @@ export default function ModelTrainerPage() {
       ...examples,
       {
         id: Date.now(),
-        decision: 'Approved',
         rawCibilText: '',
-        reason: '',
+        name: '',
+        dob: '',
+        pan: '',
+        address: '',
       },
     ]);
   };
@@ -51,15 +54,15 @@ export default function ModelTrainerPage() {
       toast({
         variant: 'destructive',
         title: 'Model Name Required',
-        description: 'Please give your model a name.',
+        description: 'Please give your extraction model a name.',
       });
       return;
     }
-    if (examples.length < 2) {
+    if (examples.length < 1) {
       toast({
         variant: 'destructive',
         title: 'More Examples Needed',
-        description: 'Please provide at least two examples (one approved, one rejected is best).',
+        description: 'Please provide at least one complete example.',
       });
       return;
     }
@@ -77,7 +80,7 @@ export default function ModelTrainerPage() {
         variant: 'default',
         className: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
         title: 'Training Complete!',
-        description: `Your model "${modelName}" is now ready to be used for underwriting.`,
+        description: `Your model "${modelName}" is now ready to be used for data extraction.`,
       });
     }, 2500);
   };
@@ -110,10 +113,10 @@ export default function ModelTrainerPage() {
       <main className="container mx-auto p-4 md:p-8">
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
-            AI Underwriting Model Trainer
+            AI Data Extraction Trainer
           </h1>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-            Teach our AI to underwrite loans according to your rules. Provide examples by pasting in a raw CIBIL report and telling the AI how you would decide on it.
+            Teach our AI to read CIBIL reports. Paste in raw report text and then fill in the correct corresponding details. The more high-quality examples you provide, the better the AI will get at automatic data extraction.
           </p>
         </div>
 
@@ -121,13 +124,13 @@ export default function ModelTrainerPage() {
           <CardHeader>
             <CardTitle className="flex items-center text-xl">
               <BrainCircuit className="mr-3 h-6 w-6 text-primary" />
-              1. Name Your Model
+              1. Name Your Extraction Model
             </CardTitle>
-            <CardDescription>Give your custom underwriting model a unique name.</CardDescription>
+            <CardDescription>Give your custom data extraction model a unique name.</CardDescription>
           </CardHeader>
           <CardContent>
             <Input
-              placeholder="e.g., 'Conservative Personal Loan Model'"
+              placeholder="e.g., 'CIBIL Consumer Info Extractor'"
               value={modelName}
               onChange={(e) => setModelName(e.target.value)}
             />
@@ -141,7 +144,7 @@ export default function ModelTrainerPage() {
               2. Provide Training Examples
             </CardTitle>
             <CardDescription>
-             Add examples of decisions you would make based on a full CIBIL report. The more examples you provide, the smarter your model will become.
+             Add examples by pasting raw CIBIL text and filling out the data you want the AI to learn to find.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -163,32 +166,43 @@ export default function ModelTrainerPage() {
                         placeholder="Paste the entire raw text from a CIBIL report here..." 
                         value={example.rawCibilText} 
                         onChange={e => updateExample(example.id, 'rawCibilText', e.target.value)}
-                        className="h-48"
+                        className="h-64"
                       />
                   </div>
                   <div className="space-y-4">
-                     <div>
-                      <Label htmlFor={`decision-${index}`}>Your Decision</Label>
-                      <Select
-                        value={example.decision}
-                        onValueChange={(value) => updateExample(example.id, 'decision', value as 'Approved' | 'Rejected')}
-                      >
-                        <SelectTrigger id={`decision-${index}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Approved">Approved</SelectItem>
-                          <SelectItem value="Rejected">Rejected</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
                       <div>
-                        <Label htmlFor={`reason-${index}`}>Reason for Your Decision</Label>
+                        <Label htmlFor={`name-${index}`}>Name</Label>
                         <Input 
-                          id={`reason-${index}`} 
-                          placeholder="Explain why you made this decision. E.g., 'High DTI ratio and recent delinquencies.'" 
-                          value={example.reason} 
-                          onChange={e => updateExample(example.id, 'reason', e.target.value)} />
+                          id={`name-${index}`} 
+                          placeholder="e.g., 'Ramesh Kumar'" 
+                          value={example.name} 
+                          onChange={e => updateExample(example.id, 'name', e.target.value)} />
+                      </div>
+                      <div>
+                        <Label htmlFor={`dob-${index}`}>Date of Birth</Label>
+                        <Input 
+                          id={`dob-${index}`} 
+                          placeholder="e.g., '01-01-1990'" 
+                          value={example.dob} 
+                          onChange={e => updateExample(example.id, 'dob', e.target.value)} />
+                      </div>
+                      <div>
+                        <Label htmlFor={`pan-${index}`}>PAN</Label>
+                        <Input 
+                          id={`pan-${index}`} 
+                          placeholder="e.g., 'ABCDE1234F'" 
+                          value={example.pan} 
+                          onChange={e => updateExample(example.id, 'pan', e.target.value)} />
+                      </div>
+                      <div>
+                        <Label htmlFor={`address-${index}`}>Address</Label>
+                        <Textarea 
+                          id={`address-${index}`} 
+                          placeholder="e.g., '123, Main Street, Bengaluru, Karnataka, 560001'" 
+                          value={example.address} 
+                          onChange={e => updateExample(example.id, 'address', e.target.value)}
+                          className="h-24"
+                        />
                       </div>
                   </div>
                 </div>
