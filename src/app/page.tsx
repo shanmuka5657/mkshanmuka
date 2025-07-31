@@ -51,7 +51,7 @@ import { getLoanEligibility, LoanEligibilityOutput } from '@/ai/flows/loan-eligi
 import { getRiskAssessment, RiskAssessmentOutput } from '@/ai/flows/risk-assessment';
 import { getCreditUnderwriting, CreditUnderwritingOutput } from '@/ai/flows/credit-underwriting';
 import { getFinancialRiskAssessment, FinancialRiskOutput } from '@/ai/flows/financial-risk-assessment';
-import { CreditChat } from '@/components/CreditChat';
+import { ShanAIChat } from '@/components/CreditChat';
 import { cn } from '@/lib/utils';
 import {
   Alert,
@@ -1906,9 +1906,7 @@ export default function CreditWiseAIPage() {
                 </div>
             )}
             
-            {rawText && !isLoading && (
-              <CreditChat creditReportText={rawText} />
-            )}
+            <ShanAIChat />
 
           </>
         )}
