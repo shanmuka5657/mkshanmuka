@@ -46,7 +46,10 @@ const saveCandidatesToStorage = (candidatesToSave: TrainingCandidate[]) => {
 
 
 // Initialize candidates from localStorage
-candidates = loadCandidates();
+if (typeof window !== 'undefined') {
+    candidates = loadCandidates();
+}
+
 
 export function saveTrainingCandidate(data: TrainingData) {
   const newCandidate: TrainingCandidate = {
@@ -60,21 +63,27 @@ export function saveTrainingCandidate(data: TrainingData) {
 }
 
 export function getTrainingCandidates(): TrainingCandidate[] {
-  // Return a copy to prevent direct mutation
+  // We need to re-load from storage here to ensure we have the latest version
+  // especially when the page is first loaded.
+  if (typeof window !== 'undefined') {
+    candidates = loadCandidates();
+  }
   return [...candidates];
 }
 
 export function approveCandidate(id: string) {
-  const candidate = candidates.find(c => c.id === id);
+  const currentCandidates = loadCandidates();
+  const candidate = currentCandidates.find(c => c.id === id);
   if (candidate) {
     candidate.status = 'approved';
-    saveCandidatesToStorage(candidates);
+    saveCandidatesToStorage(currentCandidates);
+    candidates = currentCandidates;
   }
 }
 
 export function rejectCandidate(id: string) {
-  candidates = candidates.filter(c => c.id !== id);
-  saveCandidatesToStorage(candidates);
+  let currentCandidates = loadCandidates();
+  currentCandidates = currentCandidates.filter(c => c.id !== id);
+  saveCandidatesToStorage(currentCandidates);
+  candidates = currentCandidates;
 }
-
-    

@@ -10,6 +10,7 @@ import { Bot, BrainCircuit, ThumbsUp, ThumbsDown, Trash2, Loader2, FileText, Spa
 import Link from 'next/link';
 import { getTrainingCandidates, approveCandidate, rejectCandidate, type TrainingCandidate } from '@/lib/training-store';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Input } from '@/components/ui/input';
 
 
 export default function ModelTrainerPage() {
@@ -138,7 +139,7 @@ export default function ModelTrainerPage() {
                     {candidates.map((candidate, index) => (
                       <AccordionItem value={candidate.id} key={candidate.id}>
                         <AccordionTrigger className="font-semibold text-left">
-                          Candidate #{index + 1} (Status: <span className={`capitalize ${candidate.status === 'approved' ? 'text-green-500' : 'text-yellow-500'}`}>{candidate.status}</span>)
+                          Candidate #{index + 1} (Status: <span className={`capitalize ${candidate.status === 'approved' ? 'text-green-500' : candidate.status === 'pending_review' ? 'text-yellow-500' : 'text-red-500'}`}>{candidate.status.replace('_', ' ')}</span>)
                         </AccordionTrigger>
                         <AccordionContent>
                            <Card className="p-4 bg-muted/50 relative">
@@ -199,5 +200,3 @@ export default function ModelTrainerPage() {
     </div>
   );
 }
-
-    
