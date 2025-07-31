@@ -66,6 +66,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableCaption,
 } from "@/components/ui/table"
 import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { auth } from '@/lib/firebase';
@@ -76,21 +77,22 @@ import Link from 'next/link';
 import { saveTrainingCandidate } from '@/lib/training-store';
 
 
-type CreditSummary = {
-  totalAccounts: number;
-  totalCreditLimit: number;
-  totalOutstanding: number;
-  totalDebt: number;
-  creditUtilization: number;
-  debtToLimitRatio: number;
-  activeAccounts: number;
-  closedAccounts: number;
-  writtenOff: number;
-  settled: number;
-  doubtful: number;
-  totalMonthlyEMI: number;
-  maxSingleEMI: number;
-  creditCardPayments: number;
+type AccountSummary = {
+  total: string;
+  zeroBalance: string;
+  highCredit: string;
+  currentBalance: string;
+  overdue: string;
+  recentDate: string;
+  oldestDate: string;
+};
+
+type EnquirySummary = {
+  total: string;
+  past30Days: string;
+  past12Months: string;
+  past24Months: string;
+  recentDate: string;
 };
 type DpdSummary = {
   onTime: number;
@@ -146,21 +148,22 @@ type ActiveView =
   | null;
 
 
-const initialCreditSummary: CreditSummary = {
-  totalAccounts: 0,
-  totalCreditLimit: 0,
-  totalOutstanding: 0,
-  totalDebt: 0,
-  creditUtilization: 0,
-  debtToLimitRatio: 0,
-  activeAccounts: 0,
-  closedAccounts: 0,
-  writtenOff: 0,
-  settled: 0,
-  doubtful: 0,
-  totalMonthlyEMI: 0,
-  maxSingleEMI: 0,
-  creditCardPayments: 0,
+const initialAccountSummary: AccountSummary = {
+  total: 'N/A',
+  zeroBalance: 'N/A',
+  highCredit: 'N/A',
+  currentBalance: 'N/A',
+  overdue: 'N/A',
+  recentDate: 'N/A',
+  oldestDate: 'N/A',
+};
+
+const initialEnquirySummary: EnquirySummary = {
+  total: 'N/A',
+  past30Days: 'N/A',
+  past12Months: 'N/A',
+  past24Months: 'N/A',
+  recentDate: 'N/A',
 };
 
 const initialDpdSummary: DpdSummary = {
@@ -220,7 +223,8 @@ export default function CreditWiseAIPage() {
   const [aiDebtAdvice, setAiDebtAdvice] = useState('');
   const [isAdvising, setIsAdvising] = useState(false);
   const [theme, setTheme] = useState('light');
-  const [creditSummary, setCreditSummary] = useState<CreditSummary>(initialCreditSummary);
+  const [accountSummary, setAccountSummary] = useState<AccountSummary>(initialAccountSummary);
+  const [enquirySummary, setEnquirySummary] = useState<EnquirySummary>(initialEnquirySummary);
   const [dpdSummary, setDpdSummary] = useState<DpdSummary>(initialDpdSummary);
   const [accountDpdStatus, setAccountDpdStatus] = useState<AccountDpdStatus[]>([]);
   const [riskAssessment, setRiskAssessment] = useState<RiskAssessment | null>(null);
@@ -340,7 +344,8 @@ export default function CreditWiseAIPage() {
     setAiDebtAdvice('');
     setIsAdvising(false);
     setShowRawText(false);
-    setCreditSummary(initialCreditSummary);
+    setAccountSummary(initialAccountSummary);
+    setEnquirySummary(initialEnquirySummary);
     setDpdSummary(initialDpdSummary);
     setAccountDpdStatus([]);
     setRiskAssessment(null);
@@ -429,6 +434,7 @@ export default function CreditWiseAIPage() {
   const parseCibilData = (text: string) => {
     const normalizedText = text.replace(/\s+/g, ' ').trim();
 
+    // --- Basic Info Parsing ---
     const scoreMatch = normalizedText.match(/(?:CIBIL (?:TRANSUNION )?SCORE|CREDITVISION. SCORE)\s*(\d{3})/i);
     setCreditScore(scoreMatch ? parseInt(scoreMatch[1], 10) : null);
 
@@ -450,141 +456,99 @@ export default function CreditWiseAIPage() {
     
     setConsumerInfo(info);
 
-    const summarySection = (normalizedText.match(/SUMMARY(.*?)(?=ACCOUNT INFORMATION|ACCOUNT DETAILS|$)/is) || [''])[0];
-    const accountsSection = (normalizedText.match(/ACCOUNT INFORMATION(.*)/is) || [''])[0];
+    // --- Screenshot-based Summary Parsing ---
+    const summarySection = (normalizedText.match(/SUMMARY(.*?)(?=ACCOUNT INFORMATION|ACCOUNT DETAILS|ENQUIRIES|$)/is) || [''])[0];
 
-    const getSummaryValue = (label: string, section: string, isCurrency = false): number => {
-        const regex = new RegExp(`${label}\\s*:?\\s*(₹)?\\s*([\\d,]+)`, 'i');
-        const match = section.match(regex);
-        return match ? parseInt(match[2].replace(/,/g, ''), 10) : 0;
+    const getSummaryValue = (label: RegExp, section: string, isCurrency = false): string => {
+        const match = section.match(label);
+        if (!match || !match[1]) return 'N/A';
+        const value = match[1].replace(/,/g, '');
+        return isCurrency ? `₹${parseInt(value, 10).toLocaleString('en-IN')}` : value;
     };
-
-    let summary: CreditSummary = { ...initialCreditSummary };
-
-    summary.totalAccounts = getSummaryValue('TOTAL', summarySection) || getSummaryValue('Number of Accounts', summarySection);
-    summary.totalOutstanding = getSummaryValue('CURRENT BALANCE', summarySection) || getSummaryValue('Total Balance Amount', summarySection);
-    summary.totalCreditLimit = getSummaryValue('HIGH CR/SANC. AMT', summarySection) || getSummaryValue('Total Sanctioned Amount', summarySection);
-    summary.activeAccounts = getSummaryValue('ACTIVE', summarySection);
-    summary.closedAccounts = getSummaryValue('CLOSED', summarySection) || getSummaryValue('ZERO-BALANCE', summarySection);
-
-    // If summary section values are not found, try to calculate from account details
-    if (summary.totalAccounts === 0) {
-        summary.totalAccounts = (accountsSection.match(/MEMBER NAME/gi) || []).length;
-    }
     
-    let calculatedTotalOutstanding = 0;
-    let calculatedTotalCreditLimit = 0;
+    const newAccountSummary: AccountSummary = {
+        total: getSummaryValue(/TOTAL: (\d+)/i, summarySection),
+        zeroBalance: getSummaryValue(/ZERO-BALANCE: (\d+)/i, summarySection),
+        highCredit: getSummaryValue(/HIGH CR\/SANC\. AMT: ([\d,]+)/i, summarySection, true),
+        currentBalance: getSummaryValue(/CURRENT: ([\d,]+)/i, summarySection, true),
+        overdue: getSummaryValue(/OVERDUE: ([\d,]+)/i, summarySection, true),
+        recentDate: getSummaryValue(/RECENT: (\d{8})/i, summarySection).replace(/(\d{2})(\d{2})(\d{4})/, '$1-$2-$3'),
+        oldestDate: getSummaryValue(/OLDEST: (\d{8})/i, summarySection).replace(/(\d{2})(\d{2})(\d{4})/, '$1-$2-$3'),
+    };
+    setAccountSummary(newAccountSummary);
+
+
+    const enquirySection = (normalizedText.match(/ENQUIRIES(.*?)END OF REPORT/is) || [''])[0];
+    const newEnquirySummary: EnquirySummary = {
+        total: getSummaryValue(/All Enquiry\s+(\d+)/i, enquirySection),
+        past30Days: getSummaryValue(/All Enquiry\s+\d+\s+(\d+)/i, enquirySection),
+        past12Months: getSummaryValue(/All Enquiry\s+\d+\s+\d+\s+(\d+)/i, enquirySection),
+        past24Months: getSummaryValue(/All Enquiry\s+\d+\s+\d+\s+\d+\s+(\d+)/i, enquirySection),
+        recentDate: getSummaryValue(/RECENT\s+((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun).*?GMT\+\d{4})/i, enquirySection),
+    };
+    setEnquirySummary(newEnquirySummary);
+
+    // --- Detailed DPD and Flagged Account Parsing (Remains the same) ---
+    const tempDpdSummary: DpdSummary = { ...initialDpdSummary };
+    const currentFlaggedAccounts: FlaggedAccount[] = [];
+    const currentDpdStatus: AccountDpdStatus[] = [];
     
     const accountHeaderRegex = /(MEMBER NAME|ACCOUNT NUMBER|TYPE|OWNERSHIP|ACCOUNT\s+DATES\s+AMOUNTS\s+STATUS)/gi;
     const accountSectionsSplit = normalizedText.split(accountHeaderRegex).slice(1);
-    
-    const loans: LoanAccount[] = [];
-    const currentFlaggedAccounts: FlaggedAccount[] = [];
-    const currentDpdStatus: AccountDpdStatus[] = [];
-    const tempDpdSummary: DpdSummary = { ...initialDpdSummary };
 
-    let totalEMI = 0;
-    let maxEMI = 0;
-    let ccPayments = 0;
-    
-    summary.writtenOff = 0;
-    summary.settled = 0;
-    summary.doubtful = 0;
-    
-    for(let i=0; i < accountSectionsSplit.length; i+=2) {
+     for(let i=0; i < accountSectionsSplit.length; i+=2) {
         let section = accountSectionsSplit[i + 1] || '';
         
         const typeMatch = section.match(/TYPE:\s*([A-Za-z\s-]+?)(?=OWNERSHIP|COLLATERAL|OPENED)/i);
         const accountType = typeMatch ? typeMatch[1].trim() : "N/A";
         
-        const ownershipMatch = section.match(/OWNERSHIP:\s*(.+?)(?=OPENED|REPORTED|COLLATERAL)/i);
-        const ownership = ownershipMatch ? ownershipMatch[1].trim().toLowerCase() : 'individual';
-        
         let accountStatusText = (section.match(/STATUS(.*?)(?:MEMBER NAME|ACCOUNT NUMBER|TYPE|OWNERSHIP)/i)?.[0] || section).toLowerCase();
         
-        let accountStatus = "active"; // default
+        let accountStatus = "active";
         if (accountStatusText.includes("written off")) accountStatus = "written off";
         else if (accountStatusText.includes("settled")) accountStatus = "settled";
         else if (accountStatusText.includes("closed")) accountStatus = "closed";
         else if (accountStatusText.includes("sub-standard") || accountStatusText.includes("sub ")) accountStatus = "sub-standard";
         else if (accountStatusText.includes("doubtful") || accountStatusText.includes("dbt")) accountStatus = "doubtful";
         
-        const sanctionedMatch = section.match(/(?:SANCTIONED|CREDIT LIMIT|HIGH CREDIT|SANC\. AMT):\s*₹?\s*([\d,]+)/i);
-        const balanceMatch = section.match(/(?:CURRENT BALANCE|BALANCE):\s*₹?\s*([\d,]+)/i);
-        const overdueMatch = section.match(/(?:OVERDUE|AMT OVERDUE):\s*₹?\s*([\d,]+)/i);
-        
-        const emiMatch = section.match(/(?:EMI|REPAYMENT\s*AMOUNT|INSTALLMENT\s*AMT|Amount):\s*₹?\s*([\d,]+)/i);
-
-        const openedMatch = section.match(/OPENED:\s*(\d{2}-\d{2}-\d{4})/i);
-        const closedMatch = section.match(/CLOSED:\s*(\d{2}-\d{2}-\d{4})/i);
         const paymentHistoryMatch = section.match(/DAYS PAST DUE\/ASSET CLASSIFICATION \(UP TO 36 MONTHS; LEFT TO RIGHT\)([\s\S]+?)(?=ACCOUNT DATES AMOUNTS STATUS|INFORMATION UNDER DISPUTE|END OF REPORT|$)/i);
-        
         const paymentHistory = paymentHistoryMatch ? paymentHistoryMatch[1].trim().replace(/\s+/g, ' ') : 'N/A';
-        const dpdValues = paymentHistory.match(/(\d{3})|STD|SUB|DBT|XXX/g) || [];
-        let isDelinquent = dpdValues.some(dpd => dpd !== '000' && dpd !== 'STD' && dpd !== 'XXX');
-
-
-        const loan: LoanAccount = {
-            type: accountType,
-            ownership: ownership,
-            status: accountStatus,
-            sanctioned: sanctionedMatch ? sanctionedMatch[1].replace(/,/g, '') : '0',
-            balance: balanceMatch ? balanceMatch[1].replace(/,/g, '') : '0',
-            overdue: overdueMatch ? overdueMatch[1].replace(/,/g, '') : '0',
-            emi: emiMatch ? emiMatch[1].replace(/,/g, '') : '0',
-            opened: openedMatch ? openedMatch[1] : 'N/A',
-            closed: closedMatch ? closedMatch[1] : 'N/A',
-            paymentHistory: paymentHistory,
-        };
         
-        if(loan.type === "N/A" && loan.sanctioned === '0' && loan.balance === '0') continue;
-
-        loans.push(loan);
-        
-        calculatedTotalOutstanding += parseInt(loan.balance, 10) || 0;
-        calculatedTotalCreditLimit += parseInt(loan.sanctioned, 10) || 0;
+        const overdueMatch = section.match(/(?:OVERDUE|AMT OVERDUE):\s*₹?\s*([\d,]+)/i);
 
         let isFlagged = false;
         let issue = '';
 
-        if (accountStatus.includes('written off')) { summary.writtenOff += 1; issue = 'Written Off'; isFlagged = true; }
-        if (accountStatus.includes('settled')) { summary.settled += 1; issue = 'Settled'; isFlagged = true; }
-        if (accountStatus.includes('doubtful') || paymentHistory.includes('DBT')) { summary.doubtful += 1; issue = 'Doubtful'; isFlagged = true; }
+        if (accountStatus.includes('written off')) { issue = 'Written Off'; isFlagged = true; }
+        if (accountStatus.includes('settled')) { issue = 'Settled'; isFlagged = true; }
+        if (accountStatus.includes('doubtful') || paymentHistory.includes('DBT')) { issue = 'Doubtful'; isFlagged = true; }
         if (accountStatus.includes('sub-standard') || paymentHistory.includes('SUB')) { issue = 'Sub-standard Account'; isFlagged = true; }
         
-        const overdueAmount = parseInt(loan.overdue, 10);
+        const overdueAmount = parseInt(overdueMatch?.[1]?.replace(/,/g, '') || '0', 10);
         if (!isNaN(overdueAmount) && overdueAmount > 0) {
             issue = `Overdue amount of ₹${overdueAmount.toLocaleString()}`;
             isFlagged = true;
         }
-        
+
         if (isFlagged) {
+             const loan: LoanAccount = {
+                type: accountType,
+                ownership: (section.match(/OWNERSHIP:\s*(.+?)(?=OPENED|REPORTED|COLLATERAL)/i)?.[1] || '').trim(),
+                status: accountStatus,
+                sanctioned: (section.match(/(?:SANCTIONED|CREDIT LIMIT|HIGH CREDIT|SANC\. AMT):\s*₹?\s*([\d,]+)/i)?.[1] || '0').replace(/,/g, ''),
+                balance: (section.match(/(?:CURRENT BALANCE|BALANCE):\s*₹?\s*([\d,]+)/i)?.[1] || '0').replace(/,/g, ''),
+                overdue: String(overdueAmount),
+                emi: (section.match(/(?:EMI|REPAYMENT\s*AMOUNT|INSTALLMENT\s*AMT|Amount):\s*₹?\s*([\d,]+)/i)?.[1] || '0').replace(/,/g, ''),
+                opened: section.match(/OPENED:\s*(\d{2}-\d{2}-\d{4})/i)?.[1] || 'N/A',
+                closed: section.match(/CLOSED:\s*(\d{2}-\d{2}-\d{4})/i)?.[1] || 'N/A',
+                paymentHistory: paymentHistory,
+            };
             currentFlaggedAccounts.push({ ...loan, issue });
         }
-        
-        const emi = parseInt(loan.emi, 10) || 0;
-        if (accountStatus === 'active' || accountStatus === 'sub-standard') {
-          if (ownership.includes('individual') || ownership.includes('joint') || ownership.includes('guarantor') || isDelinquent) {
-            if (accountType.toLowerCase().includes('credit card')) {
-                const outstanding = parseInt(loan.balance, 10) || 0;
-                let cardPayment = 0;
-                if(parseInt(loan.overdue, 10) > 0) {
-                    cardPayment = parseInt(loan.overdue, 10);
-                } else if(outstanding > 0) {
-                    cardPayment = Math.round(outstanding * 0.05); // 5% of outstanding
-                }
-                if(cardPayment > 0) ccPayments += cardPayment;
-            } else {
-              if (emi > 0) {
-                totalEMI += emi;
-                if (emi > maxEMI) maxEMI = emi;
-              }
-            }
-          }
-        }
-        
+
         let highestDpd = 0;
         if (paymentHistory !== 'N/A') {
+            const dpdValues = paymentHistory.match(/(\d{3})|STD|SUB|DBT|XXX/g) || [];
             dpdValues.forEach(dpdStr => {
                 if (dpdStr === 'STD' || dpdStr === '000' || dpdStr === 'XXX') {
                     tempDpdSummary.onTime++;
@@ -605,40 +569,10 @@ export default function CreditWiseAIPage() {
         }
         currentDpdStatus.push({ accountType, status: accountStatus, highestDpd, paymentHistory });
     };
-
-    summary.totalOutstanding = summary.totalOutstanding > 0 ? summary.totalOutstanding : calculatedTotalOutstanding;
-    summary.totalCreditLimit = summary.totalCreditLimit > 0 ? summary.totalCreditLimit : calculatedTotalCreditLimit;
-    summary.totalDebt = summary.totalOutstanding;
-    summary.creditUtilization = summary.totalCreditLimit > 0 ? Math.round((summary.totalOutstanding / summary.totalCreditLimit) * 100) : 0;
-    summary.debtToLimitRatio = summary.creditUtilization;
     
-    const totalMonthlyObligation = totalEMI + Math.round(ccPayments);
-    summary.totalMonthlyEMI = totalMonthlyObligation;
-    summary.maxSingleEMI = maxEMI;
-    summary.creditCardPayments = Math.round(ccPayments);
-    
-    setCreditSummary(summary);
     setFlaggedAccounts(currentFlaggedAccounts);
     setAccountDpdStatus(currentDpdStatus);
     setDpdSummary(tempDpdSummary);
-    setTotalEmi(String(totalMonthlyObligation));
-
-    const inquirySectionMatch = normalizedText.match(/ENQUIRIES:(.*?)END OF REPORT/i);
-    const inquiryText = inquirySectionMatch ? inquirySectionMatch[1] : '';
-    
-    const currentInquiries: Inquiry[] = [];
-    const inquiryRegex = /(\d{2}-\d{2}-\d{4})\s+([A-Z\s.,()-]+?)\s+(Consumer Loan|Personal Loan|Credit Card|Auto Loan|Business Loan|Housing Loan|Other|Two-wheeler Loan|Loan Against Property|LOAN AGAINST SHARES\/ SECURITIES|BUSINESS LOAN - GENERAL)/gi;
-
-    let match;
-    while ((match = inquiryRegex.exec(inquiryText)) !== null) {
-        currentInquiries.push({
-            date: match[1].trim(),
-            lender: match[2].trim().replace(/\s\s+/g, ' '),
-            purpose: match[3].trim()
-        });
-    }
-    
-    setInquiries(currentInquiries);
   };
 
 
@@ -777,7 +711,7 @@ export default function CreditWiseAIPage() {
         aiScore: aiRating.aiScore,
         rating: aiRating.rating,
         monthlyIncome: estimatedIncome,
-        totalMonthlyEMI: creditSummary.totalMonthlyEMI,
+        totalMonthlyEMI: parseFloat(totalEmi),
         creditReportText: rawText,
       });
       setLoanEligibility(result);
@@ -905,13 +839,6 @@ export default function CreditWiseAIPage() {
 
   const scoreProgress = creditScore ? (creditScore - 300) / 6 : 0;
 
-  const SummaryItem = ({ label, value, icon: Icon }: { label: string; value: string | number, icon?: React.ElementType }) => (
-    <div className="bg-muted/50 rounded-lg p-4 text-center">
-      <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">{Icon && <Icon className="h-4 w-4" />}{label}</p>
-      <p className="text-xl font-bold text-primary">{value}</p>
-    </div>
-  );
-  
   const DpdSummaryBox = ({
     label,
     count,
@@ -965,37 +892,6 @@ export default function CreditWiseAIPage() {
     }
   };
 
-
-  const getInquiryCounts = useCallback(() => {
-    const now = new Date();
-    const thirtyDaysAgo = new Date(new Date().setDate(now.getDate() - 30));
-    const oneYearAgo = new Date(new Date().setFullYear(now.getFullYear() - 1));
-    const twoYearsAgo = new Date(new Date().setFullYear(now.getFullYear() - 2));
-
-    const counts = {
-      thirtyDays: 0,
-      oneYear: 0,
-      twoYears: 0,
-    };
-
-    inquiries.forEach(inq => {
-      try {
-        const inqDate = new Date(inq.date.split('-').reverse().join('-'));
-        if (isNaN(inqDate.getTime())) return;
-        
-        if (inqDate > thirtyDaysAgo) counts.thirtyDays++;
-        if (inqDate > oneYearAgo) counts.oneYear++;
-        if (inqDate > twoYearsAgo) counts.twoYears++;
-      } catch (e) {
-        console.warn(`Could not parse date: ${inq.date}`)
-      }
-    });
-
-    return counts;
-  }, [inquiries]);
-
-  const inquiryCounts = getInquiryCounts();
-
   const handlePrint = () => {
     window.print();
   }
@@ -1017,6 +913,13 @@ export default function CreditWiseAIPage() {
       {icon}
       <span className="text-xs font-normal">{label}</span>
     </Button>
+  );
+
+  const SummaryItem = ({ label, value }: { label: string; value: string | number }) => (
+    <div className="flex flex-col items-center justify-center text-center">
+      <p className="text-xs text-muted-foreground uppercase tracking-wider">{label}</p>
+      <p className="text-base font-medium text-foreground">{value}</p>
+    </div>
   );
 
   return (
@@ -1182,7 +1085,6 @@ export default function CreditWiseAIPage() {
                       <NavButton view="aiAnalysis" label="AI Credit Report Analysis" icon={<BrainCircuit size={24} />} />
                       <NavButton view="creditSummary" label="Credit Summary" icon={<FileSymlink size={24} />} />
                       <NavButton view="loanEligibility" label="AI Loan Eligibility" icon={<Banknote size={24} />} />
-                      <NavButton view="inquiryAnalysis" label="Credit Enquiry Analysis" icon={<Search size={24} />} />
                       <NavButton view="dpdAnalysis" label="DPD Analysis" icon={<LineChart size={24} />} />
                       <NavButton view="incomeEstimator" label="Income Estimator & Debt Management" icon={<Calculator size={24} />} />
                       <NavButton view="creditImprovement" label="AI Credit Improvement" icon={<Lightbulb size={24} />} />
@@ -1327,26 +1229,42 @@ export default function CreditWiseAIPage() {
                   
                   {activeView === 'creditSummary' && (
                     <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center"><FileSymlink className="mr-3 h-6 w-6 text-primary" />Credit Summary</CardTitle>
-                        <CardDescription>A detailed overview of your credit accounts and metrics.</CardDescription>
-                      </CardHeader>
-                      <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        <SummaryItem label="Total Accounts" value={creditSummary.totalAccounts} />
-                        <SummaryItem label="Total Credit Limit" value={`₹${creditSummary.totalCreditLimit.toLocaleString('en-IN')}`} />
-                        <SummaryItem label="Total Outstanding" value={`₹${creditSummary.totalOutstanding.toLocaleString('en-IN')}`} />
-                        <SummaryItem label="Total Debt" value={`₹${creditSummary.totalDebt.toLocaleString('en-IN')}`} />
-                        <SummaryItem label="Credit Utilization" value={`${creditSummary.creditUtilization}%`} />
-                        <SummaryItem label="Debt-to-Limit Ratio" value={`${creditSummary.debtToLimitRatio}%`} />
-                        <SummaryItem label="Active Accounts" value={creditSummary.activeAccounts} />
-                        <SummaryItem label="Closed Accounts" value={creditSummary.closedAccounts} />
-                        <SummaryItem label="Written Off" value={creditSummary.writtenOff} />
-                        <SummaryItem label="Settled" value={creditSummary.settled} />
-                        <SummaryItem label="Doubtful" value={creditSummary.doubtful} />
-                        <SummaryItem label="Total Monthly EMI" value={`₹${creditSummary.totalMonthlyEMI.toLocaleString('en-IN')}`} />
-                        <SummaryItem label="Max Single EMI" value={`₹${creditSummary.maxSingleEMI.toLocaleString('en-IN')}`} />
-                        <SummaryItem label="Credit Card Payments" value={`₹${creditSummary.creditCardPayments.toLocaleString('en-IN')}`} />
-                      </CardContent>
+                        <CardHeader>
+                            <CardTitle className="flex items-center"><FileSymlink className="mr-3 h-6 w-6 text-primary" />Report Summary</CardTitle>
+                            <CardDescription>A summary of accounts and enquiries from your CIBIL report.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                             <div>
+                                <h4 className="font-semibold text-lg mb-2 text-primary">ACCOUNTS</h4>
+                                <div className="border rounded-lg p-4 grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-2">
+                                    <SummaryItem label="Account Type" value="All Accounts" />
+                                    <div className="space-y-2 col-span-2 md:col-span-1">
+                                      <SummaryItem label="Total Accounts" value={accountSummary.total} />
+                                      <SummaryItem label="Zero-Balance" value={accountSummary.zeroBalance} />
+                                    </div>
+                                    <SummaryItem label="Advances (High CR/Sanc. Amt)" value={accountSummary.highCredit} />
+                                    <div className="space-y-2 col-span-2 md:col-span-1">
+                                      <SummaryItem label="Balances (Current)" value={accountSummary.currentBalance} />
+                                      <SummaryItem label="Balances (Overdue)" value={accountSummary.overdue} />
+                                    </div>
+                                    <div className="space-y-2 col-span-2 md:col-span-2">
+                                       <SummaryItem label="Date Opened (Recent)" value={accountSummary.recentDate} />
+                                       <SummaryItem label="Date Opened (Oldest)" value={accountSummary.oldestDate} />
+                                    </div>
+                                </div>
+                            </div>
+                             <div>
+                                <h4 className="font-semibold text-lg mb-2 text-primary">ENQUIRIES</h4>
+                                <div className="border rounded-lg p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+                                    <SummaryItem label="Enquiry Purpose" value="All Enquiry" />
+                                    <SummaryItem label="Total" value={enquirySummary.total} />
+                                    <SummaryItem label="Past 30 Days" value={enquirySummary.past30Days} />
+                                    <SummaryItem label="Past 12 Months" value={enquirySummary.past12Months} />
+                                    <SummaryItem label="Past 24 Months" value={enquirySummary.past24Months} />
+                                    <SummaryItem label="Recent" value={enquirySummary.recentDate} />
+                                </div>
+                            </div>
+                        </CardContent>
                     </Card>
                   )}
                   
@@ -1400,21 +1318,6 @@ export default function CreditWiseAIPage() {
                             </Card>
                           )}
                         </CardContent>
-                    </Card>
-                  )}
-
-                  {activeView === 'inquiryAnalysis' && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center"><Search className="mr-3 h-6 w-6 text-primary" />Credit Inquiries Analysis</CardTitle>
-                        <CardDescription>An overview of recent credit inquiries on your report.</CardDescription>
-                      </CardHeader>
-                      <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <SummaryItem label="Total Inquiries" value={inquiries.length} />
-                        <SummaryItem label="Past 30 Days" value={inquiryCounts.thirtyDays} />
-                        <SummaryItem label="Past 12 Months" value={inquiryCounts.oneYear} />
-                        <SummaryItem label="Past 24 Months" value={inquiryCounts.twoYears} />
-                      </CardContent>
                     </Card>
                   )}
 
@@ -1911,7 +1814,7 @@ export default function CreditWiseAIPage() {
                           <div>
                             <h4 className="font-semibold text-center mb-2">Outstanding Loan Amounts</h4>
                             <ResponsiveContainer width="100%" height={200}>
-                                <BarChart data={[{name: 'Outstanding', value: creditSummary.totalOutstanding}, {name: 'Limit', value: creditSummary.totalCreditLimit}]}>
+                                <BarChart data={[{name: 'Outstanding', value: parseFloat(accountSummary.currentBalance.replace(/[₹,]/g, '')) || 0}, {name: 'Limit', value: parseFloat(accountSummary.highCredit.replace(/[₹,]/g, '')) || 0}]}>
                                 <XAxis dataKey="name" />
                                 <YAxis />
                                 <Tooltip />
