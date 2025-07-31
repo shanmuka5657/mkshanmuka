@@ -450,30 +450,33 @@ export default function CreditWiseAIPage() {
     
     setConsumerInfo(info);
 
-    let summary: CreditSummary = { ...initialCreditSummary };
-    const summarySection = normalizedText.match(/SUMMARY:(.*?)ACCOUNT INFORMATION/s);
-    let totalOutstanding = 0;
-    let totalCreditLimit = 0;
-    
-    if (summarySection) {
-        const summaryText = summarySection[1];
-        const totalAcMatch = summaryText.match(/TOTAL:\s*([\d,]+)/i);
-        if (totalAcMatch) summary.totalAccounts = parseInt(totalAcMatch[1].replace(/,/g, ''), 10);
-        
-        const highCreditMatch = summaryText.match(/HIGH CR\/SANC\. AMT:\s*([\d,]+)/i);
-        if (highCreditMatch) totalCreditLimit = parseInt(highCreditMatch[1].replace(/,/g, ''), 10);
-        
-        const currentBalanceMatch = summaryText.match(/(?:CURRENT BALANCE|CURRENT|BALANCES):\s*([\d,]+)/i);
-        if (currentBalanceMatch) totalOutstanding = parseInt(currentBalanceMatch[1].replace(/,/g, ''), 10);
-        
-        const zeroBalanceMatch = summaryText.match(/ZERO-BALANCE:\s*([\d,]+)/i);
-        if (zeroBalanceMatch) summary.closedAccounts = parseInt(zeroBalanceMatch[1].replace(/,/g, ''), 10);
+    const summarySection = (normalizedText.match(/SUMMARY(.*?)(?=ACCOUNT INFORMATION|ACCOUNT DETAILS|$)/is) || [''])[0];
+    const accountsSection = (normalizedText.match(/ACCOUNT INFORMATION(.*)/is) || [''])[0];
 
-        summary.activeAccounts = summary.totalAccounts - summary.closedAccounts;
+    const getSummaryValue = (label: string, section: string, isCurrency = false): number => {
+        const regex = new RegExp(`${label}\\s*:?\\s*(₹)?\\s*([\\d,]+)`, 'i');
+        const match = section.match(regex);
+        return match ? parseInt(match[2].replace(/,/g, ''), 10) : 0;
+    };
+
+    let summary: CreditSummary = { ...initialCreditSummary };
+
+    summary.totalAccounts = getSummaryValue('TOTAL', summarySection) || getSummaryValue('Number of Accounts', summarySection);
+    summary.totalOutstanding = getSummaryValue('CURRENT BALANCE', summarySection) || getSummaryValue('Total Balance Amount', summarySection);
+    summary.totalCreditLimit = getSummaryValue('HIGH CR/SANC. AMT', summarySection) || getSummaryValue('Total Sanctioned Amount', summarySection);
+    summary.activeAccounts = getSummaryValue('ACTIVE', summarySection);
+    summary.closedAccounts = getSummaryValue('CLOSED', summarySection) || getSummaryValue('ZERO-BALANCE', summarySection);
+
+    // If summary section values are not found, try to calculate from account details
+    if (summary.totalAccounts === 0) {
+        summary.totalAccounts = (accountsSection.match(/MEMBER NAME/gi) || []).length;
     }
     
+    let calculatedTotalOutstanding = 0;
+    let calculatedTotalCreditLimit = 0;
+    
     const accountHeaderRegex = /(MEMBER NAME|ACCOUNT NUMBER|TYPE|OWNERSHIP|ACCOUNT\s+DATES\s+AMOUNTS\s+STATUS)/gi;
-    const accountSections = normalizedText.split(accountHeaderRegex).slice(1);
+    const accountSectionsSplit = normalizedText.split(accountHeaderRegex).slice(1);
     
     const loans: LoanAccount[] = [];
     const currentFlaggedAccounts: FlaggedAccount[] = [];
@@ -483,15 +486,13 @@ export default function CreditWiseAIPage() {
     let totalEMI = 0;
     let maxEMI = 0;
     let ccPayments = 0;
-    let calculatedTotalOutstanding = 0;
-    let calculatedTotalCreditLimit = 0;
     
     summary.writtenOff = 0;
     summary.settled = 0;
     summary.doubtful = 0;
     
-    for(let i=0; i < accountSections.length; i+=2) {
-        let section = accountSections[i + 1] || '';
+    for(let i=0; i < accountSectionsSplit.length; i+=2) {
+        let section = accountSectionsSplit[i + 1] || '';
         
         const typeMatch = section.match(/TYPE:\s*([A-Za-z\s-]+?)(?=OWNERSHIP|COLLATERAL|OPENED)/i);
         const accountType = typeMatch ? typeMatch[1].trim() : "N/A";
@@ -508,11 +509,11 @@ export default function CreditWiseAIPage() {
         else if (accountStatusText.includes("sub-standard") || accountStatusText.includes("sub ")) accountStatus = "sub-standard";
         else if (accountStatusText.includes("doubtful") || accountStatusText.includes("dbt")) accountStatus = "doubtful";
         
-        const sanctionedMatch = section.match(/(?:SANCTIONED|CREDIT LIMIT|HIGH CREDIT|SANC\. AMT):\s*([\d,]+)/i);
-        const balanceMatch = section.match(/(?:CURRENT BALANCE|BALANCE):\s*([\d,]+)/i);
-        const overdueMatch = section.match(/(?:OVERDUE|AMT OVERDUE):\s*([\d,]+)/i);
+        const sanctionedMatch = section.match(/(?:SANCTIONED|CREDIT LIMIT|HIGH CREDIT|SANC\. AMT):\s*₹?\s*([\d,]+)/i);
+        const balanceMatch = section.match(/(?:CURRENT BALANCE|BALANCE):\s*₹?\s*([\d,]+)/i);
+        const overdueMatch = section.match(/(?:OVERDUE|AMT OVERDUE):\s*₹?\s*([\d,]+)/i);
         
-        const emiMatch = section.match(/(?:EMI|REPAYMENT\s*AMOUNT|INSTALLMENT\s*AMT|Amount):\s*([\d,]+)/i);
+        const emiMatch = section.match(/(?:EMI|REPAYMENT\s*AMOUNT|INSTALLMENT\s*AMT|Amount):\s*₹?\s*([\d,]+)/i);
 
         const openedMatch = section.match(/OPENED:\s*(\d{2}-\d{2}-\d{4})/i);
         const closedMatch = section.match(/CLOSED:\s*(\d{2}-\d{2}-\d{4})/i);
@@ -562,9 +563,8 @@ export default function CreditWiseAIPage() {
         }
         
         const emi = parseInt(loan.emi, 10) || 0;
-        if (accountStatus === 'active') {
-          // Only add EMI to total if applicant is primary borrower or if it's a delinquent joint/guarantor loan
-          if (ownership.includes('individual') || isDelinquent) {
+        if (accountStatus === 'active' || accountStatus === 'sub-standard') {
+          if (ownership.includes('individual') || ownership.includes('joint') || ownership.includes('guarantor') || isDelinquent) {
             if (accountType.toLowerCase().includes('credit card')) {
                 const outstanding = parseInt(loan.balance, 10) || 0;
                 let cardPayment = 0;
@@ -606,8 +606,8 @@ export default function CreditWiseAIPage() {
         currentDpdStatus.push({ accountType, status: accountStatus, highestDpd, paymentHistory });
     };
 
-    summary.totalOutstanding = totalOutstanding > 0 ? totalOutstanding : calculatedTotalOutstanding;
-    summary.totalCreditLimit = totalCreditLimit > 0 ? totalCreditLimit : calculatedTotalCreditLimit;
+    summary.totalOutstanding = summary.totalOutstanding > 0 ? summary.totalOutstanding : calculatedTotalOutstanding;
+    summary.totalCreditLimit = summary.totalCreditLimit > 0 ? summary.totalCreditLimit : calculatedTotalCreditLimit;
     summary.totalDebt = summary.totalOutstanding;
     summary.creditUtilization = summary.totalCreditLimit > 0 ? Math.round((summary.totalOutstanding / summary.totalCreditLimit) * 100) : 0;
     summary.debtToLimitRatio = summary.creditUtilization;
