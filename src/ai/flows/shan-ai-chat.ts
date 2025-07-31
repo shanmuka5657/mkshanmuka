@@ -12,7 +12,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { type Part } from 'genkit/ai';
-import { Message } from 'genkit/model';
+import { Message } from '@genkit-ai/googleai';
 
 
 // Define the structure for a single message in the history
@@ -60,7 +60,7 @@ function mapHistoryToGenkitMessages(history: ShanAiChatHistory[]): Message[] {
       return { text: '' }; // Should not happen with valid data
     }).filter(p => p.text || p.media);
 
-    return new Message(message.role, parts);
+    return new Message({role: message.role, content: parts});
   });
 }
 
