@@ -73,6 +73,7 @@ import type { User } from 'firebase/auth';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
+import { saveTrainingCandidate } from '@/lib/training-store';
 
 
 type CreditSummary = {
@@ -834,6 +835,19 @@ export default function CreditWiseAIPage() {
         title: 'AI Underwriting Complete',
         description: 'Your simulated underwriting assessment is ready.',
       });
+
+      // Automatically save the full analysis as a training candidate
+      saveTrainingCandidate({
+          rawCreditReport: rawText,
+          aiRating: aiRating,
+          financialRisk: financialRisk,
+          creditUnderwriting: result
+      });
+      toast({
+        title: "Training Example Saved",
+        description: "This analysis has been saved as a candidate for AI training. You can review it on the 'AI Model Trainer' page."
+      });
+
     } catch (error: any) {
       console.error('Error getting underwriting:', error);
       toast({
@@ -1993,3 +2007,5 @@ export default function CreditWiseAIPage() {
     </div>
   );
 }
+
+    

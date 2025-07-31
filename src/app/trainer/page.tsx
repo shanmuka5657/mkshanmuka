@@ -1,122 +1,62 @@
 
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
-import { Bot, BrainCircuit, Plus, Trash2, UploadCloud, Loader2 } from 'lucide-react';
+import { Bot, BrainCircuit, ThumbsUp, ThumbsDown, Trash2, Loader2, FileText, Sparkles } from 'lucide-react';
 import Link from 'next/link';
-import * as pdfjsLib from 'pdfjs-dist';
+import { getTrainingCandidates, approveCandidate, rejectCandidate, type TrainingCandidate } from '@/lib/training-store';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
-
-type TrainingExample = {
-  id: number;
-  rawCibilText: string;
-  fileName: string;
-  name: string;
-  dob: string;
-  pan: string;
-  address: string;
-};
-
-type LoadingState = {
-  [key: number]: boolean;
-};
 
 export default function ModelTrainerPage() {
-  const [modelName, setModelName] = useState('');
-  const [examples, setExamples] = useState<TrainingExample[]>([]);
+  const [modelName, setModelName] = useState('CreditUnderwritingModel-v1');
+  const [candidates, setCandidates] = useState<TrainingCandidate[]>([]);
   const [isTraining, setIsTraining] = useState(false);
-  const [loadingExamples, setLoadingExamples] = useState<LoadingState>({});
-  const fileInputRefs = useRef<{[key: number]: HTMLInputElement | null}>({});
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-    }
+    // Load candidates from our simulated store
+    setCandidates(getTrainingCandidates());
   }, []);
-
-
-  const addExample = () => {
-    setExamples([
-      ...examples,
-      {
-        id: Date.now(),
-        rawCibilText: '',
-        fileName: 'No file selected',
-        name: '',
-        dob: '',
-        pan: '',
-        address: '',
-      },
-    ]);
-  };
-
-  const updateExample = (id: number, field: keyof Omit<TrainingExample, 'id'>, value: string) => {
-    setExamples(
-      examples.map((ex) => (ex.id === id ? { ...ex, [field]: value } : ex))
-    );
-  };
   
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>, exampleId: number) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setLoadingExamples(prev => ({ ...prev, [exampleId]: true }));
-    updateExample(exampleId, 'fileName', file.name);
-
-    try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const buffer = e.target?.result as ArrayBuffer;
-        if (buffer) {
-          const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
-          let textContent = '';
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const text = await page.getTextContent();
-            textContent += text.items.map(item => 'str' in item ? item.str : '').join(' ');
-          }
-          updateExample(exampleId, 'rawCibilText', textContent);
-        }
-      };
-      reader.readAsArrayBuffer(file);
-    } catch (error) {
-      console.error('Error processing PDF:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to process the PDF file.",
-      });
-      updateExample(exampleId, 'fileName', 'Error processing file');
-    } finally {
-       setLoadingExamples(prev => ({ ...prev, [exampleId]: false }));
-    }
+  const handleApprove = (id: string) => {
+    approveCandidate(id);
+    setCandidates(getTrainingCandidates());
+    toast({
+      title: 'Candidate Approved',
+      description: 'This example can now be used for future model training.',
+    });
   };
 
-
-  const removeExample = (id: number) => {
-    setExamples(examples.filter((ex) => ex.id !== id));
+  const handleReject = (id: string) => {
+    rejectCandidate(id);
+    setCandidates(getTrainingCandidates());
+     toast({
+      variant: 'destructive',
+      title: 'Candidate Rejected',
+      description: 'This example has been deleted and will not be used for training.',
+    });
   };
+
 
   const handleTrainModel = () => {
+    const approvedCandidates = candidates.filter(c => c.status === 'approved');
     if (!modelName.trim()) {
       toast({
         variant: 'destructive',
         title: 'Model Name Required',
-        description: 'Please give your extraction model a name.',
+        description: 'Please give your model a name.',
       });
       return;
     }
-    if (examples.length < 1) {
+    if (approvedCandidates.length < 1) {
       toast({
         variant: 'destructive',
-        title: 'More Examples Needed',
-        description: 'Please provide at least one complete example.',
+        title: 'No Approved Examples',
+        description: 'Please approve at least one candidate before training.',
       });
       return;
     }
@@ -134,10 +74,12 @@ export default function ModelTrainerPage() {
         variant: 'default',
         className: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
         title: 'Training Complete!',
-        description: `Your model "${modelName}" is now ready to be used for data extraction.`,
+        description: `Your model "${modelName}" is now ready to be used.`,
       });
     }, 2500);
   };
+  
+  const approvedCount = candidates.filter(c => c.status === 'approved').length;
 
   return (
     <div className="min-h-screen bg-background font-body text-foreground">
@@ -167,10 +109,10 @@ export default function ModelTrainerPage() {
       <main className="container mx-auto p-4 md:p-8">
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
-            AI Data Extraction Trainer
+            AI Learning & Review Center
           </h1>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-            Teach our AI to read CIBIL reports. Upload a CIBIL report PDF and then fill in the correct corresponding details. The more high-quality examples you provide, the better the AI will get at automatic data extraction.
+            The app automatically captures analysis results as "training candidates." Review them here to teach the AI. Your feedback creates a high-quality dataset for building smarter, custom AI models.
           </p>
         </div>
 
@@ -178,132 +120,78 @@ export default function ModelTrainerPage() {
           <CardHeader>
             <CardTitle className="flex items-center text-xl">
               <BrainCircuit className="mr-3 h-6 w-6 text-primary" />
-              1. Name Your Extraction Model
-            </CardTitle>
-            <CardDescription>Give your custom data extraction model a unique name.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Input
-              placeholder="e.g., 'CIBIL Consumer Info Extractor'"
-              value={modelName}
-              onChange={(e) => setModelName(e.target.value)}
-            />
-          </CardContent>
-        </Card>
-
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center text-xl">
-              <UploadCloud className="mr-3 h-6 w-6 text-primary" />
-              2. Provide Training Examples
+              1. Review Training Candidates
             </CardTitle>
             <CardDescription>
-             Add examples by uploading a CIBIL PDF and filling out the data you want the AI to learn to find.
+             Approve candidates you want to use for training your custom AI model. Reject any that are inaccurate or irrelevant.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {examples.map((example, index) => (
-              <Card key={example.id} className="p-4 bg-muted/50 relative">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-2 right-2 h-7 w-7"
-                  onClick={() => removeExample(example.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className='space-y-2'>
-                      <Label htmlFor={`cibil-upload-${example.id}`}>Upload CIBIL PDF</Label>
-                       <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            onClick={() => fileInputRefs.current[example.id]?.click()}
-                            disabled={loadingExamples[example.id]}
-                          >
-                            {loadingExamples[example.id] ? (
-                              <Loader2 className="mr-2 animate-spin" />
-                            ) : (
-                              <UploadCloud className="mr-2" />
-                            )}
-                            Upload PDF
-                          </Button>
-                          <span className="text-sm text-muted-foreground truncate flex-1">
-                            {example.fileName}
-                          </span>
-                        </div>
-                       <Input
-                          id={`cibil-upload-${example.id}`}
-                          ref={el => (fileInputRefs.current[example.id] = el)}
-                          type="file"
-                          accept=".pdf"
-                          onChange={(e) => handleFileChange(e, example.id)}
-                          className="hidden"
-                        />
-                         {example.rawCibilText && (
-                            <Textarea
-                              readOnly
-                              value={example.rawCibilText.substring(0, 300) + '...'}
-                              className="h-24 bg-background/50"
-                            />
-                        )}
-                  </div>
-                  <div className="space-y-4">
-                      <div>
-                        <Label htmlFor={`name-${index}`}>Name</Label>
-                        <Input 
-                          id={`name-${index}`} 
-                          placeholder="e.g., 'Ramesh Kumar'" 
-                          value={example.name} 
-                          onChange={e => updateExample(example.id, 'name', e.target.value)} />
-                      </div>
-                      <div>
-                        <Label htmlFor={`dob-${index}`}>Date of Birth</Label>
-                        <Input 
-                          id={`dob-${index}`} 
-                          placeholder="e.g., '01-01-1990'" 
-                          value={example.dob} 
-                          onChange={e => updateExample(example.id, 'dob', e.target.value)} />
-                      </div>
-                      <div>
-                        <Label htmlFor={`pan-${index}`}>PAN</Label>
-                        <Input 
-                          id={`pan-${index}`} 
-                          placeholder="e.g., 'ABCDE1234F'" 
-                          value={example.pan} 
-                          onChange={e => updateExample(example.id, 'pan', e.target.value)} />
-                      </div>
-                      <div>
-                        <Label htmlFor={`address-${index}`}>Address</Label>
-                        <Textarea 
-                          id={`address-${index}`} 
-                          placeholder="e.g., '123, Main Street, Bengaluru, Karnataka, 560001'" 
-                          value={example.address} 
-                          onChange={e => updateExample(example.id, 'address', e.target.value)}
-                          className="h-24"
-                        />
-                      </div>
-                  </div>
+            {candidates.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                    <FileText className="mx-auto h-12 w-12 mb-4"/>
+                    <h3 className="text-lg font-semibold">No Training Candidates Found</h3>
+                    <p>Use the "Analyzer" page to process a credit report. The results will automatically appear here for your review.</p>
                 </div>
-              </Card>
-            ))}
-            <Button variant="outline" onClick={addExample}>
-              <Plus className="mr-2" />
-              Add Example
-            </Button>
+            ) : (
+                <Accordion type="multiple" className="w-full">
+                    {candidates.map((candidate, index) => (
+                      <AccordionItem value={candidate.id} key={candidate.id}>
+                        <AccordionTrigger className="font-semibold text-left">
+                          Candidate #{index + 1} (Status: <span className={`capitalize ${candidate.status === 'approved' ? 'text-green-500' : 'text-yellow-500'}`}>{candidate.status}</span>)
+                        </AccordionTrigger>
+                        <AccordionContent>
+                           <Card className="p-4 bg-muted/50 relative">
+                                <pre className="whitespace-pre-wrap text-xs bg-background p-4 rounded-lg max-h-96 overflow-auto">
+                                  {JSON.stringify(candidate.data, null, 2)}
+                                </pre>
+                                <CardFooter className="pt-4 flex justify-end gap-2">
+                                  <Button variant="outline" size="sm" onClick={() => handleApprove(candidate.id)} disabled={candidate.status === 'approved'}>
+                                    <ThumbsUp className="mr-2"/> Approve
+                                  </Button>
+                                  <Button variant="destructive" size="sm" onClick={() => handleReject(candidate.id)}>
+                                    <ThumbsDown className="mr-2"/> Reject & Delete
+                                  </Button>
+                                </CardFooter>
+                           </Card>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                </Accordion>
+            )}
           </CardContent>
         </Card>
 
-        <div className="flex justify-center">
-            <Button size="lg" onClick={handleTrainModel} disabled={isTraining}>
-              {isTraining ? (
-                <Loader2 className="mr-2 animate-spin" />
-              ) : (
-                <Bot className="mr-2" />
-              )}
-              {isTraining ? 'Training Model...' : `Train "${modelName || 'Custom'}" Model`}
-            </Button>
-          </div>
+         <Card className="mb-8">
+            <CardHeader>
+                <CardTitle className="flex items-center text-xl">
+                <Sparkles className="mr-3 h-6 w-6 text-primary" />
+                2. Train Your Custom Model
+                </CardTitle>
+                <CardDescription>Once you have approved enough examples, you can train your custom model.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Label htmlFor="model-name">Custom Model Name</Label>
+                <Input
+                    id="model-name"
+                    placeholder="e.g., 'ConservativeUnderwriting_v1'"
+                    value={modelName}
+                    onChange={(e) => setModelName(e.target.value)}
+                />
+            </CardContent>
+            <CardFooter className="flex-col items-start gap-4">
+                 <Button size="lg" onClick={handleTrainModel} disabled={isTraining || approvedCount === 0}>
+                    {isTraining ? (
+                        <Loader2 className="mr-2 animate-spin" />
+                    ) : (
+                        <Bot className="mr-2" />
+                    )}
+                    {isTraining ? 'Training Model...' : `Train Model with ${approvedCount} Approved Examples`}
+                </Button>
+                {approvedCount === 0 && <p className="text-sm text-muted-foreground">You must approve at least one candidate to enable training.</p>}
+            </CardFooter>
+        </Card>
+
       </main>
        <footer className="text-center py-6 text-sm text-muted-foreground">
          <p>© {new Date().getFullYear()} CreditWise AI. Built with Firebase and Google AI.</p>
@@ -311,3 +199,5 @@ export default function ModelTrainerPage() {
     </div>
   );
 }
+
+    
