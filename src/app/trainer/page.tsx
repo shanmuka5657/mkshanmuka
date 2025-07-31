@@ -17,8 +17,11 @@ export default function ModelTrainerPage() {
   const [modelName, setModelName] = useState('CreditUnderwritingModel-v1');
   const [candidates, setCandidates] = useState<TrainingCandidate[]>([]);
   const [isTraining, setIsTraining] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    // Ensure this runs only on the client
+    setIsClient(true);
     // Load candidates from our simulated store
     setCandidates(getTrainingCandidates());
   }, []);
@@ -81,6 +84,14 @@ export default function ModelTrainerPage() {
   };
   
   const approvedCount = candidates.filter(c => c.status === 'approved').length;
+
+  if (!isClient) {
+    return (
+        <div className="flex items-center justify-center min-h-screen">
+            <Loader2 className="h-12 w-12 animate-spin text-primary"/>
+        </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background font-body text-foreground">

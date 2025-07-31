@@ -20,11 +20,11 @@ export type TrainingCandidate = {
   data: TrainingData;
 };
 
-let candidates: TrainingCandidate[] = [];
-
-// Function to load candidates from localStorage
+// This function now safely handles server-side execution.
 const loadCandidates = (): TrainingCandidate[] => {
-  if (typeof window === 'undefined') return [];
+  if (typeof window === 'undefined') {
+    return []; // Return empty array if not in a browser
+  }
   try {
     const storedCandidates = localStorage.getItem('trainingCandidates');
     return storedCandidates ? JSON.parse(storedCandidates) : [];
@@ -33,6 +33,8 @@ const loadCandidates = (): TrainingCandidate[] => {
     return [];
   }
 };
+
+let candidates: TrainingCandidate[] = loadCandidates();
 
 // Function to save candidates to localStorage
 const saveCandidatesToStorage = (candidatesToSave: TrainingCandidate[]) => {
@@ -43,13 +45,6 @@ const saveCandidatesToStorage = (candidatesToSave: TrainingCandidate[]) => {
     console.error("Failed to save training candidates to localStorage", error);
   }
 };
-
-
-// Initialize candidates from localStorage
-if (typeof window !== 'undefined') {
-    candidates = loadCandidates();
-}
-
 
 export function saveTrainingCandidate(data: TrainingData) {
   const newCandidate: TrainingCandidate = {
@@ -63,11 +58,8 @@ export function saveTrainingCandidate(data: TrainingData) {
 }
 
 export function getTrainingCandidates(): TrainingCandidate[] {
-  // We need to re-load from storage here to ensure we have the latest version
-  // especially when the page is first loaded.
-  if (typeof window !== 'undefined') {
-    candidates = loadCandidates();
-  }
+  // We need to re-load from storage here to ensure we have the latest version.
+  candidates = loadCandidates();
   return [...candidates];
 }
 
