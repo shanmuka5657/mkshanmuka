@@ -15,10 +15,7 @@ import Link from 'next/link';
 type TrainingExample = {
   id: number;
   decision: 'Approved' | 'Rejected';
-  creditScore: string;
-  income: string;
-  debt: string;
-  creditSummary: string;
+  rawCibilText: string;
   reason: string;
 };
 
@@ -33,10 +30,7 @@ export default function ModelTrainerPage() {
       {
         id: Date.now(),
         decision: 'Approved',
-        creditScore: '',
-        income: '',
-        debt: '',
-        creditSummary: '',
+        rawCibilText: '',
         reason: '',
       },
     ]);
@@ -119,7 +113,7 @@ export default function ModelTrainerPage() {
             AI Underwriting Model Trainer
           </h1>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-            Teach our AI to underwrite loans according to your rules. Provide examples of loan decisions, and we'll create a custom model for you.
+            Teach our AI to underwrite loans according to your rules. Provide examples by pasting in a raw CIBIL report and telling the AI how you would decide on it.
           </p>
         </div>
 
@@ -147,7 +141,7 @@ export default function ModelTrainerPage() {
               2. Provide Training Examples
             </CardTitle>
             <CardDescription>
-              Add examples of decisions you would make. The more examples you provide, the smarter your model will become.
+             Add examples of decisions you would make based on a full CIBIL report. The more examples you provide, the smarter your model will become.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -161,13 +155,23 @@ export default function ModelTrainerPage() {
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor={`decision-${index}`}>Decision</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                      <Label htmlFor={`rawCibil-${index}`}>Raw CIBIL Report Text</Label>
+                      <Textarea 
+                        id={`rawCibil-${index}`} 
+                        placeholder="Paste the entire raw text from a CIBIL report here..." 
+                        value={example.rawCibilText} 
+                        onChange={e => updateExample(example.id, 'rawCibilText', e.target.value)}
+                        className="h-48"
+                      />
+                  </div>
+                  <div className="space-y-4">
+                     <div>
+                      <Label htmlFor={`decision-${index}`}>Your Decision</Label>
                       <Select
                         value={example.decision}
-                        onValueChange={(value) => updateExample(example.id, 'decision', value)}
+                        onValueChange={(value) => updateExample(example.id, 'decision', value as 'Approved' | 'Rejected')}
                       >
                         <SelectTrigger id={`decision-${index}`}>
                           <SelectValue />
@@ -178,27 +182,13 @@ export default function ModelTrainerPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div>
-                      <Label htmlFor={`score-${index}`}>Credit Score</Label>
-                      <Input id={`score-${index}`} placeholder="e.g., 750" value={example.creditScore} onChange={e => updateExample(example.id, 'creditScore', e.target.value)} />
-                    </div>
-                    <div>
-                      <Label htmlFor={`income-${index}`}>Monthly Income (₹)</Label>
-                      <Input id={`income-${index}`} placeholder="e.g., 50000" value={example.income} onChange={e => updateExample(example.id, 'income', e.target.value)}/>
-                    </div>
-                    <div>
-                      <Label htmlFor={`debt-${index}`}>Total Monthly Debt (₹)</Label>
-                      <Input id={`debt-${index}`} placeholder="e.g., 20000" value={example.debt} onChange={e => updateExample(example.id, 'debt', e.target.value)} />
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                     <div>
-                        <Label htmlFor={`summary-${index}`}>Credit Summary</Label>
-                        <Textarea id={`summary-${index}`} placeholder="e.g., High credit utilization at 95%. One recent late payment." value={example.creditSummary} onChange={e => updateExample(example.id, 'creditSummary', e.target.value)} />
-                     </div>
                       <div>
-                        <Label htmlFor={`reason-${index}`}>Reason for Decision</Label>
-                        <Input id={`reason-${index}`} placeholder="e.g., High DTI ratio" value={example.reason} onChange={e => updateExample(example.id, 'reason', e.target.value)} />
+                        <Label htmlFor={`reason-${index}`}>Reason for Your Decision</Label>
+                        <Input 
+                          id={`reason-${index}`} 
+                          placeholder="Explain why you made this decision. E.g., 'High DTI ratio and recent delinquencies.'" 
+                          value={example.reason} 
+                          onChange={e => updateExample(example.id, 'reason', e.target.value)} />
                       </div>
                   </div>
                 </div>
