@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,20 +10,36 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { Bot, BrainCircuit, Plus, Trash2, UploadCloud, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import * as pdfjsLib from 'pdfjs-dist';
+
 
 type TrainingExample = {
   id: number;
   rawCibilText: string;
+  fileName: string;
   name: string;
   dob: string;
   pan: string;
   address: string;
 };
 
+type LoadingState = {
+  [key: number]: boolean;
+};
+
 export default function ModelTrainerPage() {
   const [modelName, setModelName] = useState('');
   const [examples, setExamples] = useState<TrainingExample[]>([]);
   const [isTraining, setIsTraining] = useState(false);
+  const [loadingExamples, setLoadingExamples] = useState<LoadingState>({});
+  const fileInputRefs = useRef<{[key: number]: HTMLInputElement | null}>({});
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+    }
+  }, []);
+
 
   const addExample = () => {
     setExamples([
@@ -31,6 +47,7 @@ export default function ModelTrainerPage() {
       {
         id: Date.now(),
         rawCibilText: '',
+        fileName: 'No file selected',
         name: '',
         dob: '',
         pan: '',
@@ -44,6 +61,43 @@ export default function ModelTrainerPage() {
       examples.map((ex) => (ex.id === id ? { ...ex, [field]: value } : ex))
     );
   };
+  
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>, exampleId: number) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setLoadingExamples(prev => ({ ...prev, [exampleId]: true }));
+    updateExample(exampleId, 'fileName', file.name);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const buffer = e.target?.result as ArrayBuffer;
+        if (buffer) {
+          const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+          let textContent = '';
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const text = await page.getTextContent();
+            textContent += text.items.map(item => 'str' in item ? item.str : '').join(' ');
+          }
+          updateExample(exampleId, 'rawCibilText', textContent);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } catch (error) {
+      console.error('Error processing PDF:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to process the PDF file.",
+      });
+      updateExample(exampleId, 'fileName', 'Error processing file');
+    } finally {
+       setLoadingExamples(prev => ({ ...prev, [exampleId]: false }));
+    }
+  };
+
 
   const removeExample = (id: number) => {
     setExamples(examples.filter((ex) => ex.id !== id));
@@ -116,7 +170,7 @@ export default function ModelTrainerPage() {
             AI Data Extraction Trainer
           </h1>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-            Teach our AI to read CIBIL reports. Paste in raw report text and then fill in the correct corresponding details. The more high-quality examples you provide, the better the AI will get at automatic data extraction.
+            Teach our AI to read CIBIL reports. Upload a CIBIL report PDF and then fill in the correct corresponding details. The more high-quality examples you provide, the better the AI will get at automatic data extraction.
           </p>
         </div>
 
@@ -144,7 +198,7 @@ export default function ModelTrainerPage() {
               2. Provide Training Examples
             </CardTitle>
             <CardDescription>
-             Add examples by pasting raw CIBIL text and filling out the data you want the AI to learn to find.
+             Add examples by uploading a CIBIL PDF and filling out the data you want the AI to learn to find.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -159,15 +213,40 @@ export default function ModelTrainerPage() {
                   <Trash2 className="h-4 w-4" />
                 </Button>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                      <Label htmlFor={`rawCibil-${index}`}>Raw CIBIL Report Text</Label>
-                      <Textarea 
-                        id={`rawCibil-${index}`} 
-                        placeholder="Paste the entire raw text from a CIBIL report here..." 
-                        value={example.rawCibilText} 
-                        onChange={e => updateExample(example.id, 'rawCibilText', e.target.value)}
-                        className="h-64"
-                      />
+                  <div className='space-y-2'>
+                      <Label htmlFor={`cibil-upload-${example.id}`}>Upload CIBIL PDF</Label>
+                       <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => fileInputRefs.current[example.id]?.click()}
+                            disabled={loadingExamples[example.id]}
+                          >
+                            {loadingExamples[example.id] ? (
+                              <Loader2 className="mr-2 animate-spin" />
+                            ) : (
+                              <UploadCloud className="mr-2" />
+                            )}
+                            Upload PDF
+                          </Button>
+                          <span className="text-sm text-muted-foreground truncate flex-1">
+                            {example.fileName}
+                          </span>
+                        </div>
+                       <Input
+                          id={`cibil-upload-${example.id}`}
+                          ref={el => (fileInputRefs.current[example.id] = el)}
+                          type="file"
+                          accept=".pdf"
+                          onChange={(e) => handleFileChange(e, example.id)}
+                          className="hidden"
+                        />
+                         {example.rawCibilText && (
+                            <Textarea
+                              readOnly
+                              value={example.rawCibilText.substring(0, 300) + '...'}
+                              className="h-24 bg-background/50"
+                            />
+                        )}
                   </div>
                   <div className="space-y-4">
                       <div>
