@@ -776,6 +776,7 @@ export default function CreditWiseAIPage() {
         rating: aiRating.rating,
         monthlyIncome: estimatedIncome,
         totalMonthlyEMI: creditSummary.totalMonthlyEMI,
+        creditReportText: rawText,
       });
       setLoanEligibility(result);
       toast({
