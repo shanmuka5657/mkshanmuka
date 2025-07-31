@@ -1759,17 +1759,18 @@ export default function CreditWiseAIPage() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                           <div>
-                            <label className="text-sm font-medium">Total Monthly EMI</label>
-                            <Input type="text" placeholder="e.g. 25000" value={totalEmi} onChange={(e) => setTotalEmi(e.target.value)} />
+                            <Label htmlFor="total-emi">Total Monthly EMI</Label>
+                            <Input id="total-emi" type="text" placeholder="Auto-calculated or enter manually" value={totalEmi} onChange={(e) => setTotalEmi(e.target.value)} />
+                            <p className="text-xs text-muted-foreground mt-1">This is auto-calculated from your report. You can override it if needed.</p>
                           </div>
                           <div>
-                            <label className="text-sm font-medium">Other Monthly Obligations (Rent, etc.)</label>
-                            <Input type="text" placeholder="e.g. 15000" value={otherObligations} onChange={(e) => setOtherObligations(e.target.value)} />
+                            <Label htmlFor="other-obligations">Other Monthly Obligations (Rent, etc.)</Label>
+                            <Input id="other-obligations" type="text" placeholder="e.g. 15000" value={otherObligations} onChange={(e) => setOtherObligations(e.target.value)} />
                           </div>
                           <div>
-                            <label className="text-sm font-medium">Target Debt-to-Income (DTI) Ratio</label>
+                            <Label htmlFor="dti-ratio">Target Debt-to-Income (DTI) Ratio</Label>
                             <Select value={dtiRatio} onValueChange={setDtiRatio}>
-                              <SelectTrigger>
+                              <SelectTrigger id="dti-ratio">
                                 <SelectValue placeholder="Select DTI Ratio" />
                               </SelectTrigger>
                               <SelectContent>
