@@ -207,7 +207,7 @@ export default function CreditWiseAIPage() {
   const [aiAnalysis, setAiAnalysis] = useState<AnalyzeCreditReportOutput | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState('');
-  const [setIsSuggesting] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
   const [totalEmi, setTotalEmi] = useState('');
   const [otherObligations, setOtherObligations] = useState('');
   const [dtiRatio, setDtiRatio] = useState('40');
