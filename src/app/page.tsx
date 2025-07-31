@@ -94,54 +94,13 @@ type EnquirySummary = {
   past24Months: string;
   recentDate: string;
 };
-type DpdSummary = {
-  onTime: number;
-  days1_30: number;
-  days31_60: number;
-  days61_90: number;
-  days90plus: number;
-  default: number;
-};
-type AccountDpdStatus = {
-  accountType: string;
-  status: string;
-  highestDpd: number;
-  paymentHistory: string;
-};
-type LoanAccount = {
-  type: string;
-  ownership: string;
-  status: string;
-  sanctioned: string;
-  balance: string;
-  overdue: string;
-  emi: string;
-  opened: string;
-  closed: string;
-  paymentHistory: string;
-  settlementStatus?: string;
-};
-type Inquiry = { date: string; lender: string; purpose: string };
-type RiskAssessment = RiskAssessmentOutput;
-type DebtPaydown = {
-  type: string;
-  balance: number;
-  emi: number;
-  monthsRemaining: number;
-  payoffDate: string;
-};
-type FlaggedAccount = LoanAccount & { issue: string };
 
 type ActiveView = 
   | 'aiMeter' 
   | 'aiAnalysis' 
-  | 'creditSummary' 
   | 'loanEligibility' 
-  | 'inquiryAnalysis' 
-  | 'dpdAnalysis'
   | 'incomeEstimator'
   | 'creditImprovement'
-  | 'visualizations'
   | 'riskAssessment'
   | 'creditUnderwriting'
   | 'financialRisk'
@@ -164,15 +123,6 @@ const initialEnquirySummary: EnquirySummary = {
   past12Months: 'N/A',
   past24Months: 'N/A',
   recentDate: 'N/A',
-};
-
-const initialDpdSummary: DpdSummary = {
-  onTime: 0,
-  days1_30: 0,
-  days31_60: 0,
-  days61_90: 0,
-  days90plus: 0,
-  default: 0,
 };
 
 const initialRiskAssessment: RiskAssessment = {
@@ -225,14 +175,8 @@ export default function CreditWiseAIPage() {
   const [theme, setTheme] = useState('light');
   const [accountSummary, setAccountSummary] = useState<AccountSummary>(initialAccountSummary);
   const [enquirySummary, setEnquirySummary] = useState<EnquirySummary>(initialEnquirySummary);
-  const [dpdSummary, setDpdSummary] = useState<DpdSummary>(initialDpdSummary);
-  const [accountDpdStatus, setAccountDpdStatus] = useState<AccountDpdStatus[]>([]);
   const [riskAssessment, setRiskAssessment] = useState<RiskAssessment | null>(null);
   const [isAssessingRisk, setIsAssessingRisk] = useState(false);
-  const [potentialIssues, setPotentialIssues] = useState<string[]>([]);
-  const [debtPaydownTimeline, setDebtPaydownTimeline] = useState<DebtPaydown[]>([]);
-  const [flaggedAccounts, setFlaggedAccounts] = useState<FlaggedAccount[]>([]);
-  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [aiRating, setAiRating] = useState<AiRatingOutput | null>(null);
   const [isRating, setIsRating] = useState(false);
   const [loanEligibility, setLoanEligibility] = useState<LoanEligibilityOutput | null>(null);
@@ -346,14 +290,8 @@ export default function CreditWiseAIPage() {
     setShowRawText(false);
     setAccountSummary(initialAccountSummary);
     setEnquirySummary(initialEnquirySummary);
-    setDpdSummary(initialDpdSummary);
-    setAccountDpdStatus([]);
     setRiskAssessment(null);
     setIsAssessingRisk(false);
-    setPotentialIssues([]);
-    setDebtPaydownTimeline([]);
-    setFlaggedAccounts([]);
-    setInquiries([]);
     setAiRating(null);
     setIsRating(false);
     setLoanEligibility(null);
@@ -495,92 +433,6 @@ export default function CreditWiseAIPage() {
         recentDate: getSummaryValue(/Recent\s*:\s*(\d{2}-\d{2}-\d{4})/i, enquirySection),
     };
     setEnquirySummary(newEnquirySummary);
-
-    // --- Detailed DPD and Flagged Account Parsing (Remains the same) ---
-    const tempDpdSummary: DpdSummary = { ...initialDpdSummary };
-    const currentFlaggedAccounts: FlaggedAccount[] = [];
-    const currentDpdStatus: AccountDpdStatus[] = [];
-    
-    const accountHeaderRegex = /(MEMBER NAME|ACCOUNT NUMBER|TYPE|OWNERSHIP|ACCOUNT\s+DATES\s+AMOUNTS\s+STATUS)/gi;
-    const accountSectionsSplit = normalizedText.split(accountHeaderRegex).slice(1);
-
-     for(let i=0; i < accountSectionsSplit.length; i+=2) {
-        let section = accountSectionsSplit[i + 1] || '';
-        
-        const typeMatch = section.match(/TYPE:\s*([A-Za-z\s-]+?)(?=OWNERSHIP|COLLATERAL|OPENED)/i);
-        const accountType = typeMatch ? typeMatch[1].trim() : "N/A";
-        
-        let accountStatusText = (section.match(/STATUS(.*?)(?:MEMBER NAME|ACCOUNT NUMBER|TYPE|OWNERSHIP)/i)?.[0] || section).toLowerCase();
-        
-        let accountStatus = "active";
-        if (accountStatusText.includes("written off")) accountStatus = "written off";
-        else if (accountStatusText.includes("settled")) accountStatus = "settled";
-        else if (accountStatusText.includes("closed")) accountStatus = "closed";
-        else if (accountStatusText.includes("sub-standard") || accountStatusText.includes("sub ")) accountStatus = "sub-standard";
-        else if (accountStatusText.includes("doubtful") || accountStatusText.includes("dbt")) accountStatus = "doubtful";
-        
-        const paymentHistoryMatch = section.match(/DAYS PAST DUE\/ASSET CLASSIFICATION \(UP TO 36 MONTHS; LEFT TO RIGHT\)([\s\S]+?)(?=ACCOUNT DATES AMOUNTS STATUS|INFORMATION UNDER DISPUTE|END OF REPORT|$)/i);
-        const paymentHistory = paymentHistoryMatch ? paymentHistoryMatch[1].trim().replace(/\s+/g, ' ') : 'N/A';
-        
-        const overdueMatch = section.match(/(?:OVERDUE|AMT OVERDUE):\s*₹?\s*([\d,]+)/i);
-
-        let isFlagged = false;
-        let issue = '';
-
-        if (accountStatus.includes('written off')) { issue = 'Written Off'; isFlagged = true; }
-        if (accountStatus.includes('settled')) { issue = 'Settled'; isFlagged = true; }
-        if (accountStatus.includes('doubtful') || paymentHistory.includes('DBT')) { issue = 'Doubtful'; isFlagged = true; }
-        if (accountStatus.includes('sub-standard') || paymentHistory.includes('SUB')) { issue = 'Sub-standard Account'; isFlagged = true; }
-        
-        const overdueAmount = parseInt(overdueMatch?.[1]?.replace(/,/g, '') || '0', 10);
-        if (!isNaN(overdueAmount) && overdueAmount > 0) {
-            issue = `Overdue amount of ₹${overdueAmount.toLocaleString()}`;
-            isFlagged = true;
-        }
-
-        if (isFlagged) {
-             const loan: LoanAccount = {
-                type: accountType,
-                ownership: (section.match(/OWNERSHIP:\s*(.+?)(?=OPENED|REPORTED|COLLATERAL)/i)?.[1] || '').trim(),
-                status: accountStatus,
-                sanctioned: (section.match(/(?:SANCTIONED|CREDIT LIMIT|HIGH CREDIT|SANC\. AMT):\s*₹?\s*([\d,]+)/i)?.[1] || '0').replace(/,/g, ''),
-                balance: (section.match(/(?:CURRENT BALANCE|BALANCE):\s*₹?\s*([\d,]+)/i)?.[1] || '0').replace(/,/g, ''),
-                overdue: String(overdueAmount),
-                emi: (section.match(/(?:EMI|REPAYMENT\s*AMOUNT|INSTALLMENT\s*AMT|Amount):\s*₹?\s*([\d,]+)/i)?.[1] || '0').replace(/,/g, ''),
-                opened: section.match(/OPENED:\s*(\d{2}-\d{2}-\d{4})/i)?.[1] || 'N/A',
-                closed: section.match(/CLOSED:\s*(\d{2}-\d{2}-\d{4})/i)?.[1] || 'N/A',
-                paymentHistory: paymentHistory,
-            };
-            currentFlaggedAccounts.push({ ...loan, issue });
-        }
-
-        let highestDpd = 0;
-        if (paymentHistory !== 'N/A') {
-            const dpdValues = paymentHistory.match(/(\d{3})|STD|SUB|DBT|XXX/g) || [];
-            dpdValues.forEach(dpdStr => {
-                if (dpdStr === 'STD' || dpdStr === '000' || dpdStr === 'XXX') {
-                    tempDpdSummary.onTime++;
-                } else if (dpdStr === 'SUB' || dpdStr === 'DBT') {
-                    tempDpdSummary.default++;
-                    highestDpd = Math.max(highestDpd, 999);
-                } else {
-                    const dpd = parseInt(dpdStr, 10);
-                    if (!isNaN(dpd)) {
-                        highestDpd = Math.max(highestDpd, dpd);
-                        if (dpd >= 1 && dpd <= 30) tempDpdSummary.days1_30++;
-                        else if (dpd >= 31 && dpd <= 60) tempDpdSummary.days31_60++;
-                        else if (dpd >= 61 && dpd <= 90) tempDpdSummary.days61_90++;
-                        else if (dpd > 90) tempDpdSummary.days90plus++;
-                    }
-                }
-            });
-        }
-        currentDpdStatus.push({ accountType, status: accountStatus, highestDpd, paymentHistory });
-    };
-    
-    setFlaggedAccounts(currentFlaggedAccounts);
-    setAccountDpdStatus(currentDpdStatus);
-    setDpdSummary(tempDpdSummary);
   };
 
 
@@ -836,34 +688,7 @@ export default function CreditWiseAIPage() {
     }
   };
 
-  const loanTypeData = [
-    { name: 'Personal', value: rawText.match(/PERSONAL LOAN/gi)?.length || 0 },
-    { name: 'Credit Card', value: rawText.match(/CREDIT CARD/gi)?.length || 0 },
-    { name: 'Auto', value: rawText.match(/AUTO LOAN/gi)?.length || 0 },
-    { name: 'Home', value: rawText.match(/HOME LOAN/gi)?.length || 0 },
-  ].filter(d => d.value > 0);
-  
-  const PIE_COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))'];
-
   const scoreProgress = creditScore ? (creditScore - 300) / 6 : 0;
-
-  const DpdSummaryBox = ({
-    label,
-    count,
-    colorClass,
-    subtext,
-  }: {
-    label: string;
-    count: number;
-    colorClass: string;
-    subtext: string;
-  }) => (
-    <div className={cn('rounded-lg p-4 text-center text-white', colorClass)}>
-      <p className="font-semibold">{label}</p>
-      <p className="text-sm">{subtext}</p>
-      <p className="text-3xl font-bold">{count}</p>
-    </div>
-  );
 
   const getRiskColorClass = (level: string = 'Low') => {
     switch (level) {
@@ -1088,17 +913,14 @@ export default function CreditWiseAIPage() {
                       <CardTitle>Analysis Dashboard</CardTitle>
                       <CardDescription>Select a section to view its detailed analysis.</CardDescription>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    <CardContent className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
                       <NavButton view="aiMeter" label="AI Credit Analysis Meter" icon={<Bot size={24} />} />
                       <NavButton view="aiAnalysis" label="AI Credit Report Analysis" icon={<BrainCircuit size={24} />} />
-                      <NavButton view="creditSummary" label="Credit Summary" icon={<FileSymlink size={24} />} />
                       <NavButton view="loanEligibility" label="AI Loan Eligibility" icon={<Banknote size={24} />} />
-                      <NavButton view="dpdAnalysis" label="DPD Analysis" icon={<LineChart size={24} />} />
                       <NavButton view="incomeEstimator" label="Income Estimator & Debt Management" icon={<Calculator size={24} />} />
                       <NavButton view="creditImprovement" label="AI Credit Improvement" icon={<Lightbulb size={24} />} />
-                      <NavButton view="visualizations" label="Credit Visualisation" icon={<AreaChart size={24} />} />
                       <NavButton view="riskAssessment" label="AI Risk Assessment" icon={<ShieldAlert size={24} />} />
-                       <NavButton view="financialRisk" label="AI Financial Risk" icon={<BadgeCent size={24} />} />
+                      <NavButton view="financialRisk" label="AI Financial Risk" icon={<BadgeCent size={24} />} />
                       <NavButton view="creditUnderwriting" label="AI Credit Underwriting" icon={<Gavel size={24} />} />
                     </CardContent>
                   </Card>
@@ -1235,77 +1057,6 @@ export default function CreditWiseAIPage() {
                     </Card>
                   )}
                   
-                  {activeView === 'creditSummary' && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center"><FileSymlink className="mr-3 h-6 w-6 text-primary" />Report Summary</CardTitle>
-                            <CardDescription>A summary of accounts and enquiries from your CIBIL report.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div>
-                                <h4 className="font-semibold text-lg mb-2 text-primary">SUMMARY</h4>
-                                <div className="border rounded-lg p-4">
-                                  <Table>
-                                    <TableBody>
-                                      <TableRow>
-                                        <TableCell className="font-medium">Total Accounts</TableCell>
-                                        <TableCell>{accountSummary.total}</TableCell>
-                                        <TableCell className="font-medium">Overdue Accounts</TableCell>
-                                        <TableCell>0</TableCell>
-                                        <TableCell className="font-medium">Zero Balance Accounts</TableCell>
-                                        <TableCell>{accountSummary.zeroBalance}</TableCell>
-                                      </TableRow>
-                                      <TableRow>
-                                        <TableCell className="font-medium">High Credit/Sanctioned Amount</TableCell>
-                                        <TableCell>{accountSummary.highCredit}</TableCell>
-                                        <TableCell className="font-medium">Current Balance</TableCell>
-                                        <TableCell>{accountSummary.currentBalance}</TableCell>
-                                        <TableCell className="font-medium">Overdue Amount</TableCell>
-                                        <TableCell>{accountSummary.overdue}</TableCell>
-                                      </TableRow>
-                                      <TableRow>
-                                        <TableCell className="font-medium">Date Opened (Recent)</TableCell>
-                                        <TableCell>{accountSummary.recentDate}</TableCell>
-                                        <TableCell className="font-medium">Date Opened (Oldest)</TableCell>
-                                        <TableCell>{accountSummary.oldestDate}</TableCell>
-                                        <TableCell></TableCell>
-                                        <TableCell></TableCell>
-                                      </TableRow>
-                                    </TableBody>
-                                  </Table>
-                                </div>
-                            </div>
-                             <div>
-                                <h4 className="font-semibold text-lg mb-2 text-primary">ENQUIRIES</h4>
-                                 <div className="border rounded-lg p-4">
-                                    <Table>
-                                      <TableBody>
-                                        <TableRow>
-                                          <TableCell className="font-medium">Total</TableCell>
-                                          <TableCell>{enquirySummary.total}</TableCell>
-                                          <TableCell className="font-medium">Past 30 days</TableCell>
-                                          <TableCell>{enquirySummary.past30Days}</TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                          <TableCell className="font-medium">Past 12 months</TableCell>
-                                          <TableCell>{enquirySummary.past12Months}</TableCell>
-                                          <TableCell className="font-medium">Past 24 months</TableCell>
-                                          <TableCell>{enquirySummary.past24Months}</TableCell>
-                                        </TableRow>
-                                         <TableRow>
-                                          <TableCell className="font-medium">Recent</TableCell>
-                                          <TableCell>{enquirySummary.recentDate}</TableCell>
-                                          <TableCell></TableCell>
-                                          <TableCell></TableCell>
-                                        </TableRow>
-                                      </TableBody>
-                                    </Table>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                  )}
-                  
                   {activeView === 'aiAnalysis' && (
                     <Card>
                         <CardHeader>
@@ -1359,59 +1110,6 @@ export default function CreditWiseAIPage() {
                     </Card>
                   )}
 
-                  {activeView === 'dpdAnalysis' && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center"><LineChart className="mr-3 h-6 w-6 text-primary" />DPD (Days Past Due) Analysis</CardTitle>
-                        <CardDescription>Days Past Due (DPD) indicate how late payments were made on your accounts. Lower DPD is better for your credit score.</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-                          <DpdSummaryBox label="On Time" subtext="(000)" count={dpdSummary.onTime} colorClass="bg-green-500" />
-                          <DpdSummaryBox label="1-30 Days" subtext="Late" count={dpdSummary.days1_30} colorClass="bg-yellow-400" />
-                          <DpdSummaryBox label="31-60 Days" subtext="Late" count={dpdSummary.days31_60} colorClass="bg-yellow-500" />
-                          <DpdSummaryBox label="61-90 Days" subtext="Late" count={dpdSummary.days61_90} colorClass="bg-orange-500" />
-                          <DpdSummaryBox label="90+ Days" subtext="Late" count={dpdSummary.days90plus} colorClass="bg-red-500" />
-                          <DpdSummaryBox label="Default" subtext="(SUB/DBT)" count={dpdSummary.default} colorClass="bg-red-700" />
-                        </div>
-                        <h4 className="text-lg font-semibold mt-6 mb-4">Account DPD Status</h4>
-                        <div className="overflow-x-auto">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Account Type</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Highest DPD</TableHead>
-                                <TableHead>Payment History</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {accountDpdStatus.map((account, index) => (
-                                <TableRow key={index}>
-                                  <TableCell>{account.accountType}</TableCell>
-                                  <TableCell className="capitalize">{account.status}</TableCell>
-                                  <TableCell>
-                                    <span className={cn(
-                                      'px-2 py-1 rounded-full text-xs font-semibold text-white',
-                                      account.highestDpd === 0 && 'bg-green-500',
-                                      account.highestDpd > 0 && account.highestDpd <= 30 && 'bg-yellow-400',
-                                      account.highestDpd > 30 && account.highestDpd <= 60 && 'bg-yellow-500',
-                                      account.highestDpd > 60 && account.highestDpd <= 90 && 'bg-orange-500',
-                                      account.highestDpd > 90 && 'bg-red-500',
-                                    )}>
-                                      {account.highestDpd}
-                                    </span>
-                                  </TableCell>
-                                  <TableCell className="font-mono text-xs truncate max-w-xs">{account.paymentHistory}</TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                  
                   {activeView === 'creditUnderwriting' && (
                     <Card>
                       <CardHeader>
@@ -1657,87 +1355,6 @@ export default function CreditWiseAIPage() {
                     </Card>
                   )}
 
-
-                  {potentialIssues.length > 0 && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center"><AlertCircle className="mr-3 h-6 w-6 text-yellow-500" />Potential Issues</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          {potentialIssues.map((issue, i) => (
-                            <Alert key={i} variant="destructive" className="bg-yellow-50 border-yellow-400 text-yellow-700 dark:bg-yellow-900/20 dark:border-yellow-600 dark:text-yellow-300 [&>svg]:text-yellow-500">
-                              <AlertCircle className="h-4 w-4" />
-                              <AlertDescription>{issue}</AlertDescription>
-                            </Alert>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                  
-                  {flaggedAccounts.length > 0 && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center"><Flag className="mr-3 h-6 w-6 text-red-500" />Flagged Accounts</CardTitle>
-                        <CardDescription>These accounts have potential issues that may negatively impact your score.</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Account Type</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead>Issue</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {flaggedAccounts.map((account, i) => (
-                              <TableRow key={i} className="bg-red-50/50 dark:bg-red-900/20">
-                                <TableCell>{account.type}</TableCell>
-                                <TableCell className="capitalize">{account.status}</TableCell>
-                                <TableCell>{account.issue}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {debtPaydownTimeline.length > 0 && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center"><CalendarDays className="mr-3 h-6 w-6 text-primary" />Debt Paydown Timeline</CardTitle>
-                        <CardDescription>Based on current EMIs and outstanding balances. Does not include interest calculations.</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Loan Type</TableHead>
-                              <TableHead>Outstanding</TableHead>
-                              <TableHead>EMI</TableHead>
-                              <TableHead>Months Remaining</TableHead>
-                              <TableHead>Est. Payoff Date</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {debtPaydownTimeline.map((item, i) => (
-                              <TableRow key={i}>
-                                <TableCell>{item.type}</TableCell>
-                                <TableCell>₹{item.balance.toLocaleString('en-IN')}</TableCell>
-                                <TableCell>₹{item.emi.toLocaleString('en-IN')}</TableCell>
-                                <TableCell>{item.monthsRemaining}</TableCell>
-                                <TableCell>{item.payoffDate}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </CardContent>
-                    </Card>
-                  )}
-
                   {activeView === 'creditImprovement' && (
                     <Card>
                       <CardHeader>
@@ -1827,44 +1444,6 @@ export default function CreditWiseAIPage() {
                       </Card>
                     </div>
                   )}
-
-                  {activeView === 'visualizations' && (
-                    <div className="lg:col-span-3">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center"><BarChartBig className="mr-3 h-6 w-6 text-primary" />Credit Visualizations</CardTitle>
-                          <CardDescription>Visual breakdown of your credit report.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                          <div>
-                            <h4 className="font-semibold text-center mb-2">Loan Type Distribution</h4>
-                            {loanTypeData.length > 0 ? (
-                                <ResponsiveContainer width="100%" height={200}>
-                                    <PieChart>
-                                    <Pie data={loanTypeData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                                        {loanTypeData.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
-                                    </Pie>
-                                    <Tooltip />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            ) : (<p className="text-center text-muted-foreground">No loan data to display.</p>)}
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-center mb-2">Outstanding Loan Amounts</h4>
-                            <ResponsiveContainer width="100%" height={200}>
-                                <BarChart data={[{name: 'Outstanding', value: parseFloat(accountSummary.currentBalance.replace(/[₹,]/g, '')) || 0}, {name: 'Limit', value: parseFloat(accountSummary.highCredit.replace(/[₹,]/g, '')) || 0}]}>
-                                <XAxis dataKey="name" />
-                                <YAxis />
-                                <Tooltip />
-                                <Bar dataKey="value" fill="hsl(var(--primary))" />
-                                </BarChart>
-                            </ResponsiveContainer>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  )}
-                  
                   
                   <Card className="print:hidden">
                     <CardHeader>
@@ -1950,3 +1529,4 @@ export default function CreditWiseAIPage() {
 }
 
     
+
