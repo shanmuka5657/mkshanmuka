@@ -12,7 +12,6 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { type Part } from 'genkit/ai';
-import { Message } from '@genkit-ai/googleai';
 
 
 // Define the structure for a single message in the history
@@ -33,7 +32,6 @@ const ShanAiChatInputSchema = z.object({
 });
 export type ShanAiChatHistory = z.infer<typeof ShanAiChatMessageSchema>;
 
-
 const ShanAiChatOutputSchema = z.object({
   answer: z
     .string()
@@ -47,23 +45,6 @@ export async function shanAiChat(
   return shanAiChatFlow({ history });
 }
 
-// Transform the Zod schema-based history into the format Genkit expects
-function mapHistoryToGenkitMessages(history: ShanAiChatHistory[]): Message[] {
-  return history.map(message => {
-    const parts: Part[] = message.content.map(part => {
-      if (part.text) {
-        return { text: part.text };
-      }
-      if (part.media) {
-        return { media: { url: part.media.url, contentType: part.media.contentType } };
-      }
-      return { text: '' }; // Should not happen with valid data
-    }).filter(p => p.text || p.media);
-
-    return new Message({role: message.role, content: parts});
-  });
-}
-
 const shanAiChatFlow = ai.defineFlow(
   {
     name: 'shanAiChatFlow',
@@ -71,11 +52,10 @@ const shanAiChatFlow = ai.defineFlow(
     outputSchema: ShanAiChatOutputSchema,
   },
   async ({ history }) => {
-    const genkitMessages = mapHistoryToGenkitMessages(history);
-
+    
     const llmResponse = await ai.generate({
       prompt: {
-        messages: genkitMessages,
+        messages: history,
       },
       system: `You are Shan AI, a powerful, general-purpose AI assistant. Your goal is to be helpful and answer the user's questions accurately and concisely. Maintain a friendly and conversational tone. If the user provides an image or document, use it as the primary context for your answer.`,
       model: 'googleai/gemini-2.0-flash',
@@ -83,7 +63,12 @@ const shanAiChatFlow = ai.defineFlow(
 
     const responseText = llmResponse.text;
     if (!responseText) {
-      throw new Error("The AI returned an empty response.");
+      // In case the model returns a non-text response or an error.
+      const toolResponse = llmResponse.output?.content[0]?.toolRequest;
+      if(toolResponse) {
+          throw new Error("The AI tried to use a tool, but none were provided.");
+      }
+      throw new Error("The AI returned an empty or invalid response.");
     }
 
     return {

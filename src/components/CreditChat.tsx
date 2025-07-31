@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Bot, Loader2, Send, User, Paperclip, X, Minus, MessageSquare } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -16,6 +16,7 @@ interface DisplayMessage {
   role: 'user' | 'assistant';
   content: string;
   mediaPreview?: string;
+  mediaDataUri?: string; // Keep original data for history
 }
 
 export function ShanAIChat() {
@@ -54,7 +55,7 @@ export function ShanAIChat() {
       reader.onload = (e) => {
         const dataUri = e.target?.result as string;
         setMediaDataUri(dataUri);
-        setMediaPreview(dataUri);
+        setMediaPreview(URL.createObjectURL(file)); // Use blob URL for preview for better performance
       };
       reader.readAsDataURL(file);
     }
@@ -66,34 +67,34 @@ export function ShanAIChat() {
     if ((!input.trim() && !mediaDataUri) || isLoading) return;
 
     // Add user message to display
-    const userMessageForDisplay: DisplayMessage = { role: 'user', content: input, mediaPreview: mediaPreview || undefined };
+    const userMessageForDisplay: DisplayMessage = { 
+        role: 'user', 
+        content: input, 
+        mediaPreview: mediaPreview || undefined,
+        mediaDataUri: mediaDataUri || undefined
+    };
     setMessages((prev) => [...prev, userMessageForDisplay]);
     
     // Construct conversation history for the AI
-    const conversationHistory: ShanAiChatHistory[] = messages.map(msg => {
+    const conversationHistory: ShanAiChatHistory[] = [...messages, userMessageForDisplay].map(msg => {
       const content = [];
       if (msg.content) content.push({ text: msg.content });
-      // Note: We don't have historical media URIs, so we only send the current one.
-      // This is a simplification for this component.
+      if (msg.mediaDataUri) content.push({ media: { url: msg.mediaDataUri }});
+      
       return {
         role: msg.role === 'assistant' ? 'model' : 'user',
         content,
       }
     });
     
-    // Add the new user message to the history to be sent
-    const userMessageForApiContent = [];
-    if(input) userMessageForApiContent.push({ text: input });
-    if(mediaDataUri) userMessageForApiContent.push({ media: { url: mediaDataUri } });
-    
-    conversationHistory.push({
-      role: 'user',
-      content: userMessageForApiContent
-    });
-    
-
     setIsLoading(true);
-    
+    setInput('');
+    setMediaDataUri(null);
+    setMediaPreview(null);
+    if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+    }
+
     try {
       const result = await shanAiChat(conversationHistory);
       const aiMessage: DisplayMessage = { role: 'assistant', content: result.answer };
@@ -108,16 +109,14 @@ export function ShanAIChat() {
             ? 'The AI model is currently overloaded. Please try again in a moment.'
             : error.message || 'Could not get chat response. Please try again.',
       });
-       const systemMessage: DisplayMessage = { role: 'assistant', content: "Sorry, I couldn't get a response. Please try again." };
-      setMessages((prev) => [...prev, systemMessage]);
+       // Restore user input on error
+       setMessages(prev => prev.slice(0, -1)); // remove the optimistic user message
+       setInput(userMessageForDisplay.content);
+       setMediaDataUri(userMessageForDisplay.mediaDataUri || null);
+       setMediaPreview(userMessageForDisplay.mediaPreview || null);
+
     } finally {
       setIsLoading(false);
-      setInput('');
-      setMediaDataUri(null);
-      setMediaPreview(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
     }
   };
   
