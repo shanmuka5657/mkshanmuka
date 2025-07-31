@@ -498,7 +498,9 @@ export default function CreditWiseAIPage() {
           const sanctionedMatch = section.match(/(?:SANCTIONED|CREDIT LIMIT|HIGH CREDIT):\s*([\d,]+)/i);
           const balanceMatch = section.match(/(?:CURRENT BALANCE|BALANCE):\s*([\d,]+)/i);
           const overdueMatch = section.match(/OVERDUE:\s*([\d,]+)/i);
-          const emiMatch = section.match(/(?:EMI|REPAYMENT\s*AMOUNT|INSTALLMENT\s*AMT):\s*([\d,]+)/i);
+          
+          const emiMatch = section.match(/(?:EMI|REPAYMENT\s*AMOUNT|INSTALLMENT\s*AMT|Amount):\s*([\d,]+)/i);
+
           const openedMatch = section.match(/OPENED:\s*(\d{2}-\d{2}-\d{4})/i);
           const closedMatch = section.match(/CLOSED:\s*(\d{2}-\d{2}-\d{4})/i);
           const paymentHistoryMatch = section.match(/DAYS PAST DUE\/ASSET CLASSIFICATION \(UP TO 36 MONTHS; LEFT TO RIGHT\)([\s\S]+?)(?=ACCOUNT DATES AMOUNTS STATUS|INFORMATION UNDER DISPUTE|END OF REPORT|$)/i);
@@ -544,9 +546,10 @@ export default function CreditWiseAIPage() {
           if (!loan.status.includes('closed') && !loan.status.includes('written off') && !loan.status.includes('settled')) {
             if (accountType.toLowerCase().includes('credit card')) {
                 const outstanding = parseInt(loan.balance, 10) || 0;
-                if(outstanding > 0) {
-                  // Calculate 5% of outstanding as minimum payment for credit cards
-                  ccPayments += outstanding * 0.05; 
+                // If there's an overdue amount, it's likely the minimum payment. Otherwise, estimate 5%.
+                const cardPayment = parseInt(loan.overdue, 10) > 0 ? parseInt(loan.overdue, 10) : (outstanding * 0.05);
+                if(cardPayment > 0) {
+                  ccPayments += cardPayment;
                 }
             } else {
               if (emi > 0) {
@@ -580,10 +583,9 @@ export default function CreditWiseAIPage() {
           currentDpdStatus.push({ accountType, status: accountStatus, highestDpd, paymentHistory });
       });
 
-      // Add credit card payments to total EMI
       const totalMonthlyObligation = totalEMI + Math.round(ccPayments);
       summary.totalMonthlyEMI = totalMonthlyObligation;
-      summary.maxSingleEMI = maxEMI; // maxEMI remains the highest loan EMI, not including CCs
+      summary.maxSingleEMI = maxEMI;
       summary.creditCardPayments = Math.round(ccPayments);
       
       setCreditSummary(summary);
