@@ -170,6 +170,8 @@ const initialRiskAssessment: RiskAssessment = {
   level: 'Low',
   factors: [],
   mitigations: [],
+  probabilityOfDefault: 0,
+  defaultProbabilityExplanation: '',
 };
 
 const initialAiAnalysis: AnalyzeCreditReportOutput = {
@@ -1502,13 +1504,22 @@ export default function CreditWiseAIPage() {
                               <span>AI is assessing your credit risk...</span>
                             </div>
                           ) : riskAssessment ? (
-                            <>
-                              <div className={cn('p-4 rounded-lg border-l-4 mb-6', getRiskColorClass(riskAssessment.level))}>
+                            <div className="space-y-6">
+                              <div className={cn('p-4 rounded-lg border-l-4', getRiskColorClass(riskAssessment.level))}>
                                   <h4 className="font-bold text-lg">{riskAssessment.level} Risk</h4>
                                   <p className="text-sm">Your AI-assessed credit risk score is <strong>{riskAssessment.score}/100</strong>. A higher score indicates lower risk.</p>
                               </div>
+                              
+                               <div>
+                                <h5 className="font-semibold mb-2">Probability of Default</h5>
+                                <div className="flex items-center gap-4">
+                                  <div className="text-4xl font-bold text-destructive">{riskAssessment.probabilityOfDefault}%</div>
+                                  <p className="text-sm text-muted-foreground">{riskAssessment.defaultProbabilityExplanation}</p>
+                                </div>
+                              </div>
+
                               {riskAssessment.factors.length > 0 && (
-                                  <div className="mb-6">
+                                  <div>
                                       <h5 className="font-semibold mb-2">Key Risk Factors:</h5>
                                       <ul className="list-disc list-inside space-y-1 text-sm">
                                           {riskAssessment.factors.map((factor, i) => <li key={i}><strong>{factor.factor} ({factor.severity} risk):</strong> {factor.details}</li>)}
@@ -1523,7 +1534,7 @@ export default function CreditWiseAIPage() {
                                       </ul>
                                   </div>
                               )}
-                            </>
+                            </div>
                           ) : (
                             <p className="text-muted-foreground">No risk assessment available. The assessment will be generated automatically when you upload a report.</p>
                           )}

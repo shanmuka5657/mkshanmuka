@@ -38,7 +38,9 @@ const RiskAssessmentOutputSchema = z.object({
   mitigations: z.array(z.object({
     factor: z.string().describe('The risk factor this mitigation addresses.'),
     action: z.string().describe('A one-sentence actionable suggestion to mitigate the risk.')
-  })).describe('A list of suggested actions to mitigate the identified risks.')
+  })).describe('A list of suggested actions to mitigate the identified risks.'),
+  probabilityOfDefault: z.number().describe('The estimated probability of the user defaulting on a new loan in the next 24 months, as a percentage (0-100).'),
+  defaultProbabilityExplanation: z.string().describe('A detailed, multi-sentence explanation of the factors that contributed to the probability of default calculation.'),
 });
 export type RiskAssessmentOutput = z.infer<typeof RiskAssessmentOutputSchema>;
 
@@ -62,6 +64,8 @@ Based on your analysis, generate a comprehensive risk assessment.
 - **level**: A summary level of 'Low', 'Medium', or 'High'.
 - **factors**: A list of the most significant risk factors. For each, provide a short title, a severity, and a brief explanation.
 - **mitigations**: For each major risk factor, provide a corresponding actionable mitigation strategy.
+- **probabilityOfDefault**: Holistically analyze the entire report to estimate the probability (from 0 to 100) that the user might default (fail to pay for 90+ days) on a new loan within the next 24 months.
+- **defaultProbabilityExplanation**: Provide a detailed, multi-sentence explanation for the 'probabilityOfDefault' score. Explain which specific factors (e.g., past DPD, high utilization, frequent inquiries, settled accounts) increased the probability, and which factors (e.g., long positive history, low debt) decreased it.
 
 **Credit Report Text:**
 \`\`\`
