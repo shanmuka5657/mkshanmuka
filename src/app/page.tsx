@@ -207,7 +207,7 @@ export default function CreditWiseAIPage() {
   const [aiAnalysis, setAiAnalysis] = useState<AnalyzeCreditReportOutput | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState('');
-  const [isSuggesting, setIsSuggesting] = useState(false);
+  const [setIsSuggesting] = useState(false);
   const [totalEmi, setTotalEmi] = useState('');
   const [otherObligations, setOtherObligations] = useState('');
   const [dtiRatio, setDtiRatio] = useState('40');
@@ -1601,7 +1601,7 @@ export default function CreditWiseAIPage() {
                           AI Financial Risk Assessment
                         </CardTitle>
                         <CardDescription>
-                          Get an AI-based analysis of your overall financial stability.
+                          Get an AI-based analysis of your overall financial stability. This requires your income to be estimated first.
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
@@ -1624,21 +1624,35 @@ export default function CreditWiseAIPage() {
                             </TooltipTrigger>
                             {estimatedIncome === null && (
                               <TooltipContent>
-                                <p>Please estimate your income first to enable this analysis.</p>
+                                <p>Please use the 'Income Estimator' to estimate your income first.</p>
                               </TooltipContent>
                             )}
                           </UiTooltip>
                         </TooltipProvider>
 
                         {financialRisk && (
-                          <div className="mt-6 space-y-4">
+                          <div className="mt-6 space-y-6">
                             <div className={cn('p-4 rounded-lg border-l-4', getRiskColorClass(financialRisk.financialRiskRating))}>
                               <h4 className="font-bold text-lg">Financial Risk Rating: {financialRisk.financialRiskRating}</h4>
                             </div>
-                             <div>
-                                <h5 className="font-semibold mb-2">Financial Risk Summary</h5>
-                                <p className="text-sm text-muted-foreground whitespace-pre-line">{financialRisk.financialRiskSummary}</p>
-                              </div>
+                            <div className="prose prose-sm dark:prose-invert max-w-none">
+                                <div className="p-4 rounded-lg bg-muted/50">
+                                    <h5 className="font-semibold mt-0">Debt-to-Income (DTI) Analysis</h5>
+                                    <p className="whitespace-pre-line">{financialRisk.dtiAnalysis.explanation}</p>
+                                </div>
+                                <div className="p-4 rounded-lg bg-muted/50">
+                                    <h5 className="font-semibold mt-0">Debt Composition Analysis</h5>
+                                    <p className="whitespace-pre-line">{financialRisk.debtComposition.explanation}</p>
+                                </div>
+                                <div className="p-4 rounded-lg bg-muted/50">
+                                    <h5 className="font-semibold mt-0">Credit Utilization Analysis</h5>
+                                    <p className="whitespace-pre-line">{financialRisk.creditUtilizationAnalysis.explanation}</p>
+                                </div>
+                                 <div className="p-4 rounded-lg bg-muted/50">
+                                    <h5 className="font-semibold mt-0">Overall Financial Outlook</h5>
+                                    <p className="whitespace-pre-line">{financialRisk.overallOutlook}</p>
+                                </div>
+                            </div>
                           </div>
                         )}
                       </CardContent>
