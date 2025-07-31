@@ -54,9 +54,7 @@ const shanAiChatFlow = ai.defineFlow(
   async ({ history }) => {
     
     const llmResponse = await ai.generate({
-      prompt: {
-        messages: history,
-      },
+      messages: history,
       system: `You are Shan AI, a powerful, general-purpose AI assistant. Your goal is to be helpful and answer the user's questions accurately and concisely. Maintain a friendly and conversational tone. If the user provides an image or document, use it as the primary context for your answer.`,
       model: 'googleai/gemini-2.0-flash',
     });
