@@ -2,26 +2,37 @@
 'use server';
 
 /**
- * @fileOverview A general-purpose, multi-modal AI assistant named Shan AI.
+ * @fileOverview A general-purpose, multi-modal AI assistant named Shan AI that supports conversation history.
  *
  * - shanAiChat - A function that handles the chat interaction.
- * - ShanAiChatInput - The input type for the chat function.
+ * - ShanAiChatHistory - the history type for the chat function.
  * - ShanAiChatOutput - The return type for the chat function.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import { type Part } from 'genkit/ai';
+import { Message } from 'genkit/model';
 
-const ShanAiChatInputSchema = z.object({
-  message: z.string().describe('The user message.'),
-  media: z
-    .string()
-    .optional()
-    .describe(
-      "A media file (image or document) as a data URI. Format: 'data:<mimetype>;base64,<encoded_data>'."
-    ),
+
+// Define the structure for a single message in the history
+const ShanAiChatMessageSchema = z.object({
+  role: z.enum(['user', 'model']),
+  content: z.array(z.object({
+    text: z.string().optional(),
+    media: z.object({
+      url: z.string(),
+      contentType: z.string().optional(),
+    }).optional(),
+  }))
 });
-export type ShanAiChatInput = z.infer<typeof ShanAiChatInputSchema>;
+
+// The input now includes the history of the conversation
+const ShanAiChatInputSchema = z.object({
+  history: z.array(ShanAiChatMessageSchema).describe('The conversation history.'),
+});
+export type ShanAiChatHistory = z.infer<typeof ShanAiChatMessageSchema>;
+
 
 const ShanAiChatOutputSchema = z.object({
   answer: z
@@ -31,27 +42,27 @@ const ShanAiChatOutputSchema = z.object({
 export type ShanAiChatOutput = z.infer<typeof ShanAiChatOutputSchema>;
 
 export async function shanAiChat(
-  input: ShanAiChatInput
+  history: ShanAiChatHistory[]
 ): Promise<ShanAiChatOutput> {
-  return shanAiChatFlow(input);
+  return shanAiChatFlow({ history });
 }
 
-const prompt = ai.definePrompt({
-  name: 'shanAiChatPrompt',
-  input: { schema: ShanAiChatInputSchema },
-  output: { schema: ShanAiChatOutputSchema },
-  prompt: `You are Shan AI, a powerful, general-purpose AI assistant. Your goal is to be helpful and answer the user's questions accurately and concisely.
+// Transform the Zod schema-based history into the format Genkit expects
+function mapHistoryToGenkitMessages(history: ShanAiChatHistory[]): Message[] {
+  return history.map(message => {
+    const parts: Part[] = message.content.map(part => {
+      if (part.text) {
+        return { text: part.text };
+      }
+      if (part.media) {
+        return { media: { url: part.media.url, contentType: part.media.contentType } };
+      }
+      return { text: '' }; // Should not happen with valid data
+    }).filter(p => p.text || p.media);
 
-{{#if media}}
-You have been provided with an image or document to analyze. Use it as the primary context for your answer.
-Image/Document: {{media url=media}}
-{{/if}}
-
-User's Message:
-"{{{message}}}"
-
-Provide your answer.`,
-});
+    return new Message(message.role, parts);
+  });
+}
 
 const shanAiChatFlow = ai.defineFlow(
   {
@@ -59,8 +70,19 @@ const shanAiChatFlow = ai.defineFlow(
     inputSchema: ShanAiChatInputSchema,
     outputSchema: ShanAiChatOutputSchema,
   },
-  async (input) => {
-    const { output } = await prompt(input);
-    return output!;
+  async ({ history }) => {
+    const genkitMessages = mapHistoryToGenkitMessages(history);
+
+    const llmResponse = await ai.generate({
+      prompt: {
+        messages: genkitMessages,
+      },
+      system: `You are Shan AI, a powerful, general-purpose AI assistant. Your goal is to be helpful and answer the user's questions accurately and concisely. Maintain a friendly and conversational tone. If the user provides an image or document, use it as the primary context for your answer.`,
+      model: 'googleai/gemini-2.0-flash',
+    });
+
+    return {
+      answer: llmResponse.text,
+    };
   }
 );

@@ -6,24 +6,24 @@ import { Bot, Loader2, Send, User, Paperclip, X, Minus, MessageSquare } from 'lu
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
-import { shanAiChat } from '@/ai/flows/shan-ai-chat';
+import { shanAiChat, ShanAiChatHistory } from '@/ai/flows/shan-ai-chat';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from './ui/scroll-area';
 import Image from 'next/image';
 
-interface Message {
+interface DisplayMessage {
   role: 'user' | 'assistant';
   content: string;
-  media?: string; // Data URI for image
+  mediaPreview?: string;
 }
 
 export function ShanAIChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [input, setInput] = useState('');
-  const [media, setMedia] = useState<string | null>(null);
+  const [mediaDataUri, setMediaDataUri] = useState<string | null>(null);
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -32,7 +32,7 @@ export function ShanAIChat() {
 
   useEffect(() => {
     if (isOpen && !isMinimized && scrollAreaRef.current) {
-        const viewport = scrollAreaRef.current.querySelector('div');
+        const viewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
         if (viewport) {
              viewport.scrollTop = viewport.scrollHeight;
         }
@@ -53,7 +53,7 @@ export function ShanAIChat() {
       const reader = new FileReader();
       reader.onload = (e) => {
         const dataUri = e.target?.result as string;
-        setMedia(dataUri);
+        setMediaDataUri(dataUri);
         setMediaPreview(dataUri);
       };
       reader.readAsDataURL(file);
@@ -63,19 +63,40 @@ export function ShanAIChat() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if ((!input.trim() && !media) || isLoading) return;
+    if ((!input.trim() && !mediaDataUri) || isLoading) return;
 
-    const userMessage: Message = { role: 'user', content: input, media: mediaPreview || undefined };
-    setMessages((prev) => [...prev, userMessage]);
+    // Add user message to display
+    const userMessageForDisplay: DisplayMessage = { role: 'user', content: input, mediaPreview: mediaPreview || undefined };
+    setMessages((prev) => [...prev, userMessageForDisplay]);
     
+    // Construct conversation history for the AI
+    const conversationHistory: ShanAiChatHistory[] = messages.map(msg => {
+      const content = [];
+      if (msg.content) content.push({ text: msg.content });
+      // Note: We don't have historical media URIs, so we only send the current one.
+      // This is a simplification for this component.
+      return {
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        content,
+      }
+    });
+    
+    // Add the new user message to the history to be sent
+    const userMessageForApiContent = [];
+    if(input) userMessageForApiContent.push({ text: input });
+    if(mediaDataUri) userMessageForApiContent.push({ media: { url: mediaDataUri } });
+    
+    conversationHistory.push({
+      role: 'user',
+      content: userMessageForApiContent
+    });
+    
+
     setIsLoading(true);
     
     try {
-      const result = await shanAiChat({
-        message: input,
-        media: media || undefined,
-      });
-      const aiMessage: Message = { role: 'assistant', content: result.answer };
+      const result = await shanAiChat(conversationHistory);
+      const aiMessage: DisplayMessage = { role: 'assistant', content: result.answer };
       setMessages((prev) => [...prev, aiMessage]);
     } catch (error: any) {
       console.error('Error getting chat response:', error);
@@ -87,12 +108,12 @@ export function ShanAIChat() {
             ? 'The AI model is currently overloaded. Please try again in a moment.'
             : error.message || 'Could not get chat response. Please try again.',
       });
-       const systemMessage: Message = { role: 'assistant', content: "Sorry, I couldn't get a response. Please try again." };
+       const systemMessage: DisplayMessage = { role: 'assistant', content: "Sorry, I couldn't get a response. Please try again." };
       setMessages((prev) => [...prev, systemMessage]);
     } finally {
       setIsLoading(false);
       setInput('');
-      setMedia(null);
+      setMediaDataUri(null);
       setMediaPreview(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -158,9 +179,9 @@ export function ShanAIChat() {
                         : 'bg-muted'
                     )}
                   >
-                    {message.media && (
+                    {message.mediaPreview && (
                       <Image
-                        src={message.media}
+                        src={message.mediaPreview}
                         alt="Uploaded content"
                         width={200}
                         height={200}
@@ -195,15 +216,16 @@ export function ShanAIChat() {
                   src={mediaPreview}
                   alt="Preview"
                   fill
-                  objectFit="cover"
+                  style={{objectFit: 'cover'}}
                   className="rounded-md"
                 />
                 <Button
+                  type="button"
                   size="icon"
                   variant="destructive"
                   className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
                   onClick={() => {
-                    setMedia(null);
+                    setMediaDataUri(null);
                     setMediaPreview(null);
                     if (fileInputRef.current) {
                       fileInputRef.current.value = '';
