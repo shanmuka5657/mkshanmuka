@@ -545,7 +545,8 @@ export default function CreditWiseAIPage() {
             if (accountType.toLowerCase().includes('credit card')) {
                 const outstanding = parseInt(loan.balance, 10) || 0;
                 if(outstanding > 0) {
-                  ccPayments += Math.max(outstanding * 0.05, 500); 
+                  // Calculate 5% of outstanding as minimum payment for credit cards
+                  ccPayments += outstanding * 0.05; 
                 }
             } else {
               if (emi > 0) {
@@ -579,15 +580,17 @@ export default function CreditWiseAIPage() {
           currentDpdStatus.push({ accountType, status: accountStatus, highestDpd, paymentHistory });
       });
 
-      summary.totalMonthlyEMI = totalEMI;
-      summary.maxSingleEMI = maxEMI;
+      // Add credit card payments to total EMI
+      const totalMonthlyObligation = totalEMI + Math.round(ccPayments);
+      summary.totalMonthlyEMI = totalMonthlyObligation;
+      summary.maxSingleEMI = maxEMI; // maxEMI remains the highest loan EMI, not including CCs
       summary.creditCardPayments = Math.round(ccPayments);
       
       setCreditSummary(summary);
       setFlaggedAccounts(currentFlaggedAccounts);
       setAccountDpdStatus(currentDpdStatus);
       setDpdSummary(tempDpdSummary);
-      setTotalEmi(String(totalEMI + ccPayments));
+      setTotalEmi(String(totalMonthlyObligation));
 
       const inquirySectionMatch = normalizedText.match(/ENQUIRIES:(.*?)END OF REPORT/i);
       const inquiryText = inquirySectionMatch ? inquirySectionMatch[1] : '';
