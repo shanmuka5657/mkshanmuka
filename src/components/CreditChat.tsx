@@ -6,7 +6,7 @@ import { Bot, Loader2, Send, User, Paperclip, X, Minus, MessageSquare } from 'lu
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
-import { shanAiChat, ShanAiChatHistory } from '@/ai/flows/shan-ai-chat';
+import { shanAiChat, ShanAiChatHistory, ShanAiChatInput } from '@/ai/flows/shan-ai-chat';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from './ui/scroll-area';
@@ -19,7 +19,7 @@ interface DisplayMessage {
   mediaDataUri?: string; // Keep original data for history
 }
 
-export function ShanAIChat() {
+export function ShanAIChat({ cibilReportText }: { cibilReportText?: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
@@ -96,7 +96,11 @@ export function ShanAIChat() {
     }
 
     try {
-      const result = await shanAiChat(conversationHistory);
+      const flowInput: ShanAiChatInput = {
+        history: conversationHistory,
+        cibilReportText: cibilReportText,
+      };
+      const result = await shanAiChat(flowInput);
       const aiMessage: DisplayMessage = { role: 'assistant', content: result.answer };
       setMessages((prev) => [...prev, aiMessage]);
     } catch (error: any) {
@@ -187,7 +191,7 @@ export function ShanAIChat() {
                         className="rounded-md mb-2 max-w-full h-auto"
                       />
                     )}
-                    {message.content}
+                    <div className="prose prose-sm dark:prose-invert max-w-none break-words" dangerouslySetInnerHTML={{ __html: message.content.replace(/\n/g, '<br />') }}></div>
                   </div>
                   {message.role === 'user' && (
                     <span className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-muted text-muted-foreground">

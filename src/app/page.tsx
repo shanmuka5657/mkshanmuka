@@ -125,7 +125,7 @@ const initialEnquirySummary: EnquirySummary = {
   recentDate: 'N/A',
 };
 
-const initialRiskAssessment: RiskAssessment = {
+const initialRiskAssessment: RiskAssessmentOutput = {
   score: 0,
   level: 'Low',
   factors: [],
@@ -175,7 +175,7 @@ export default function CreditWiseAIPage() {
   const [theme, setTheme] = useState('light');
   const [accountSummary, setAccountSummary] = useState<AccountSummary>(initialAccountSummary);
   const [enquirySummary, setEnquirySummary] = useState<EnquirySummary>(initialEnquirySummary);
-  const [riskAssessment, setRiskAssessment] = useState<RiskAssessment | null>(null);
+  const [riskAssessment, setRiskAssessment] = useState<RiskAssessmentOutput | null>(null);
   const [isAssessingRisk, setIsAssessingRisk] = useState(false);
   const [aiRating, setAiRating] = useState<AiRatingOutput | null>(null);
   const [isRating, setIsRating] = useState(false);
@@ -1482,7 +1482,7 @@ export default function CreditWiseAIPage() {
                 </div>
             )}
             
-            <ShanAIChat />
+            <ShanAIChat cibilReportText={rawText} />
 
           </>
         )}
@@ -1529,4 +1529,3 @@ export default function CreditWiseAIPage() {
 }
 
     
-

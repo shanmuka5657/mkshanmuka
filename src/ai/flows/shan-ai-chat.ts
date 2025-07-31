@@ -2,7 +2,7 @@
 'use server';
 
 /**
- * @fileOverview A general-purpose, multi-modal AI assistant named Shan AI that supports conversation history.
+ * @fileOverview A general-purpose, multi-modal AI assistant named Shan AI that supports conversation history and can access CIBIL report context.
  *
  * - shanAiChat - A function that handles the chat interaction.
  * - ShanAiChatHistory - the history type for the chat function.
@@ -11,8 +11,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { type Part } from 'genkit/ai';
-
 
 // Define the structure for a single message in the history
 const ShanAiChatMessageSchema = z.object({
@@ -26,11 +24,14 @@ const ShanAiChatMessageSchema = z.object({
   }))
 });
 
-// The input now includes the history of the conversation
+// The input now includes the history of the conversation and the CIBIL report
 const ShanAiChatInputSchema = z.object({
   history: z.array(ShanAiChatMessageSchema).describe('The conversation history.'),
+  cibilReportText: z.string().optional().describe('The full text of the user\'s CIBIL report.'),
 });
 export type ShanAiChatHistory = z.infer<typeof ShanAiChatMessageSchema>;
+export type ShanAiChatInput = z.infer<typeof ShanAiChatInputSchema>;
+
 
 const ShanAiChatOutputSchema = z.object({
   answer: z
@@ -40,9 +41,9 @@ const ShanAiChatOutputSchema = z.object({
 export type ShanAiChatOutput = z.infer<typeof ShanAiChatOutputSchema>;
 
 export async function shanAiChat(
-  history: ShanAiChatHistory[]
+  input: ShanAiChatInput
 ): Promise<ShanAiChatOutput> {
-  return shanAiChatFlow({ history });
+  return shanAiChatFlow(input);
 }
 
 const shanAiChatFlow = ai.defineFlow(
@@ -51,11 +52,22 @@ const shanAiChatFlow = ai.defineFlow(
     inputSchema: ShanAiChatInputSchema,
     outputSchema: ShanAiChatOutputSchema,
   },
-  async ({ history }) => {
+  async ({ history, cibilReportText }) => {
+    
+    const systemPrompt = `You are Shan AI, a powerful, general-purpose AI assistant. Your goal is to be helpful and answer the user's questions accurately and concisely. Maintain a friendly and conversational tone.
+    
+    ${cibilReportText ? 
+    `IMPORTANT: You have access to the user's CIBIL credit report. Use it as the primary source of truth to answer any questions related to their credit history, score, accounts, etc. When asked about their score or other specific data, reference this report directly. Here is the report:
+    \`\`\`
+    ${cibilReportText}
+    \`\`\``
+    : `The user has not uploaded a credit report. If they ask questions about their credit, inform them that you need them to upload a report first.`}
+    
+    If the user provides an image or document in their message, use it as additional context for your answer.`
     
     const llmResponse = await ai.generate({
       messages: history,
-      system: `You are Shan AI, a powerful, general-purpose AI assistant. Your goal is to be helpful and answer the user's questions accurately and concisely. Maintain a friendly and conversational tone. If the user provides an image or document, use it as the primary context for your answer.`,
+      system: systemPrompt,
       model: 'googleai/gemini-2.0-flash',
     });
 
