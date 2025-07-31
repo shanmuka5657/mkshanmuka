@@ -34,6 +34,7 @@ import {
   AreaChart,
   Gavel,
   BadgeCent,
+  Wallet,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -888,9 +889,9 @@ export default function CreditWiseAIPage() {
 
   const scoreProgress = creditScore ? (creditScore - 300) / 6 : 0;
 
-  const SummaryItem = ({ label, value }: { label: string; value: string | number }) => (
+  const SummaryItem = ({ label, value, icon: Icon }: { label: string; value: string | number, icon?: React.ElementType }) => (
     <div className="bg-muted/50 rounded-lg p-4 text-center">
-      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">{Icon && <Icon className="h-4 w-4" />}{label}</p>
       <p className="text-xl font-bold text-primary">{value}</p>
     </div>
   );
@@ -1218,8 +1219,7 @@ export default function CreditWiseAIPage() {
                           AI Loan Eligibility
                         </CardTitle>
                         <CardDescription>
-                          Estimate your potential loan eligibility based on your AI
-                          rating and financial details.
+                          Estimate your potential loan eligibility and repayment capacity based on your AI rating and financial details.
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
@@ -1249,30 +1249,34 @@ export default function CreditWiseAIPage() {
                         </TooltipProvider>
 
                         {loanEligibility && (
-                          <div className="mt-6 p-4 bg-muted rounded-lg">
-                            <h4 className="font-semibold">
-                              Estimated Loan Eligibility:
-                            </h4>
-                            <p className="text-2xl font-bold text-primary">
-                              ₹
-                              {loanEligibility.eligibleLoanAmount.toLocaleString(
-                                'en-IN'
-                              )}
-                            </p>
-                            <p className="text-muted-foreground">
-                              at an estimated interest rate of{' '}
-                              <strong>
-                                {loanEligibility.estimatedInterestRate}% p.a.
-                              </strong>
-                            </p>
-                            <Alert className="mt-4">
-                              <AlertCircle className="h-4 w-4" />
-                              <AlertTitle>Eligibility Summary</AlertTitle>
-                              <AlertDescription>
-                                {loanEligibility.eligibilitySummary}
-                              </AlertDescription>
-                            </Alert>
-                          </div>
+                            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="p-4 bg-muted rounded-lg">
+                                <h4 className="font-semibold flex items-center gap-2"><Wallet className="h-5 w-5 text-primary"/>Repayment Capacity</h4>
+                                <p className="text-sm text-muted-foreground">Remaining amount you can afford for a new EMI per month.</p>
+                                <p className="text-3xl font-bold text-primary mt-2">
+                                    ₹{loanEligibility.repaymentCapacity.toLocaleString('en-IN')}
+                                </p>
+                                </div>
+                                <div className="p-4 bg-muted rounded-lg">
+                                <h4 className="font-semibold">Eligible Loan Amount</h4>
+                                <p className="text-2xl font-bold text-primary">
+                                    ₹{loanEligibility.eligibleLoanAmount.toLocaleString('en-IN')}
+                                </p>
+                                <p className="text-muted-foreground text-sm">
+                                    at an estimated interest rate of{' '}
+                                    <strong>{loanEligibility.estimatedInterestRate}% p.a.</strong>
+                                </p>
+                                </div>
+                                <div className="md:col-span-2">
+                                <Alert className="mt-4">
+                                    <AlertCircle className="h-4 w-4" />
+                                    <AlertTitle>Eligibility Summary</AlertTitle>
+                                    <AlertDescription>
+                                    {loanEligibility.eligibilitySummary}
+                                    </AlertDescription>
+                                </Alert>
+                                </div>
+                            </div>
                         )}
                       </CardContent>
                     </Card>

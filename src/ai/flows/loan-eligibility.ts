@@ -33,6 +33,11 @@ const LoanEligibilityOutputSchema = z.object({
     .describe(
       'The estimated annual interest rate for the personal loan (e.g., "11.5%-13%").'
     ),
+  repaymentCapacity: z
+    .number()
+    .describe(
+      'The exact remaining monthly amount the applicant can comfortably afford for a new EMI.'
+    ),
   eligibilitySummary: z
     .string()
     .describe(
@@ -51,7 +56,7 @@ const prompt = ai.definePrompt({
   name: 'loanEligibilityPrompt',
   input: { schema: LoanEligibilityInputSchema },
   output: { schema: LoanEligibilityOutputSchema },
-  prompt: `You are an expert loan officer at a digital bank in India. Your task is to estimate a user's eligibility for a personal loan based on the provided data.
+  prompt: `You are an expert loan officer at a digital bank in India. Your task is to estimate a user's eligibility for a personal loan and calculate their remaining repayment capacity.
 
 The user's financial profile is as follows:
 - **AI Credit Score:** {{aiScore}}/100
@@ -60,13 +65,21 @@ The user's financial profile is as follows:
 - **Total Existing Monthly EMI:** ₹{{totalMonthlyEMI}}
 
 **Your Task:**
-1.  **Calculate Loan Eligibility:** Based on the user's profile, determine a realistic personal loan amount they could qualify for. A standard rule is that total EMIs (including the new loan) should not exceed 50-60% of the monthly income. Assume a standard personal loan tenure of 36 to 60 months.
-2.  **Estimate Interest Rate:** Provide a realistic interest rate range (e.g., "12.5%-14%"). Users with higher scores and ratings should get lower rates.
+1.  **Calculate Repayment Capacity:** First, calculate the user's maximum allowable monthly debt payment. A standard rule is that total EMIs (including the new loan) should not exceed 50-60% of the monthly income. Use a conservative 50% for this calculation.
+    - Max Allowable EMI = (Monthly Income * 0.50)
+    - **Repayment Capacity** = Max Allowable EMI - Total Existing Monthly EMI.
+    - If the result is negative, set Repayment Capacity to 0. Store this exact amount in the 'repaymentCapacity' field.
+
+2.  **Calculate Loan Eligibility:** Based on the calculated 'repaymentCapacity', determine a realistic personal loan amount they could qualify for. Assume a standard personal loan tenure of 36 to 60 months and an interest rate based on their rating.
+    - The new EMI for the proposed loan should not exceed the 'repaymentCapacity'.
+
+3.  **Estimate Interest Rate:** Provide a realistic interest rate range (e.g., "12.5%-14%"). Users with higher scores and ratings should get lower rates.
     - Excellent (85-100): 10.5% - 12.5%
     - Good (70-84): 12.5% - 15%
     - Fair (55-69): 15% - 20%
     - Poor (<55): Likely ineligible, but if eligible, >20%.
-3.  **Write Summary:** Provide a concise summary explaining your estimation. Mention how their credit rating and income impact the result. If their existing EMIs are high, mention that as a limiting factor.
+
+4.  **Write Summary:** Provide a concise summary explaining your estimation. Mention their calculated repayment capacity, how their credit rating and income impact the result, and if their existing EMIs are high.
 
 Generate the final output based on this analysis.
 `,
