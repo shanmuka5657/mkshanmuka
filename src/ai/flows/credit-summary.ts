@@ -2,7 +2,7 @@
 'use server';
 
 /**
- * @fileOverview An AI agent that provides a detailed credit summary from a CIBIL report.
+ * @fileOverview An AI agent that provides a detailed credit summary from a CIBIL report, including a list of flagged accounts with potential issues.
  *
  * - getCreditSummary - A function that returns a comprehensive credit summary.
  * - CreditSummaryInput - The input type for the getCreditSummary function.
@@ -18,6 +18,13 @@ const CreditSummaryInputSchema = z.object({
 });
 export type CreditSummaryInput = z.infer<typeof CreditSummaryInputSchema>;
 
+const FlaggedAccountSchema = z.object({
+    type: z.string().describe("The type of the account (e.g., 'Loan', 'Credit Card')."),
+    status: z.string().describe("The current status or payment status of the account."),
+    outstanding: z.string().describe("The outstanding balance, formatted as a currency string (e.g., ₹X,XXX)."),
+    overdue: z.string().describe("The overdue amount, formatted as a currency string (e.g., ₹X,XXX)."),
+    issue: z.string().describe("A brief, one-sentence description of why the account is flagged."),
+});
 
 const CreditSummaryOutputSchema = z.object({
   totalAccounts: z.number().describe('The total number of all credit accounts (active and closed).'),
@@ -34,6 +41,7 @@ const CreditSummaryOutputSchema = z.object({
   totalMonthlyEMI: z.number().describe('The sum of all monthly EMIs or installment amounts in INR.'),
   maxSingleEMI: z.number().describe('The largest single EMI amount found among all loans in INR.'),
   creditCardPayments: z.number().describe('The sum of minimum amount due or EMI for all credit card accounts in INR.'),
+  flaggedAccounts: z.array(FlaggedAccountSchema).describe("A list of accounts that have potential issues negatively impacting the credit score."),
 });
 export type CreditSummaryOutput = z.infer<typeof CreditSummaryOutputSchema>;
 
@@ -47,9 +55,9 @@ const prompt = ai.definePrompt({
   name: 'creditSummaryPrompt',
   input: {schema: CreditSummaryInputSchema},
   output: {schema: CreditSummaryOutputSchema},
-  prompt: `You are an expert financial data extraction AI. Your task is to meticulously scan the provided credit report text and calculate the values for the credit summary, following very specific rules for calculation.
+  prompt: `You are an expert financial data extraction and analysis AI. Your task is to meticulously scan the provided credit report text, calculate the values for the credit summary, and identify any "Flagged Accounts" with potential issues.
 
-**Instructions:**
+**Part 1: Credit Summary Calculation**
 1.  **Iterate through all accounts** in the "ACCOUNT INFORMATION" or similar section.
 2.  **Calculate Totals for All Accounts:**
     *   **totalAccounts**: Count every account listed.
@@ -73,12 +81,20 @@ const prompt = ai.definePrompt({
     *   **creditCardPayments**: This must ONLY be the sum from 'Credit Card' type accounts. Sum their 'EMI Amount' or 'Minimum Amount Due'. If an EMI isn't specified, you MUST find the 'Minimum Amount Due' and use it. If both are zero or missing, use 0.
 4.  **Zero Payment Rule:** If the calculated creditCardPayments is 0, you MUST return "N/A" for the creditUtilization field, regardless of balance or limit.
 
+**Part 2: Flagged Account Identification**
+Scan all accounts again and identify any account that meets one or more of the following criteria. Add each one to the 'flaggedAccounts' array.
+1.  **Negative Status:** The account status is 'Written-off', 'Settled', 'Doubtful', or has a high DPD (e.g., '090', 'SUB', 'LSS'). Issue should be like "Account was written-off".
+2.  **Missing EMI:** The account is an active loan with a 'Current Balance' greater than zero, but the 'EMI Amount' is '0' or not mentioned. Issue should be: "Active loan with no EMI mentioned."
+3.  **Overdue Balance:** The 'Overdue Amount' is greater than zero. Issue should be: "Account has an overdue balance."
+
+For each flagged account, provide the requested details. Outstanding and Overdue amounts must be formatted as currency strings (e.g., "₹38,620", "₹NaN" if not applicable).
+
 **Credit Report Text:**
 \`\`\`
 {{{creditReportText}}}
 \`\`\`
 
-Provide the final extracted data in the structured format.
+Provide the final extracted data in the structured format, including both the summary and the list of flagged accounts.
 `,
 });
 
