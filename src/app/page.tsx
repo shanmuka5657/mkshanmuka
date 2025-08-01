@@ -132,6 +132,9 @@ const initialRiskAssessment: RiskAssessmentOutput = {
   mitigations: [],
   probabilityOfDefault: 0,
   defaultProbabilityExplanation: '',
+  exposureAtDefault: 0,
+  lossGivenDefault: 0,
+  expectedLoss: 0,
 };
 
 const initialAiAnalysis: AnalyzeCreditReportOutput = {
@@ -1256,14 +1259,24 @@ export default function CreditWiseAIPage() {
                                   <h4 className="font-bold text-lg">{riskAssessment.level} Risk</h4>
                                   <p className="text-sm">Your AI-assessed credit risk score is <strong>{riskAssessment.score}/100</strong>. A higher score indicates lower risk.</p>
                               </div>
-                              
-                               <div>
-                                <h5 className="font-semibold mb-2">Probability of Default</h5>
-                                <div className="flex items-center gap-4">
-                                  <div className="text-4xl font-bold text-destructive">{riskAssessment.probabilityOfDefault}%</div>
-                                  <p className="text-sm text-muted-foreground">{riskAssessment.defaultProbabilityExplanation}</p>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                  <h5 className="font-semibold mb-2">Probability of Default (PD)</h5>
+                                  <div className="flex items-center gap-4">
+                                    <div className="text-4xl font-bold text-destructive">{riskAssessment.probabilityOfDefault}%</div>
+                                    <p className="text-sm text-muted-foreground">{riskAssessment.defaultProbabilityExplanation}</p>
+                                  </div>
+                                </div>
+                                <div>
+                                  <h5 className="font-semibold mb-2">Expected Loss (EL)</h5>
+                                  <div className="text-4xl font-bold text-destructive">₹{riskAssessment.expectedLoss.toLocaleString('en-IN')}</div>
+                                  <p className="text-sm text-muted-foreground">
+                                    Based on EAD of ₹{riskAssessment.exposureAtDefault.toLocaleString('en-IN')} and LGD of {riskAssessment.lossGivenDefault}%.
+                                  </p>
                                 </div>
                               </div>
+
 
                               {riskAssessment.factors.length > 0 && (
                                   <div>
