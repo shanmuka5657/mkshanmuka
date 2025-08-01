@@ -74,16 +74,16 @@ const prompt = ai.definePrompt({
 
 **Part 1: Credit Summary Calculation**
 1.  **Iterate through all accounts** in the "ACCOUNT INFORMATION" or similar section.
-2.  **Calculate Totals for All Accounts:**
+2.  **Calculate Totals for All Accounts with Strict Logic:**
     *   **totalAccounts**: Count every account listed.
-    *   **activeAccounts**: Count accounts that are not closed, written-off, or settled.
     *   **closedAccounts**: Count accounts explicitly marked as "Closed".
     *   **writtenOff**: Count accounts with status "Written-off" or "Post (WO) Settled".
     *   **settled**: Count accounts with status "Settled".
     *   **doubtful**: Count accounts with status "Doubtful".
+    *   **activeAccounts**: CRITICAL: This MUST be calculated as: totalAccounts - (closedAccounts + writtenOff + settled + doubtful). Do not count them separately.
     *   **totalCreditLimit**: Sum the "Sanctioned Amount" or "High Credit" for ALL accounts.
     *   **totalOutstanding / totalDebt**: Sum the "Current Balance" for ALL accounts.
-    *   **totalMonthlyEMI**: Sum the "EMI Amount" or "Instalment Amount" for ALL accounts.
+    *   **totalMonthlyEMI**: Sum the "EMI Amount" or "Instalment Amount" for ALL accounts. This must be an exact sum of the numbers in the report.
     *   **maxSingleEMI**: Find the largest single "EMI Amount" from any account.
 3.  **Calculate Ratios with Specific Rules:**
     *   **debtToLimitRatio**: Calculate this based on ALL accounts: (totalOutstanding / totalCreditLimit) * 100. Format as a percentage string (e.g., "35%"). If totalCreditLimit is 0, return "N/A".
