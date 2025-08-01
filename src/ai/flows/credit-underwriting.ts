@@ -133,12 +133,12 @@ const prompt = ai.definePrompt({
     - Connect these specific factors directly to the approved loan amount, interest rate, and tenure. For example, if declining, state "The application was declined due to a high DTI of 65% combined with the variable nature of self-employment income, which makes further credit extension too risky at this time."
 7.  **List Required Documents:** Provide a standard, comprehensive list of documents required for the specified 'loanType' AND 'employmentType'. For example, salaried employees need salary slips, while self-employed individuals need ITR and business financials. Daily wage earners might need affidavits or bank statements.
 8.  **List Conditions:** If the decision is 'Conditionally Approved', list the specific, actionable conditions required for final approval (e.g., "Clearance of the outstanding balance on the settled credit card account," "Submission of last 6 months of bank statements for income verification").
-9.  **Advanced Risk Metrics:** As part of your final analysis, calculate and explain the following:
+9.  **Advanced Risk Metrics:** As part of your final analysis, determine and explain the following:
     *   **exposureAtDefault (EAD):** Calculate the total outstanding balance across all active loans and credit cards. This represents the total amount the lender would be exposed to if the borrower defaults today. Sum up all 'Current Balance' fields and provide the total in INR.
     *   **probabilityOfDefault (PD):** Holistically analyze the entire report to estimate the probability (from 0 to 100) that the user might default (fail to pay for 90+ days) on a new loan within the next 24 months.
     *   **lossGivenDefault (LGD):** Based on the mix of credit (secured vs. unsecured loans), estimate the percentage of the EAD that would likely be unrecoverable in the event of a default. Unsecured debt (personal loans, credit cards) has a higher LGD (typically 50-90%) than secured debt (auto, home loans) (typically 10-50%). Provide a single, blended LGD percentage (0-100).
-    *   **expectedLoss (EL):** Calculate the Expected Loss in INR using the formula: EL = (PD / 100) * (LGD / 100) * EAD.
     *   **riskMetricsExplanation:** Provide detailed, multi-sentence explanations for each metric (pd, lgd, ead), explaining which specific factors influenced the calculation.
+    *   **DO NOT** calculate the final 'expectedLoss'. Only provide the component values (PD, LGD, EAD). The final calculation will be handled by the system.
 
 Generate the final, structured output based on this complete and thoroughly justified analysis.`,
 });
@@ -151,6 +151,19 @@ const creditUnderwritingFlow = ai.defineFlow(
   },
   async (input) => {
     const {output} = await prompt(input);
-    return output!;
+
+    if (!output) {
+      throw new Error("AI failed to provide an underwriting analysis.");
+    }
+
+    // Perform the Expected Loss calculation in code for accuracy.
+    const pd = output.probabilityOfDefault / 100;
+    const lgd = output.lossGivenDefault / 100;
+    const ead = output.exposureAtDefault;
+    
+    // Ensure the final EL is a number and round it for cleanliness.
+    output.expectedLoss = Math.round(pd * lgd * ead);
+
+    return output;
   }
 );
