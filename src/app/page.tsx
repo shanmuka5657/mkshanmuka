@@ -56,6 +56,7 @@ import { getRiskAssessment, RiskAssessmentOutput } from '@/ai/flows/risk-assessm
 import { getCreditUnderwriting, CreditUnderwritingOutput, CreditUnderwritingInput } from '@/ai/flows/credit-underwriting';
 import { getFinancialRiskAssessment, FinancialRiskOutput } from '@/ai/flows/financial-risk-assessment';
 import { calculateTotalEmi, CalculateTotalEmiOutput } from '@/ai/flows/calculate-total-emi';
+import { getReportSummary, ReportSummaryOutput } from '@/ai/flows/report-summary';
 import { ShanAIChat } from '@/components/CreditChat';
 import { cn } from '@/lib/utils';
 import {
@@ -82,59 +83,25 @@ import { saveTrainingCandidate } from '@/lib/training-store';
 import { Textarea } from '@/components/ui/textarea';
 
 
-type AccountSummary = {
-  total: string;
-  zeroBalance: string;
-  highCredit: string;
-  currentBalance: string;
-  overdue: string;
-  recentDate: string;
-  oldestDate: string;
+const initialReportSummary: ReportSummaryOutput = {
+  accountSummary: {
+    total: 'N/A',
+    zeroBalance: 'N/A',
+    highCredit: 'N/A',
+    currentBalance: 'N/A',
+    overdue: 'N/A',
+    recentDate: 'N/A',
+    oldestDate: 'N/A',
+  },
+  enquirySummary: {
+    total: 'N/A',
+    past30Days: 'N/A',
+    past12Months: 'N/A',
+    past24Months: 'N/A',
+    recentDate: 'N/A',
+  }
 };
 
-type EnquirySummary = {
-  total: string;
-  past30Days: string;
-  past12Months: string;
-  past24Months: string;
-  recentDate: string;
-};
-
-type ActiveView = 
-  | 'aiMeter' 
-  | 'aiAnalysis' 
-  | 'loanEligibility' 
-  | 'incomeEstimator'
-  | 'creditImprovement'
-  | 'riskAssessment'
-  | 'creditUnderwriting'
-  | 'financialRisk'
-  | null;
-
-type ActiveLoanDetail = CalculateTotalEmiOutput['activeLoans'][0] & {
-    id: string; // Add a unique ID for React keys
-    considerForObligation: 'Yes' | 'No';
-    comment: string;
-};
-
-
-const initialAccountSummary: AccountSummary = {
-  total: 'N/A',
-  zeroBalance: 'N/A',
-  highCredit: 'N/A',
-  currentBalance: 'N/A',
-  overdue: 'N/A',
-  recentDate: 'N/A',
-  oldestDate: 'N/A',
-};
-
-const initialEnquirySummary: EnquirySummary = {
-  total: 'N/A',
-  past30Days: 'N/A',
-  past12Months: 'N/A',
-  past24Months: 'N/A',
-  recentDate: 'N/A',
-};
 
 const initialRiskAssessment: RiskAssessmentOutput = {
   score: 0,
@@ -159,6 +126,24 @@ const initialAiAnalysis: AnalyzeCreditReportOutput = {
   creditHistoryLength: '',
   creditMix: '',
 };
+
+type ActiveView = 
+  | 'aiMeter' 
+  | 'aiAnalysis' 
+  | 'loanEligibility' 
+  | 'incomeEstimator'
+  | 'creditImprovement'
+  | 'riskAssessment'
+  | 'creditUnderwriting'
+  | 'financialRisk'
+  | null;
+
+type ActiveLoanDetail = CalculateTotalEmiOutput['activeLoans'][0] & {
+    id: string; // Add a unique ID for React keys
+    considerForObligation: 'Yes' | 'No';
+    comment: string;
+};
+
 
 export default function CreditWiseAIPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -187,8 +172,8 @@ export default function CreditWiseAIPage() {
   const [aiDebtAdvice, setAiDebtAdvice] = useState('');
   const [isAdvising, setIsAdvising] = useState(false);
   const [theme, setTheme] = useState('light');
-  const [accountSummary, setAccountSummary] = useState<AccountSummary>(initialAccountSummary);
-  const [enquirySummary, setEnquirySummary] = useState<EnquirySummary>(initialEnquirySummary);
+  const [reportSummary, setReportSummary] = useState<ReportSummaryOutput>(initialReportSummary);
+  const [isFetchingSummary, setIsFetchingSummary] = useState(false);
   const [riskAssessment, setRiskAssessment] = useState<RiskAssessmentOutput | null>(null);
   const [isAssessingRisk, setIsAssessingRisk] = useState(false);
   const [aiRating, setAiRating] = useState<AiRatingOutput | null>(null);
@@ -310,8 +295,8 @@ export default function CreditWiseAIPage() {
     setAiDebtAdvice('');
     setIsAdvising(false);
     setShowRawText(false);
-    setAccountSummary(initialAccountSummary);
-    setEnquirySummary(initialEnquirySummary);
+    setReportSummary(initialReportSummary);
+    setIsFetchingSummary(false);
     setRiskAssessment(null);
     setIsAssessingRisk(false);
     setAiRating(null);
@@ -353,7 +338,8 @@ export default function CreditWiseAIPage() {
             setProgress(30 + Math.round((70 * i) / pdf.numPages));
           }
           setRawText(textContent);
-          parseCibilData(textContent);
+          parseBasicInfo(textContent);
+          handleGetReportSummary(textContent); // Trigger AI summary fetch
           handleGetRiskAssessment(textContent); // Trigger AI risk assessment
           handleCalculateTotalEmi(textContent); // Trigger AI EMI calculation
         }
@@ -368,6 +354,25 @@ export default function CreditWiseAIPage() {
       })
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGetReportSummary = async (text: string) => {
+    if (!text) return;
+    setIsFetchingSummary(true);
+    setReportSummary(initialReportSummary);
+    try {
+      const result = await getReportSummary({ creditReportText: text });
+      setReportSummary(result);
+    } catch (error: any) {
+      console.error('Error getting AI report summary:', error);
+       toast({
+        variant: "destructive",
+        title: "AI Summary Failed",
+        description: error.message?.includes('429') ? "You've exceeded the daily limit for the AI. Please try again tomorrow." : (error.message || "Could not get AI report summary. Please try again."),
+      })
+    } finally {
+      setIsFetchingSummary(false);
     }
   };
   
@@ -419,7 +424,7 @@ export default function CreditWiseAIPage() {
   };
 
 
-  const parseCibilData = (text: string) => {
+  const parseBasicInfo = (text: string) => {
     const normalizedText = text.replace(/\s+/g, ' ').trim();
 
     // --- Basic Info Parsing ---
@@ -443,46 +448,6 @@ export default function CreditWiseAIPage() {
     if (addressMatch) info['Address'] = addressMatch[1].replace(/\s+/g, ' ').trim();
     
     setConsumerInfo(info);
-
-    // --- Screenshot-based Summary Parsing ---
-    const summarySectionMatch = normalizedText.match(/SUMMARY(.*?)(?=ACCOUNT INFORMATION|ACCOUNT DETAILS|ENQUIRY INFORMATION|$)/is);
-    const summarySection = summarySectionMatch ? summarySectionMatch[1] : '';
-
-    const getSummaryValue = (label: RegExp, section: string, isCurrency = false): string => {
-        const match = section.match(label);
-        if (!match || !match[1]) return 'N/A';
-        const value = match[1].replace(/,/g, '').trim();
-        if (value === '') return 'N/A';
-        try {
-            return isCurrency ? `₹${parseInt(value, 10).toLocaleString('en-IN')}` : value;
-        } catch (e) {
-            return value; // Return as is if parsing fails
-        }
-    };
-    
-    const newAccountSummary: AccountSummary = {
-        total: getSummaryValue(/Total\s*:\s*(\d+)/i, summarySection),
-        zeroBalance: getSummaryValue(/Zero-Balance\s*:\s*(\d+)/i, summarySection),
-        highCredit: getSummaryValue(/High Credit\/Sanc\. Amt\s*:\s*([\d,]+)/i, summarySection, true),
-        currentBalance: getSummaryValue(/Current\s*:\s*([\d,]+)/i, summarySection, true),
-        overdue: getSummaryValue(/Overdue\s*:\s*([\d,]+)/i, summarySection, true),
-        recentDate: getSummaryValue(/Recent\s*:\s*(\d{2}-\d{2}-\d{4})/i, summarySection),
-        oldestDate: getSummaryValue(/Oldest\s*:\s*(\d{2}-\d{2}-\d{4})/i, summarySection),
-    };
-    setAccountSummary(newAccountSummary);
-
-
-    const enquirySectionMatch = normalizedText.match(/ENQUIRY INFORMATION(.*?)(?=END OF REPORT|$)/is);
-    const enquirySection = enquirySectionMatch ? enquirySectionMatch[1] : '';
-
-    const newEnquirySummary: EnquirySummary = {
-        total: getSummaryValue(/Total\s*:\s*(\d+)/i, enquirySection),
-        past30Days: getSummaryValue(/Past 30 days\s*:\s*(\d+)/i, enquirySection),
-        past12Months: getSummaryValue(/Past 12 months\s*:\s*(\d+)/i, enquirySection),
-        past24Months: getSummaryValue(/Past 24 months\s*:\s*(\d+)/i, enquirySection),
-        recentDate: getSummaryValue(/Recent\s*:\s*(\d{2}-\d{2}-\d{4})/i, enquirySection),
-    };
-    setEnquirySummary(newEnquirySummary);
   };
 
 
@@ -798,10 +763,10 @@ export default function CreditWiseAIPage() {
     </Button>
   );
 
-  const SummaryItem = ({ label, value, valueClassName }: { label: string; value: string | number; valueClassName?: string }) => (
+  const SummaryItem = ({ label, value, valueClassName, isLoading = false }: { label: string; value: string | number; valueClassName?: string, isLoading?: boolean }) => (
     <div className="flex flex-col items-center justify-center text-center p-2">
       <p className="text-xs text-muted-foreground uppercase tracking-wider">{label}</p>
-      <p className={cn("text-base font-medium text-foreground", valueClassName)}>{value}</p>
+      {isLoading ? <Loader2 className="h-4 w-4 mt-1 animate-spin" /> : <p className={cn("text-base font-medium text-foreground", valueClassName)}>{value}</p>}
     </div>
   );
   
@@ -1623,28 +1588,29 @@ export default function CreditWiseAIPage() {
                    <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center"><BarChartBig className="mr-3 h-6 w-6 text-primary" />Report Summary</CardTitle>
+                        <CardDescription>This summary is generated by an AI analyzing your CIBIL report.</CardDescription>
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div>
                             <h3 className="font-semibold text-lg mb-2 border-b pb-1">Account Summary</h3>
                             <div className="grid grid-cols-2 gap-4">
-                                <SummaryItem label="Total Accounts" value={accountSummary.total} />
-                                <SummaryItem label="Zero-Balance" value={accountSummary.zeroBalance} />
-                                <SummaryItem label="High Credit/Sanc. Amt" value={accountSummary.highCredit} />
-                                <SummaryItem label="Current Balance" value={accountSummary.currentBalance} />
-                                <SummaryItem label="Overdue Amount" value={accountSummary.overdue} valueClassName="text-destructive" />
-                                <SummaryItem label="Most Recent Account" value={accountSummary.recentDate} />
-                                <SummaryItem label="Oldest Account" value={accountSummary.oldestDate} />
+                                <SummaryItem isLoading={isFetchingSummary} label="Total Accounts" value={reportSummary.accountSummary.total} />
+                                <SummaryItem isLoading={isFetchingSummary} label="Zero-Balance" value={reportSummary.accountSummary.zeroBalance} />
+                                <SummaryItem isLoading={isFetchingSummary} label="High Credit/Sanc. Amt" value={reportSummary.accountSummary.highCredit} />
+                                <SummaryItem isLoading={isFetchingSummary} label="Current Balance" value={reportSummary.accountSummary.currentBalance} />
+                                <SummaryItem isLoading={isFetchingSummary} label="Overdue Amount" value={reportSummary.accountSummary.overdue} valueClassName="text-destructive" />
+                                <SummaryItem isLoading={isFetchingSummary} label="Most Recent Account" value={reportSummary.accountSummary.recentDate} />
+                                <SummaryItem isLoading={isFetchingSummary} label="Oldest Account" value={reportSummary.accountSummary.oldestDate} />
                             </div>
                         </div>
                         <div>
                             <h3 className="font-semibold text-lg mb-2 border-b pb-1">Enquiry Summary</h3>
                              <div className="grid grid-cols-2 gap-4">
-                                <SummaryItem label="Total Enquiries" value={enquirySummary.total} />
-                                <SummaryItem label="Last 30 Days" value={enquirySummary.past30Days} />
-                                <SummaryItem label="Last 12 Months" value={enquirySummary.past12Months} />
-                                <SummaryItem label="Last 24 Months" value={enquirySummary.past24Months} />
-                                <SummaryItem label="Most Recent Enquiry" value={enquirySummary.recentDate} />
+                                <SummaryItem isLoading={isFetchingSummary} label="Total Enquiries" value={reportSummary.enquirySummary.total} />
+                                <SummaryItem isLoading={isFetchingSummary} label="Last 30 Days" value={reportSummary.enquirySummary.past30Days} />
+                                <SummaryItem isLoading={isFetchingSummary} label="Last 12 Months" value={reportSummary.enquirySummary.past12Months} />
+                                <SummaryItem isLoading={isFetchingSummary} label="Last 24 Months" value={reportSummary.enquirySummary.past24Months} />
+                                <SummaryItem isLoading={isFetchingSummary} label="Most Recent Enquiry" value={reportSummary.enquirySummary.recentDate} />
                             </div>
                         </div>
                     </CardContent>
