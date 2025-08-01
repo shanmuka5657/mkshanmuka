@@ -123,6 +123,14 @@ const initialCreditSummary: CreditSummaryOutput = {
     creditCardPayments: 0,
     flaggedAccounts: [],
     allAccounts: [],
+    dpdSummary: {
+      onTime: 0,
+      late30: 0,
+      late60: 0,
+      late90: 0,
+      late90Plus: 0,
+      default: 0,
+    },
 };
 
 
@@ -187,9 +195,9 @@ type ActiveLoanDetail = CalculateTotalEmiOutput['activeLoans'][0] & {
     comment: string;
 };
 
-// Pricing for gemini-2.0-flash model per 1M tokens
-const INPUT_PRICE_PER_MILLION_TOKENS = 0.25;
-const OUTPUT_PRICE_PER_MILLION_TOKENS = 0.50;
+// Pricing for gemini-1.5-flash-latest model per 1M tokens
+const INPUT_PRICE_PER_MILLION_TOKENS = 0.35; // Example price
+const OUTPUT_PRICE_PER_MILLION_TOKENS = 1.05; // Example price
 
 
 export default function CreditWiseAIPage() {
@@ -378,8 +386,8 @@ export default function CreditWiseAIPage() {
   const updateTokenUsage = (usage?: FlowUsage) => {
     if (!usage) return;
     setTokenUsage(prev => ({
-      inputTokens: prev.inputTokens + usage.inputTokens,
-      outputTokens: prev.outputTokens + usage.outputTokens
+      inputTokens: prev.inputTokens + (usage.inputTokens || 0),
+      outputTokens: prev.outputTokens + (usage.outputTokens || 0)
     }));
   };
 
@@ -816,6 +824,13 @@ export default function CreditWiseAIPage() {
     </div>
   );
 
+  const DpdSummaryItem = ({ label, value, colorClass }: { label: string; value: number; colorClass: string; }) => (
+    <div className={cn("text-center p-3 rounded-lg", colorClass)}>
+      <p className="text-2xl font-bold">{value}</p>
+      <p className="text-xs font-medium uppercase">{label}</p>
+    </div>
+  );
+
   const renderActiveView = () => {
     if (!activeView) return null;
 
@@ -855,6 +870,23 @@ export default function CreditWiseAIPage() {
                     <SummaryItem label="Max Single EMI" value={`₹${creditSummary.maxSingleEMI.toLocaleString('en-IN')}`} valueClassName="text-foreground" />
                     <SummaryItem label="Credit Card Payments" value={`₹${creditSummary.creditCardPayments.toLocaleString('en-IN')}`} valueClassName="text-foreground" />
                   </div>
+
+                  {creditSummary.dpdSummary && (
+                     <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center"><Clock className="mr-3 h-5 w-5" />DPD Analysis</CardTitle>
+                            <CardDescription>Your payment history at a glance.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                            <DpdSummaryItem label="On Time" value={creditSummary.dpdSummary.onTime} colorClass="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300" />
+                            <DpdSummaryItem label="1-30 Days" value={creditSummary.dpdSummary.late30} colorClass="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300" />
+                            <DpdSummaryItem label="31-60 Days" value={creditSummary.dpdSummary.late60} colorClass="bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300" />
+                            <DpdSummaryItem label="61-90 Days" value={creditSummary.dpdSummary.late90} colorClass="bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300" />
+                            <DpdSummaryItem label="90+ Days" value={creditSummary.dpdSummary.late90Plus} colorClass="bg-red-200 text-red-900 dark:bg-red-800/50 dark:text-red-200" />
+                            <DpdSummaryItem label="Default" value={creditSummary.dpdSummary.default} colorClass="bg-black text-white dark:bg-red-950 dark:text-red-100" />
+                        </CardContent>
+                    </Card>
+                  )}
 
                   {creditSummary.flaggedAccounts && creditSummary.flaggedAccounts.length > 0 && (
                     <Card className="border-destructive bg-destructive/5">

@@ -39,6 +39,15 @@ const AccountDetailSchema = z.object({
     paymentHistory: z.string().describe("A summary of the payment history (e.g., 'STD', '090'). Use 'NA' if not applicable."),
 });
 
+const DPDSummarySchema = z.object({
+  onTime: z.number().describe('Total number of on-time payments (STD or 000).'),
+  late30: z.number().describe('Total number of payments that were 1-30 days late.'),
+  late60: z.number().describe('Total number of payments that were 31-60 days late.'),
+  late90: z.number().describe('Total number of payments that were 61-90 days late.'),
+  late90Plus: z.number().describe('Total number of payments that were over 90 days late (e.g., SUB, DBT).'),
+  default: z.number().describe('Total number of months reported as Default or Loss (LSS).'),
+});
+
 
 const CreditSummaryOutputSchema = z.object({
   totalAccounts: z.number().describe('The total number of all credit accounts (active and closed).'),
@@ -57,6 +66,7 @@ const CreditSummaryOutputSchema = z.object({
   creditCardPayments: z.number().describe('The sum of minimum amount due or EMI for all credit card accounts in INR.'),
   flaggedAccounts: z.array(FlaggedAccountSchema).describe("A list of accounts that have potential issues negatively impacting the credit score."),
   allAccounts: z.array(AccountDetailSchema).describe("A complete list of every account found in the report with all details."),
+  dpdSummary: DPDSummarySchema.describe("A summary of the Days Past Due (DPD) payment history across all accounts."),
 });
 export type CreditSummaryOutput = z.infer<typeof CreditSummaryOutputSchema>;
 
@@ -70,7 +80,7 @@ const prompt = ai.definePrompt({
   name: 'creditSummaryPrompt',
   input: {schema: CreditSummaryInputSchema},
   output: {schema: CreditSummaryOutputSchema},
-  prompt: `You are an expert financial data extraction and analysis AI. Your task is to meticulously scan the provided credit report text, extract data for three key sections: a Credit Summary, a list of Flagged Accounts, and a complete list of All Accounts.
+  prompt: `You are an expert financial data extraction and analysis AI. Your task is to meticulously scan the provided credit report text, extract data for four key sections: a Credit Summary, DPD Analysis, a list of Flagged Accounts, and a complete list of All Accounts.
 
 **Part 1: Credit Summary Calculation**
 1.  **Iterate through all accounts** in the "ACCOUNT INFORMATION" or similar section.
@@ -96,14 +106,23 @@ const prompt = ai.definePrompt({
     *   **creditCardPayments**: This must ONLY be the sum from 'Credit Card' type accounts. Sum their 'EMI Amount' or 'Minimum Amount Due'. If an EMI isn't specified, you MUST find the 'Minimum Amount Due' and use it. If both are zero or missing, use 0.
 4.  **Zero Payment Rule:** If the calculated creditCardPayments is 0, you MUST return "N/A" for the creditUtilization field, regardless of balance or limit.
 
-**Part 2: Flagged Account Identification**
+**Part 2: DPD (Days Past Due) Analysis**
+Scan the payment history strings for ALL accounts. Tally up the total number of months for each DPD category and populate the 'dpdSummary' object.
+- **onTime**: Count all instances of 'STD' or '000'.
+- **late30**: Count all instances from '001' to '030'.
+- **late60**: Count all instances from '031' to '060'.
+- **late90**: Count all instances from '061' to '090'.
+- **late90Plus**: Count all instances of 'SUB' or any number greater than 90.
+- **default**: Count all instances of 'DBT' (Doubtful) or 'LSS' (Loss).
+
+**Part 3: Flagged Account Identification**
 Scan all accounts again and identify any account that meets one or more of the following criteria. Add each one to the 'flaggedAccounts' array.
 1.  **Negative Status:** The account status is 'Written-off', 'Settled', 'Doubtful', or has a high DPD (e.g., '090', 'SUB', 'LSS'). Issue should be like "Account was written-off".
 2.  **Missing EMI:** The account is an active loan with a 'Current Balance' greater than zero, but the 'EMI Amount' is '0' or not mentioned. Issue should be: "Active loan with no EMI mentioned."
 3.  **Overdue Balance:** The 'Overdue Amount' is greater than zero. Issue should be: "Account has an overdue balance."
 For each flagged account, provide the requested details. Outstanding and Overdue amounts must be formatted as currency strings (e.g., "₹38,620", "₹NaN" if not applicable).
 
-**Part 3: All Account Details Extraction**
+**Part 4: All Account Details Extraction**
 Go through every single account one last time and extract the following details for the 'allAccounts' array. For any value that is not present or not applicable, use "NA" for text/date fields and "₹NaN" for currency fields.
 - **type**: The account type.
 - **ownership**: The ownership status.
@@ -121,7 +140,7 @@ Go through every single account one last time and extract the following details 
 {{{creditReportText}}}
 \`\`\`
 
-Provide the final extracted data in the structured format, including all three parts: the summary, the flagged accounts list, and the complete list of all accounts.
+Provide the final extracted data in the structured format, including all four parts: the summary, the DPD analysis, the flagged accounts list, and the complete list of all accounts.
 `,
 });
 
