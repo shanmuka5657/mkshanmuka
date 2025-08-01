@@ -48,6 +48,10 @@ const CreditUnderwritingInputSchema = z.object({
   desiredTenure: z
     .number()
     .describe('The desired loan tenure in months.'),
+  userComments: z
+    .string()
+    .optional()
+    .describe('A string containing any comments or notes the user has added about their specific loans.'),
 });
 export type CreditUnderwritingInput = z.infer<
   typeof CreditUnderwritingInputSchema
@@ -74,7 +78,7 @@ const CreditUnderwritingOutputSchema = z.object({
   underwritingSummary: z
     .string()
     .describe(
-      'A comprehensive, multi-paragraph summary explaining the decision. It should detail the factors (positive and negative) that influenced the outcome.'
+      'A comprehensive, multi-paragraph summary explaining the decision. It should detail the factors (positive and negative) that influenced the outcome, and MUST reference any user comments provided.'
     ),
   requiredDocuments: z
     .array(z.string())
@@ -125,6 +129,14 @@ const prompt = ai.definePrompt({
 - **Pre-Calculated Max Repayment Capacity:** ₹{{{loanEligibility.repaymentCapacity}}}/month
 - **Pre-Calculated Max Eligible Loan Amount:** ₹{{{loanEligibility.eligibleLoanAmount}}}
 
+{{#if userComments}}
+**IMPORTANT USER COMMENTS ON LOANS:**
+The user has provided the following notes about their loans. You MUST consider these comments in your analysis and reference them in your summary. For example, if a user states they are not paying for a guarantor loan, you should acknowledge this.
+\`\`\`
+{{{userComments}}}
+\`\`\`
+{{/if}}
+
 **Full Credit Report Text:**
 \`\`\`
 {{{creditReportText}}}
@@ -137,7 +149,7 @@ const prompt = ai.definePrompt({
     *   **approvedLoanAmount:** Adhere strictly to the critical rules above.
     *   **recommendedInterestRate:** Provide a clear interest rate or range.
     *   **recommendedTenure:** Usually the same as desired, unless risk warrants a change.
-3.  **Write a Comprehensive Summary:** This is critical. Provide a detailed, multi-paragraph summary. Explain *exactly* how you reached your decision. Reference specific positive and negative factors from the report. If you reduce the loan amount, explain *why*, linking it to specific risks (e.g., "While the applicant requested ₹6,00,000, the approved amount was reduced to ₹4,50,000 due to a high DTI ratio and a recent 30-day delinquency on their credit card...").
+3.  **Write a Comprehensive Summary:** This is critical. Provide a detailed, multi-paragraph summary. Explain *exactly* how you reached your decision. Reference specific positive and negative factors from the report. If the user provided comments, you MUST address them in your summary. If you reduce the loan amount, explain *why*, linking it to specific risks (e.g., "While the applicant requested ₹6,00,000, the approved amount was reduced to ₹4,50,000 due to a high DTI ratio and a recent 30-day delinquency on their credit card...").
 4.  **List Documents and Conditions:**
     *   Provide a standard list of 'requiredDocuments'.
     *   **Add Conditions Based on Risk:** If you see a potential inconsistency (e.g., a 'Daily Wage Earner' with an unusually high estimated income of > ₹50,000/month), add a condition like "Income verification via bank statements and ITR for the last 2 years is mandatory." to the 'conditions' array.

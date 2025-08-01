@@ -79,6 +79,7 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } f
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { saveTrainingCandidate } from '@/lib/training-store';
+import { Textarea } from '@/components/ui/textarea';
 
 
 type AccountSummary = {
@@ -110,7 +111,11 @@ type ActiveView =
   | 'financialRisk'
   | null;
 
-type ActiveLoanDetail = CalculateTotalEmiOutput['activeLoans'][0];
+type ActiveLoanDetail = CalculateTotalEmiOutput['activeLoans'][0] & {
+    id: string; // Add a unique ID for React keys
+    considerForObligation: 'Yes' | 'No';
+    comment: string;
+};
 
 
 const initialAccountSummary: AccountSummary = {
@@ -224,6 +229,15 @@ export default function CreditWiseAIPage() {
       document.documentElement.classList.toggle('dark', savedTheme === 'dark');
     }
   }, []);
+
+    // Effect to recalculate total EMI whenever loan details change
+  useEffect(() => {
+    const newTotalEmi = activeLoanDetails
+      .filter(loan => loan.considerForObligation === 'Yes')
+      .reduce((sum, loan) => sum + loan.emi, 0);
+    setTotalEmi(newTotalEmi.toString());
+  }, [activeLoanDetails]);
+
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -388,8 +402,16 @@ export default function CreditWiseAIPage() {
     setActiveLoanDetails([]);
     try {
       const result = await calculateTotalEmi({ creditReportText: text });
-      setTotalEmi(result.totalEmi.toString());
-      setActiveLoanDetails(result.activeLoans);
+      
+      const enhancedLoanDetails = result.activeLoans.map((loan, index) => ({
+        ...loan,
+        id: `loan-${index}-${Date.now()}`, // Simple unique ID
+        considerForObligation: 'Yes' as 'Yes' | 'No',
+        comment: '',
+      }));
+      
+      setActiveLoanDetails(enhancedLoanDetails);
+      // The total EMI will be calculated by the useEffect hook
     } catch (error: any) {
       console.error('Error calculating total EMI:', error);
       toast({
@@ -647,6 +669,12 @@ export default function CreditWiseAIPage() {
 
     setIsUnderwriting(true);
     setUnderwritingResult(null);
+    
+    const userComments = activeLoanDetails
+        .filter(loan => loan.comment.trim() !== '')
+        .map(loan => `Loan (${loan.loanType}, Bal: ₹${loan.currentBalance.toLocaleString('en-IN')}): ${loan.comment}`)
+        .join('\n');
+
     try {
       const result = await getCreditUnderwriting({
         creditReportText: rawText,
@@ -657,6 +685,7 @@ export default function CreditWiseAIPage() {
         loanType: loanType as any,
         desiredLoanAmount: parseFloat(desiredLoanAmount),
         desiredTenure: parseInt(desiredTenure),
+        userComments: userComments || undefined,
       });
       setUnderwritingResult(result);
       setActiveView(null); // Close the accordion
@@ -721,6 +750,14 @@ export default function CreditWiseAIPage() {
     } finally {
       setIsAssessingFinancialRisk(false);
     }
+  };
+
+  const handleLoanDetailChange = (id: string, field: 'considerForObligation' | 'comment', value: string) => {
+    setActiveLoanDetails(prevDetails =>
+        prevDetails.map(loan =>
+            loan.id === id ? { ...loan, [field]: value } : loan
+        )
+    );
   };
 
   const scoreProgress = creditScore ? (creditScore - 300) / 6 : 0;
@@ -1516,28 +1553,46 @@ export default function CreditWiseAIPage() {
                           {activeLoanDetails.length > 0 && (
                             <div className="mt-4">
                                 <h4 className="font-semibold mb-2">Active Loan Details</h4>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Loan Type</TableHead>
-                                            <TableHead>Ownership</TableHead>
-                                            <TableHead className="text-right">Sanctioned Amt.</TableHead>
-                                            <TableHead className="text-right">Current Balance</TableHead>
-                                            <TableHead className="text-right">EMI</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {activeLoanDetails.map((loan, index) => (
-                                            <TableRow key={index}>
-                                                <TableCell>{loan.loanType}</TableCell>
-                                                <TableCell>{loan.ownership}</TableCell>
-                                                <TableCell className="text-right">₹{loan.sanctionedAmount.toLocaleString('en-IN')}</TableCell>
-                                                <TableCell className="text-right">₹{loan.currentBalance.toLocaleString('en-IN')}</TableCell>
-                                                <TableCell className="text-right">₹{loan.emi.toLocaleString('en-IN')}</TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
+                                <div className="space-y-4">
+                                    {activeLoanDetails.map((loan, index) => (
+                                        <Card key={loan.id} className="p-4 bg-muted/50">
+                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 items-center">
+                                                <SummaryItem label="Loan Type" value={loan.loanType} />
+                                                <SummaryItem label="Ownership" value={loan.ownership} />
+                                                <SummaryItem label="Sanctioned Amt." value={`₹${loan.sanctionedAmount.toLocaleString('en-IN')}`} />
+                                                <SummaryItem label="Current Balance" value={`₹${loan.currentBalance.toLocaleString('en-IN')}`} />
+                                                <SummaryItem label="EMI" value={`₹${loan.emi.toLocaleString('en-IN')}`} />
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                                <div>
+                                                    <Label htmlFor={`obligation-${loan.id}`} className="text-xs">Include in EMI?</Label>
+                                                    <Select
+                                                        value={loan.considerForObligation}
+                                                        onValueChange={(value: 'Yes' | 'No') => handleLoanDetailChange(loan.id, 'considerForObligation', value)}
+                                                    >
+                                                        <SelectTrigger id={`obligation-${loan.id}`}>
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="Yes">Yes</SelectItem>
+                                                            <SelectItem value="No">No</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div>
+                                                    <Label htmlFor={`comment-${loan.id}`} className="text-xs">Comments</Label>
+                                                    <Textarea
+                                                        id={`comment-${loan.id}`}
+                                                        placeholder="e.g., Guarantor loan, paid by primary."
+                                                        value={loan.comment}
+                                                        onChange={(e) => handleLoanDetailChange(loan.id, 'comment', e.target.value)}
+                                                        className="h-10 text-sm"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    ))}
+                                </div>
                             </div>
                           )}
 
