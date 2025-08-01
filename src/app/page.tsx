@@ -55,7 +55,7 @@ import { getLoanEligibility, LoanEligibilityOutput } from '@/ai/flows/loan-eligi
 import { getRiskAssessment, RiskAssessmentOutput } from '@/ai/flows/risk-assessment';
 import { getCreditUnderwriting, CreditUnderwritingOutput } from '@/ai/flows/credit-underwriting';
 import { getFinancialRiskAssessment, FinancialRiskOutput } from '@/ai/flows/financial-risk-assessment';
-import { calculateTotalEmi } from '@/ai/flows/calculate-total-emi';
+import { calculateTotalEmi, CalculateTotalEmiOutput } from '@/ai/flows/calculate-total-emi';
 import { ShanAIChat } from '@/components/CreditChat';
 import { cn } from '@/lib/utils';
 import {
@@ -109,6 +109,8 @@ type ActiveView =
   | 'creditUnderwriting'
   | 'financialRisk'
   | null;
+
+type ActiveLoanDetail = CalculateTotalEmiOutput['activeLoans'][0];
 
 
 const initialAccountSummary: AccountSummary = {
@@ -173,6 +175,7 @@ export default function CreditWiseAIPage() {
   const [aiSuggestions, setAiSuggestions] = useState('');
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [totalEmi, setTotalEmi] = useState('');
+  const [activeLoanDetails, setActiveLoanDetails] = useState<ActiveLoanDetail[]>([]);
   const [isCalculatingEmi, setIsCalculatingEmi] = useState(false);
   const [otherObligations, setOtherObligations] = useState('');
   const [dtiRatio, setDtiRatio] = useState('40');
@@ -289,6 +292,7 @@ export default function CreditWiseAIPage() {
     setAiSuggestions('');
     setIsSuggesting(false);
     setTotalEmi('');
+    setActiveLoanDetails([]);
     setIsCalculatingEmi(false);
     setOtherObligations('');
     setDtiRatio('40');
@@ -381,9 +385,11 @@ export default function CreditWiseAIPage() {
   const handleCalculateTotalEmi = async (text: string) => {
     if (!text) return;
     setIsCalculatingEmi(true);
+    setActiveLoanDetails([]);
     try {
       const result = await calculateTotalEmi({ creditReportText: text });
       setTotalEmi(result.totalEmi.toString());
+      setActiveLoanDetails(result.activeLoans);
     } catch (error: any) {
       console.error('Error calculating total EMI:', error);
       toast({
@@ -1503,6 +1509,35 @@ export default function CreditWiseAIPage() {
                             </div>
                             <p className="text-xs text-muted-foreground mt-1">This is auto-calculated from your report by AI. You can override it if needed.</p>
                           </div>
+                          
+                          {activeLoanDetails.length > 0 && (
+                            <div className="mt-4">
+                                <h4 className="font-semibold mb-2">Active Loan Details</h4>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Loan Type</TableHead>
+                                            <TableHead>Ownership</TableHead>
+                                            <TableHead className="text-right">Sanctioned Amt.</TableHead>
+                                            <TableHead className="text-right">Current Balance</TableHead>
+                                            <TableHead className="text-right">EMI</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {activeLoanDetails.map((loan, index) => (
+                                            <TableRow key={index}>
+                                                <TableCell>{loan.loanType}</TableCell>
+                                                <TableCell>{loan.ownership}</TableCell>
+                                                <TableCell className="text-right">₹{loan.sanctionedAmount.toLocaleString('en-IN')}</TableCell>
+                                                <TableCell className="text-right">₹{loan.currentBalance.toLocaleString('en-IN')}</TableCell>
+                                                <TableCell className="text-right">₹{loan.emi.toLocaleString('en-IN')}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                          )}
+
                           <div>
                             <Label htmlFor="other-obligations">Other Monthly Obligations (Rent, etc.)</Label>
                             <Input id="other-obligations" type="text" placeholder="e.g. 15000" value={otherObligations} onChange={(e) => setOtherObligations(e.target.value)} />
@@ -1642,3 +1677,4 @@ export default function CreditWiseAIPage() {
     
 
     
+
