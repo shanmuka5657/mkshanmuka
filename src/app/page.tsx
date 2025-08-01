@@ -770,15 +770,18 @@ export default function CreditWiseAIPage() {
     view,
     label,
     icon,
+    disabled = false
   }: {
     view: ActiveView;
     label: string;
     icon: React.ReactNode;
+    disabled?: boolean;
   }) => (
     <Button
       variant={activeView === view ? 'default' : 'outline'}
       onClick={() => setActiveView(activeView === view ? null : view)}
       className="flex flex-col h-24 text-center justify-center items-center gap-2"
+      disabled={disabled}
     >
       {icon}
       <span className="text-xs font-normal">{label}</span>
@@ -991,17 +994,17 @@ export default function CreditWiseAIPage() {
                   <Card>
                     <CardHeader>
                       <CardTitle>Analysis Dashboard</CardTitle>
-                      <CardDescription>Select a section to view its detailed analysis.</CardDescription>
+                      <CardDescription>Select a section to view its detailed analysis. Some sections require previous steps to be completed.</CardDescription>
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
                       <NavButton view="aiMeter" label="AI Credit Analysis Meter" icon={<Bot size={24} />} />
                       <NavButton view="aiAnalysis" label="AI Credit Report Analysis" icon={<BrainCircuit size={24} />} />
-                      <NavButton view="loanEligibility" label="AI Loan Eligibility" icon={<Banknote size={24} />} />
+                      <NavButton view="loanEligibility" label="AI Loan Eligibility" icon={<Banknote size={24} />} disabled={!aiRating || estimatedIncome === null} />
                       <NavButton view="incomeEstimator" label="Income Estimator & Debt Management" icon={<Calculator size={24} />} />
                       <NavButton view="creditImprovement" label="AI Credit Improvement" icon={<Lightbulb size={24} />} />
                       <NavButton view="riskAssessment" label="AI Risk Assessment" icon={<ShieldAlert size={24} />} />
-                      <NavButton view="financialRisk" label="AI Financial Risk" icon={<BadgeCent size={24} />} />
-                      <NavButton view="creditUnderwriting" label="AI Credit Underwriting" icon={<Gavel size={24} />} />
+                      <NavButton view="financialRisk" label="AI Financial Risk" icon={<BadgeCent size={24} />} disabled={estimatedIncome === null}/>
+                      <NavButton view="creditUnderwriting" label="AI Credit Underwriting" icon={<Gavel size={24} />} disabled={!loanEligibility} />
                     </CardContent>
                   </Card>
                   
