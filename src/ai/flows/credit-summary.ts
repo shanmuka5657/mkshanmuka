@@ -2,9 +2,9 @@
 'use server';
 
 /**
- * @fileOverview An AI agent that provides a detailed credit summary from a CIBIL report, including a list of flagged accounts with potential issues and a full list of all accounts.
+ * @fileOverview An AI agent that provides a detailed list of all accounts from a CIBIL report and a DPD summary.
  *
- * - getCreditSummary - A function that returns a comprehensive credit summary.
+ * - getCreditSummary - A function that returns a comprehensive list of all accounts and DPD analysis.
  * - CreditSummaryInput - The input type for the getCreditSummary function.
  * - CreditSummaryOutput - The return type for the getCreditSummary function.
  */
@@ -18,18 +18,10 @@ const CreditSummaryInputSchema = z.object({
 });
 export type CreditSummaryInput = z.infer<typeof CreditSummaryInputSchema>;
 
-const FlaggedAccountSchema = z.object({
-    type: z.string().describe("The type of the account (e.g., 'Loan', 'Credit Card')."),
-    status: z.string().describe("The current status or payment status of the account."),
-    outstanding: z.string().describe("The outstanding balance, formatted as a currency string (e.g., ₹X,XXX)."),
-    overdue: z.string().describe("The overdue amount, formatted as a currency string (e.g., ₹X,XXX)."),
-    issue: z.string().describe("A brief, one-sentence description of why the account is flagged."),
-});
-
 const AccountDetailSchema = z.object({
     type: z.string().describe("The type of the account (e.g., 'Credit Card', 'Personal Loan')."),
     ownership: z.string().describe("The ownership type (e.g., 'Individual', 'Joint')."),
-    status: z.string().describe("The current account status (e.g., 'OPEN', 'NA PAYMENT')."),
+    status: z.string().describe("The current account status (e.g., 'OPEN', 'CLOSED', 'WRITTEN-OFF')."),
     sanctioned: z.string().describe("The sanctioned amount, formatted as a currency string. Use '₹NaN' if not applicable."),
     outstanding: z.string().describe("The outstanding balance, formatted as a currency string. Use '₹NaN' if not applicable."),
     overdue: z.string().describe("The overdue amount, formatted as a currency string. Use '₹NaN' if not applicable."),
@@ -50,21 +42,6 @@ const DPDSummarySchema = z.object({
 
 
 const CreditSummaryOutputSchema = z.object({
-  totalAccounts: z.number().describe('The total number of all credit accounts (active and closed).'),
-  totalCreditLimit: z.number().describe('The sum of all sanctioned limits/high credits across all accounts in INR.'),
-  totalOutstanding: z.number().describe('The sum of all current balances across all accounts in INR.'),
-  totalDebt: z.number().describe('The sum of all current balances across all accounts (same as totalOutstanding) in INR.'),
-  creditUtilization: z.string().describe('The overall credit utilization percentage based on revolving credit (e.g., Credit Cards). If limit is 0, return "N/A".'),
-  debtToLimitRatio: z.string().describe('The debt-to-limit ratio as a percentage for all accounts. If limit is 0, return "N/A".'),
-  activeAccounts: z.number().describe('The total number of currently active accounts.'),
-  closedAccounts: z.number().describe('The total number of closed accounts.'),
-  writtenOff: z.number().describe('The total number of accounts with a "Written-off" status.'),
-  settled: z.number().describe('The total number of accounts with a "Settled" status.'),
-  doubtful: z.number().describe('The total number of accounts with a "Doubtful" status.'),
-  totalMonthlyEMI: z.number().describe('The sum of all monthly EMIs or installment amounts in INR.'),
-  maxSingleEMI: z.number().describe('The largest single EMI amount found among all loans in INR.'),
-  creditCardPayments: z.number().describe('The sum of minimum amount due or EMI for all credit card accounts in INR.'),
-  flaggedAccounts: z.array(FlaggedAccountSchema).describe("A list of accounts that have potential issues negatively impacting the credit score."),
   allAccounts: z.array(AccountDetailSchema).describe("A complete list of every account found in the report with all details."),
   dpdSummary: DPDSummarySchema.describe("A summary of the Days Past Due (DPD) payment history across all accounts."),
 });
@@ -80,33 +57,9 @@ const prompt = ai.definePrompt({
   name: 'creditSummaryPrompt',
   input: {schema: CreditSummaryInputSchema},
   output: {schema: CreditSummaryOutputSchema},
-  prompt: `You are an expert financial data extraction and analysis AI. Your task is to meticulously scan the provided credit report text, extract data for four key sections: a Credit Summary, DPD Analysis, a list of Flagged Accounts, and a complete list of All Accounts.
+  prompt: `You are an expert financial data extraction AI. Your task is to meticulously scan the provided credit report text and extract data for two key sections: a complete list of 'All Accounts' and a 'DPD Analysis'.
 
-**Part 1: Credit Summary Calculation**
-1.  **Iterate through all accounts** in the "ACCOUNT INFORMATION" or similar section.
-2.  **Calculate Totals for All Accounts with Strict Logic:**
-    *   **totalAccounts**: Count every account listed.
-    *   **closedAccounts**: Count accounts explicitly marked as "Closed".
-    *   **writtenOff**: Count accounts with status "Written-off" or "Post (WO) Settled".
-    *   **settled**: Count accounts with status "Settled".
-    *   **doubtful**: Count accounts with status "Doubtful".
-    *   **activeAccounts**: CRITICAL: This MUST be calculated as: totalAccounts - (closedAccounts + writtenOff + settled + doubtful). Do not count them separately.
-    *   **totalCreditLimit**: Sum the "Sanctioned Amount" or "High Credit" for ALL accounts.
-    *   **totalOutstanding / totalDebt**: Sum the "Current Balance" for ALL accounts.
-    *   **totalMonthlyEMI**: Sum the "EMI Amount" or "Instalment Amount" for ALL accounts. This must be an exact sum of the numbers in the report.
-    *   **maxSingleEMI**: Find the largest single "EMI Amount" from any account.
-3.  **Calculate Ratios with Specific Rules:**
-    *   **debtToLimitRatio**: Calculate this based on ALL accounts: (totalOutstanding / totalCreditLimit) * 100. Format as a percentage string (e.g., "35%"). If totalCreditLimit is 0, return "N/A".
-    *   **creditUtilization**: THIS IS A SPECIAL CALCULATION. It must be based ONLY on revolving accounts like 'Credit Card' or 'Credit Line'.
-        a. Find all 'Credit Card' or 'Credit Line' accounts.
-        b. Sum their 'Current Balance'.
-        c. Sum their 'Sanctioned Amount'/'High Credit' (this is the credit card limit).
-        d. Calculate (Credit Card Balance / Credit Card Limit) * 100. Format as a percentage string.
-        e. If the total credit card limit is 0, return "N/A".
-    *   **creditCardPayments**: This must ONLY be the sum from 'Credit Card' type accounts. Sum their 'EMI Amount' or 'Minimum Amount Due'. If an EMI isn't specified, you MUST find the 'Minimum Amount Due' and use it. If both are zero or missing, use 0.
-4.  **Zero Payment Rule:** If the calculated creditCardPayments is 0, you MUST return "N/A" for the creditUtilization field, regardless of balance or limit.
-
-**Part 2: DPD (Days Past Due) Analysis**
+**Part 1: DPD (Days Past Due) Analysis**
 Scan the payment history strings for ALL accounts. Tally up the total number of months for each DPD category and populate the 'dpdSummary' object.
 - **onTime**: Count all instances of 'STD' or '000'.
 - **late30**: Count all instances from '001' to '030'.
@@ -115,18 +68,12 @@ Scan the payment history strings for ALL accounts. Tally up the total number of 
 - **late90Plus**: Count all instances of 'SUB' or any number greater than 90.
 - **default**: Count all instances of 'DBT' (Doubtful) or 'LSS' (Loss).
 
-**Part 3: Flagged Account Identification**
-Scan all accounts again and identify any account that meets one or more of the following criteria. Add each one to the 'flaggedAccounts' array.
-1.  **Negative Status:** The account status is 'Written-off', 'Settled', 'Doubtful', or has a high DPD (e.g., '090', 'SUB', 'LSS'). Issue should be like "Account was written-off".
-2.  **Missing EMI:** The account is an active loan with a 'Current Balance' greater than zero, but the 'EMI Amount' is '0' or not mentioned. Issue should be: "Active loan with no EMI mentioned."
-3.  **Overdue Balance:** The 'Overdue Amount' is greater than zero. Issue should be: "Account has an overdue balance."
-For each flagged account, provide the requested details. Outstanding and Overdue amounts must be formatted as currency strings (e.g., "₹38,620", "₹NaN" if not applicable).
 
-**Part 4: All Account Details Extraction**
-Go through every single account one last time and extract the following details for the 'allAccounts' array. For any value that is not present or not applicable, use "NA" for text/date fields and "₹NaN" for currency fields.
+**Part 2: All Account Details Extraction**
+Go through every single account one by one in the "ACCOUNT INFORMATION" or similar section and extract the following details for the 'allAccounts' array. Do NOT perform any calculations or summarizations. Your only job is to extract the raw data for each account. For any value that is not present or not applicable, use "NA" for text/date fields and "₹NaN" for currency fields.
 - **type**: The account type.
 - **ownership**: The ownership status.
-- **status**: The current status or payment status.
+- **status**: The current account status. CRITICAL: Capture the status exactly as written (e.g., 'OPEN', 'CLOSED', 'WRITTEN-OFF', 'SETTLED', 'DOUBTFUL').
 - **sanctioned**: Sanctioned Amount, formatted as a currency string.
 - **outstanding**: Current Balance, formatted as a currency string.
 - **overdue**: Overdue Amount, formatted as a currency string.
@@ -140,7 +87,7 @@ Go through every single account one last time and extract the following details 
 {{{creditReportText}}}
 \`\`\`
 
-Provide the final extracted data in the structured format, including all four parts: the summary, the DPD analysis, the flagged accounts list, and the complete list of all accounts.
+Provide the final extracted data in the structured format, including the DPD analysis and the complete list of all accounts. Do not provide any summary fields like totalAccounts or totalDebt.
 `,
 });
 
@@ -160,19 +107,6 @@ const creditSummaryFlow = ai.defineFlow(
       throw new Error("AI failed to extract the credit summary.");
     }
     
-    // Post-calculation for safety on debtToLimitRatio
-    if (output.totalCreditLimit > 0) {
-        const debtRatio = Math.round((output.totalOutstanding / output.totalCreditLimit) * 100);
-        output.debtToLimitRatio = `${debtRatio}%`;
-    } else {
-        output.debtToLimitRatio = "N/A";
-    }
-
-    // The AI is instructed to handle credit utilization calculation and the zero payment rule,
-    // so we trust its output directly for `creditUtilization`.
-    
     return { output, usage: result.usage };
   }
 );
-
-    
