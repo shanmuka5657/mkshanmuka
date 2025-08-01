@@ -1028,6 +1028,37 @@ export default function CreditWiseAIPage() {
                       </CardContent>
                   </Card>
 
+                   <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center"><BarChartBig className="mr-3 h-6 w-6 text-primary" />Report Summary</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h3 className="font-semibold text-lg mb-2 border-b pb-1">Account Summary</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <SummaryItem label="Total Accounts" value={accountSummary.total} />
+                                <SummaryItem label="Zero-Balance" value={accountSummary.zeroBalance} />
+                                <SummaryItem label="High Credit/Sanc. Amt" value={accountSummary.highCredit} />
+                                <SummaryItem label="Current Balance" value={accountSummary.currentBalance} />
+                                <SummaryItem label="Overdue Amount" value={accountSummary.overdue} valueClassName="text-destructive" />
+                                <SummaryItem label="Most Recent Account" value={accountSummary.recentDate} />
+                                <SummaryItem label="Oldest Account" value={accountSummary.oldestDate} />
+                            </div>
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-lg mb-2 border-b pb-1">Enquiry Summary</h3>
+                             <div className="grid grid-cols-2 gap-4">
+                                <SummaryItem label="Total Enquiries" value={enquirySummary.total} />
+                                <SummaryItem label="Last 30 Days" value={enquirySummary.past30Days} />
+                                <SummaryItem label="Last 12 Months" value={enquirySummary.past12Months} />
+                                <SummaryItem label="Last 24 Months" value={enquirySummary.past24Months} />
+                                <SummaryItem label="Most Recent Enquiry" value={enquirySummary.recentDate} />
+                            </div>
+                        </div>
+                    </CardContent>
+                  </Card>
+
+
                   <Card>
                     <CardHeader>
                       <CardTitle>Analysis Dashboard</CardTitle>
@@ -1554,7 +1585,7 @@ export default function CreditWiseAIPage() {
                             <div className="mt-4">
                                 <h4 className="font-semibold mb-2">Active Loan Details</h4>
                                 <div className="space-y-4">
-                                    {activeLoanDetails.map((loan, index) => (
+                                    {activeLoanDetails.map((loan) => (
                                         <Card key={loan.id} className="p-4 bg-muted/50">
                                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 items-center">
                                                 <SummaryItem label="Loan Type" value={loan.loanType} />
@@ -1731,3 +1762,4 @@ export default function CreditWiseAIPage() {
     </div>
   );
 }
+
