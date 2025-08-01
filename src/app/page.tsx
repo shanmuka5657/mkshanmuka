@@ -55,6 +55,7 @@ import { getLoanEligibility, LoanEligibilityOutput } from '@/ai/flows/loan-eligi
 import { getRiskAssessment, RiskAssessmentOutput } from '@/ai/flows/risk-assessment';
 import { getCreditUnderwriting, CreditUnderwritingOutput } from '@/ai/flows/credit-underwriting';
 import { getFinancialRiskAssessment, FinancialRiskOutput } from '@/ai/flows/financial-risk-assessment';
+import { calculateTotalEmi } from '@/ai/flows/calculate-total-emi';
 import { ShanAIChat } from '@/components/CreditChat';
 import { cn } from '@/lib/utils';
 import {
@@ -172,6 +173,7 @@ export default function CreditWiseAIPage() {
   const [aiSuggestions, setAiSuggestions] = useState('');
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [totalEmi, setTotalEmi] = useState('');
+  const [isCalculatingEmi, setIsCalculatingEmi] = useState(false);
   const [otherObligations, setOtherObligations] = useState('');
   const [dtiRatio, setDtiRatio] = useState('40');
   const [customDti, setCustomDti] = useState('');
@@ -287,6 +289,7 @@ export default function CreditWiseAIPage() {
     setAiSuggestions('');
     setIsSuggesting(false);
     setTotalEmi('');
+    setIsCalculatingEmi(false);
     setOtherObligations('');
     setDtiRatio('40');
     setCustomDti('');
@@ -340,6 +343,7 @@ export default function CreditWiseAIPage() {
           setRawText(textContent);
           parseCibilData(textContent);
           handleGetRiskAssessment(textContent); // Trigger AI risk assessment
+          handleCalculateTotalEmi(textContent); // Trigger AI EMI calculation
         }
       };
       reader.readAsArrayBuffer(selectedFile);
@@ -371,6 +375,24 @@ export default function CreditWiseAIPage() {
       })
     } finally {
       setIsAssessingRisk(false);
+    }
+  };
+  
+  const handleCalculateTotalEmi = async (text: string) => {
+    if (!text) return;
+    setIsCalculatingEmi(true);
+    try {
+      const result = await calculateTotalEmi({ creditReportText: text });
+      setTotalEmi(result.totalEmi.toString());
+    } catch (error: any) {
+      console.error('Error calculating total EMI:', error);
+      toast({
+        variant: "destructive",
+        title: "AI EMI Calculation Failed",
+        description: error.message?.includes('503') ? "The AI model is currently overloaded. Please try again in a moment." : (error.message || "Could not calculate total EMI. Please try again."),
+      })
+    } finally {
+      setIsCalculatingEmi(false);
     }
   };
 
@@ -1475,8 +1497,11 @@ export default function CreditWiseAIPage() {
                         <CardContent className="space-y-4">
                           <div>
                             <Label htmlFor="total-emi">Total Monthly EMI</Label>
-                            <Input id="total-emi" type="text" placeholder="Auto-calculated or enter manually" value={totalEmi} onChange={(e) => setTotalEmi(e.target.value)} />
-                            <p className="text-xs text-muted-foreground mt-1">This is auto-calculated from your report. You can override it if needed.</p>
+                            <div className="flex items-center gap-2">
+                              <Input id="total-emi" type="text" placeholder="AI is calculating..." value={totalEmi} onChange={(e) => setTotalEmi(e.target.value)} disabled={isCalculatingEmi} />
+                              {isCalculatingEmi && <Loader2 className="h-5 w-5 animate-spin" />}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">This is auto-calculated from your report by AI. You can override it if needed.</p>
                           </div>
                           <div>
                             <Label htmlFor="other-obligations">Other Monthly Obligations (Rent, etc.)</Label>
