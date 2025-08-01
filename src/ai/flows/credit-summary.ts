@@ -24,8 +24,8 @@ const CreditSummaryOutputSchema = z.object({
   totalCreditLimit: z.number().describe('The sum of all sanctioned limits/high credits across all accounts in INR.'),
   totalOutstanding: z.number().describe('The sum of all current balances across all accounts in INR.'),
   totalDebt: z.number().describe('The sum of all current balances across all accounts (same as totalOutstanding) in INR.'),
-  creditUtilization: z.string().describe('The overall credit utilization percentage. If limit is 0, return "N/A".'),
-  debtToLimitRatio: z.string().describe('The debt-to-limit ratio as a percentage. If limit is 0, return "N/A".'),
+  creditUtilization: z.string().describe('The overall credit utilization percentage based on revolving credit (e.g., Credit Cards). If limit is 0, return "N/A".'),
+  debtToLimitRatio: z.string().describe('The debt-to-limit ratio as a percentage for all accounts. If limit is 0, return "N/A".'),
   activeAccounts: z.number().describe('The total number of currently active accounts.'),
   closedAccounts: z.number().describe('The total number of closed accounts.'),
   writtenOff: z.number().describe('The total number of accounts with a "Written-off" status.'),
@@ -47,25 +47,31 @@ const prompt = ai.definePrompt({
   name: 'creditSummaryPrompt',
   input: {schema: CreditSummaryInputSchema},
   output: {schema: CreditSummaryOutputSchema},
-  prompt: `You are an expert financial data extraction AI. Your task is to meticulously scan the provided credit report text and calculate the values for the credit summary.
+  prompt: `You are an expert financial data extraction AI. Your task is to meticulously scan the provided credit report text and calculate the values for the credit summary, following very specific rules for calculation.
 
 **Instructions:**
 1.  **Iterate through all accounts** in the "ACCOUNT INFORMATION" or similar section.
-2.  **Calculate Totals:**
+2.  **Calculate Totals for All Accounts:**
     *   **totalAccounts**: Count every account listed.
     *   **activeAccounts**: Count accounts that are not closed, written-off, or settled.
     *   **closedAccounts**: Count accounts explicitly marked as "Closed".
     *   **writtenOff**: Count accounts with status "Written-off" or "Post (WO) Settled".
     *   **settled**: Count accounts with status "Settled".
     *   **doubtful**: Count accounts with status "Doubtful".
-    *   **totalCreditLimit**: Sum the "Sanctioned Amount" or "High Credit" for all accounts.
-    *   **totalOutstanding / totalDebt**: Sum the "Current Balance" for all accounts.
-    *   **totalMonthlyEMI**: Sum the "EMI Amount" or "Instalment Amount" for all accounts.
+    *   **totalCreditLimit**: Sum the "Sanctioned Amount" or "High Credit" for ALL accounts.
+    *   **totalOutstanding / totalDebt**: Sum the "Current Balance" for ALL accounts.
+    *   **totalMonthlyEMI**: Sum the "EMI Amount" or "Instalment Amount" for ALL accounts.
     *   **maxSingleEMI**: Find the largest single "EMI Amount" from any account.
-    *   **creditCardPayments**: For "Credit Card" type accounts only, sum the "EMI Amount" or "Minimum Amount Due".
-3.  **Calculate Ratios:**
-    *   **creditUtilization / debtToLimitRatio**: Calculate (totalOutstanding / totalCreditLimit) * 100. Format as a percentage string (e.g., "35%"). If totalCreditLimit is 0, return "N/A".
-4.  **Handle Missing Data:** If a value cannot be found, return 0 for numbers and "N/A" for strings.
+3.  **Calculate Ratios with Specific Rules:**
+    *   **debtToLimitRatio**: Calculate this based on ALL accounts: (totalOutstanding / totalCreditLimit) * 100. Format as a percentage string (e.g., "35%"). If totalCreditLimit is 0, return "N/A".
+    *   **creditUtilization**: THIS IS A SPECIAL CALCULATION. It must be based ONLY on revolving accounts like 'Credit Card' or 'Credit Line'.
+        a. Find all 'Credit Card' or 'Credit Line' accounts.
+        b. Sum their 'Current Balance'.
+        c. Sum their 'Sanctioned Amount'/'High Credit' (this is the credit card limit).
+        d. Calculate (Credit Card Balance / Credit Card Limit) * 100. Format as a percentage string.
+        e. If the total credit card limit is 0, return "N/A".
+    *   **creditCardPayments**: This must ONLY be the sum from 'Credit Card' type accounts. Sum their 'EMI Amount' or 'Minimum Amount Due'. If an EMI isn't specified, you MUST find the 'Minimum Amount Due' and use it. If both are zero or missing, use 0.
+4.  **Zero Payment Rule:** If the calculated creditCardPayments is 0, you MUST return "N/A" for the creditUtilization field, regardless of balance or limit.
 
 **Credit Report Text:**
 \`\`\`
@@ -92,15 +98,16 @@ const creditSummaryFlow = ai.defineFlow(
       throw new Error("AI failed to extract the credit summary.");
     }
     
-    // Post-calculation for safety
+    // Post-calculation for safety on debtToLimitRatio
     if (output.totalCreditLimit > 0) {
-        const utilization = Math.round((output.totalOutstanding / output.totalCreditLimit) * 100);
-        output.creditUtilization = `${utilization}%`;
-        output.debtToLimitRatio = `${utilization}%`;
+        const debtRatio = Math.round((output.totalOutstanding / output.totalCreditLimit) * 100);
+        output.debtToLimitRatio = `${debtRatio}%`;
     } else {
-        output.creditUtilization = "N/A";
-        output.debtToLimitRatio = "0%";
+        output.debtToLimitRatio = "N/A";
     }
+
+    // The AI is instructed to handle credit utilization calculation and the zero payment rule,
+    // so we trust its output directly for `creditUtilization`.
     
     return { output, usage: result.usage };
   }
