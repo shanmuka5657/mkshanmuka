@@ -1235,6 +1235,42 @@ export default function CreditWiseAIPage() {
                             </div>
                           </div>
 
+                           <div className="mt-8 space-y-6">
+                            <h4 className="text-xl font-semibold border-b pb-2">Advanced Risk Metrics</h4>
+                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                               <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg">
+                                 <p className="text-sm text-muted-foreground">Probability of Default (PD)</p>
+                                 <p className="text-3xl font-bold text-destructive">{underwritingResult.probabilityOfDefault}%</p>
+                               </div>
+                               <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg">
+                                 <p className="text-sm text-muted-foreground">Loss Given Default (LGD)</p>
+                                 <p className="text-3xl font-bold text-destructive">{underwritingResult.lossGivenDefault}%</p>
+                               </div>
+                               <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg">
+                                 <p className="text-sm text-muted-foreground">Exposure at Default (EAD)</p>
+                                 <p className="text-3xl font-bold text-destructive">₹{underwritingResult.exposureAtDefault.toLocaleString('en-IN')}</p>
+                               </div>
+                               <div className="flex flex-col items-center text-center p-4 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                                 <p className="text-sm text-red-700 dark:text-red-300">Expected Loss (EL)</p>
+                                 <p className="text-3xl font-bold text-red-600 dark:text-red-400">₹{underwritingResult.expectedLoss.toLocaleString('en-IN')}</p>
+                               </div>
+                             </div>
+                             <div className="prose prose-sm dark:prose-invert max-w-none space-y-4">
+                                <div>
+                                    <h5>Probability of Default (PD) Explanation</h5>
+                                    <p>{underwritingResult.riskMetricsExplanation.pd}</p>
+                                </div>
+                                <div>
+                                    <h5>Loss Given Default (LGD) Explanation</h5>
+                                    <p>{underwritingResult.riskMetricsExplanation.lgd}</p>
+                                </div>
+                                <div>
+                                    <h5>Exposure at Default (EAD) Explanation</h5>
+                                    <p>{underwritingResult.riskMetricsExplanation.ead}</p>
+                                </div>
+                             </div>
+                           </div>
+
                         </CardContent>
                       )}
 
