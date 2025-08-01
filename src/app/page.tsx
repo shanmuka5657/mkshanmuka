@@ -53,7 +53,7 @@ import { getDebtManagementAdvice } from '@/ai/flows/debt-management-advice';
 import { getAiRating, AiRatingOutput } from '@/ai/flows/ai-rating';
 import { getLoanEligibility, LoanEligibilityOutput } from '@/ai/flows/loan-eligibility';
 import { getRiskAssessment, RiskAssessmentOutput } from '@/ai/flows/risk-assessment';
-import { getCreditUnderwriting, CreditUnderwritingOutput } from '@/ai/flows/credit-underwriting';
+import { getCreditUnderwriting, CreditUnderwritingOutput, CreditUnderwritingInput } from '@/ai/flows/credit-underwriting';
 import { getFinancialRiskAssessment, FinancialRiskOutput } from '@/ai/flows/financial-risk-assessment';
 import { calculateTotalEmi, CalculateTotalEmiOutput } from '@/ai/flows/calculate-total-emi';
 import { ShanAIChat } from '@/components/CreditChat';
@@ -206,7 +206,6 @@ export default function CreditWiseAIPage() {
   const [employmentType, setEmploymentType] = useState('Salaried');
   const [desiredLoanAmount, setDesiredLoanAmount] = useState('');
   const [desiredTenure, setDesiredTenure] = useState('');
-  const [desiredInterestRate, setDesiredInterestRate] = useState('');
 
   // New state for Financial Risk
   const [financialRisk, setFinancialRisk] = useState<FinancialRiskOutput | null>(null);
@@ -330,7 +329,6 @@ export default function CreditWiseAIPage() {
     setEmploymentType('Salaried');
     setDesiredLoanAmount('');
     setDesiredTenure('');
-    setDesiredInterestRate('');
     setFinancialRisk(null);
     setIsAssessingFinancialRisk(false);
 
@@ -641,114 +639,105 @@ export default function CreditWiseAIPage() {
         variant: 'destructive',
         title: 'Eligibility Calculation Failed',
         description:
-          error.message?.includes('429') ? "You've exceeded the daily limit for the AI. Please try again tomorrow." : (error.message || 'Could not calculate your loan eligibility. Please try again.'),
+          error.message?.includes('429')
+            ? "You've exceeded the daily limit for the AI. Please try again tomorrow."
+            : error.message || 'Could not calculate loan eligibility. Please try again.',
       });
     } finally {
       setIsCalculatingEligibility(false);
     }
   };
-  
+
+  const handleGetFinancialRisk = async () => {
+    if (estimatedIncome === null) {
+      toast({ variant: "destructive", title: "Calculate Income First", description: "Please estimate your income before getting advice."});
+      return;
+    }
+    setIsAssessingFinancialRisk(true);
+    setFinancialRisk(null);
+    try {
+      const result = await getFinancialRiskAssessment({
+        estimatedIncome,
+        creditReportText: rawText,
+      });
+      setFinancialRisk(result);
+      toast({
+        title: 'Financial Risk Assessed',
+        description: 'Your overall financial stability analysis is ready.',
+      });
+    } catch (error: any) {
+      console.error('Error assessing financial risk:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Financial Risk Assessment Failed',
+        description:
+          error.message?.includes('429')
+            ? "You've exceeded the daily limit for the AI. Please try again tomorrow."
+            : error.message || 'Could not assess financial risk. Please try again.',
+      });
+    } finally {
+      setIsAssessingFinancialRisk(false);
+    }
+  };
+
   const handleGetUnderwriting = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!aiRating || !loanEligibility || estimatedIncome === null) {
+    if (!aiRating || estimatedIncome === null || !loanEligibility || !desiredLoanAmount || !desiredTenure) {
       toast({
         variant: 'destructive',
-        title: 'Missing Information',
-        description: 'Please get your AI Rating, Loan Eligibility, and estimate your income first.',
+        title: 'Missing Prerequisites',
+        description: 'Please complete AI Rating, Income Estimation, Loan Eligibility, and fill all loan fields before underwriting.',
       });
       return;
     }
-    if (!desiredLoanAmount || !desiredTenure) {
-      toast({
-        variant: 'destructive',
-        title: 'Missing Loan Details',
-        description: 'Please enter the desired loan amount and tenure.',
-      });
-      return;
-    }
-
     setIsUnderwriting(true);
     setUnderwritingResult(null);
-    
+
     const userComments = activeLoanDetails
         .filter(loan => loan.comment.trim() !== '')
-        .map(loan => `Loan (${loan.loanType}, Bal: ₹${loan.currentBalance.toLocaleString('en-IN')}): ${loan.comment}`)
+        .map(loan => `${loan.loanType}: ${loan.comment}`)
         .join('\n');
 
     try {
-      const result = await getCreditUnderwriting({
+      const input: CreditUnderwritingInput = {
         creditReportText: rawText,
         aiRating: aiRating,
         loanEligibility: loanEligibility,
         estimatedIncome: estimatedIncome,
-        employmentType: employmentType as any,
-        loanType: loanType as any,
+        employmentType: employmentType as "Salaried" | "Self-employed" | "Daily Wage Earner",
+        loanType: loanType as "Personal Loan" | "Home Loan" | "Auto Loan" | "Loan Against Property",
         desiredLoanAmount: parseFloat(desiredLoanAmount),
-        desiredTenure: parseInt(desiredTenure),
-        userComments: userComments || undefined,
-      });
-      setUnderwritingResult(result);
-      setActiveView(null); // Close the accordion
-      toast({
-        title: 'AI Underwriting Complete',
-        description: 'Your final analysis and profile summary is ready.',
-      });
+        desiredTenure: parseInt(desiredTenure, 10),
+        userComments: userComments,
+      };
 
-      // Automatically save the full analysis as a training candidate
+      const result = await getCreditUnderwriting(input);
+      setUnderwritingResult(result);
+
+      // Save the complete analysis as a candidate for model training
       saveTrainingCandidate({
           rawCreditReport: rawText,
-          aiRating: aiRating,
-          financialRisk: financialRisk,
+          aiRating,
+          financialRisk,
           creditUnderwriting: result
       });
-      toast({
-        title: "Training Example Saved",
-        description: "This analysis has been saved as a candidate for AI training. You can review it on the 'AI Model Trainer' page."
-      });
 
+      toast({
+        title: 'Underwriting Complete',
+        description: 'The final AI underwriting decision is ready.',
+      });
     } catch (error: any) {
       console.error('Error getting underwriting:', error);
       toast({
         variant: 'destructive',
         title: 'Underwriting Failed',
-        description: error.message?.includes('429') ? "You've exceeded the daily limit for the AI. Please try again tomorrow." : (error.message || 'Could not get underwriting details. Please try again.'),
+        description:
+          error.message?.includes('429')
+            ? "You've exceeded the daily limit for the AI. Please try again tomorrow."
+            : error.message || 'Could not get underwriting analysis. Please try again.',
       });
     } finally {
       setIsUnderwriting(false);
-    }
-  };
-
-  const handleGetFinancialRisk = async () => {
-    if (!rawText || estimatedIncome === null) {
-      toast({
-        variant: 'destructive',
-        title: 'Missing Information',
-        description: 'Please upload a report and estimate your income first.',
-      });
-      return;
-    }
-
-    setIsAssessingFinancialRisk(true);
-    setFinancialRisk(null);
-    try {
-      const result = await getFinancialRiskAssessment({
-        creditReportText: rawText,
-        estimatedIncome: estimatedIncome,
-      });
-      setFinancialRisk(result);
-      toast({
-        title: 'Financial Risk Assessment Complete',
-        description: 'Your financial risk analysis is ready.',
-      });
-    } catch (error: any) {
-      console.error('Error getting financial risk:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Financial Risk Assessment Failed',
-        description: error.message?.includes('429') ? "You've exceeded the daily limit for the AI. Please try again tomorrow." : (error.message || 'Could not get financial risk details. Please try again.'),
-      });
-    } finally {
-      setIsAssessingFinancialRisk(false);
     }
   };
 
@@ -831,6 +820,614 @@ export default function CreditWiseAIPage() {
       <p className={cn("text-base font-medium text-foreground", valueClassName)}>{value}</p>
     </div>
   );
+  
+  const renderActiveView = () => {
+    if (!activeView) return null;
+
+    const views: { [key in ActiveView]: React.ReactNode } = {
+      aiMeter: (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center"><Bot className="mr-3 h-6 w-6 text-primary" />AI Credit Analysis Meter</CardTitle>
+            <CardDescription>This AI acts as a holistic credit advisor. It provides a comprehensive score of your overall credit health by balancing both the positive and negative factors in your report.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={handleGetAiRating} disabled={isRating || !riskAssessment}>
+              {isRating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+              Get AI Rating
+            </Button>
+            
+            {aiRating && (
+              <div className="mt-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                  <div className="text-center">
+                    <div className={cn("text-7xl font-bold", getRatingColorClass(aiRating.rating))}>
+                      {aiRating.aiScore}
+                    </div>
+                    <div className={cn("text-2xl font-semibold", getRatingColorClass(aiRating.rating))}>
+                      {aiRating.rating}
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">AI Score / 100</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <p className="text-sm text-muted-foreground">{aiRating.summary}</p>
+                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <h4 className="font-semibold flex items-center mb-2"><ThumbsUp className="h-5 w-5 mr-2 text-green-500" />Positive Factors</h4>
+                          <ul className="list-disc list-inside space-y-1 text-sm">
+                            {aiRating.positiveFactors.map((factor, i) => <li key={i}>{factor}</li>)}
+                          </ul>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold flex items-center mb-2"><ThumbsDown className="h-5 w-5 mr-2 text-red-500" />Negative Factors</h4>
+                          <ul className="list-disc list-inside space-y-1 text-sm">
+                            {aiRating.negativeFactors.map((factor, i) => <li key={i}>{factor}</li>)}
+                          </ul>
+                        </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ),
+      loanEligibility: (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Banknote className="mr-3 h-6 w-6 text-primary" />
+              AI Loan Eligibility
+            </CardTitle>
+            <CardDescription>
+              Estimate your potential loan eligibility and repayment capacity based on your AI rating and financial details.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TooltipProvider>
+              <UiTooltip>
+                <TooltipTrigger asChild>
+                  <div className="inline-block">
+                      <Button
+                        onClick={handleGetLoanEligibility}
+                        disabled={isCalculatingEligibility || !aiRating || estimatedIncome === null}
+                      >
+                        {isCalculatingEligibility ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Sparkles className="mr-2 h-4 w-4" />
+                        )}
+                        Calculate Loan Eligibility
+                      </Button>
+                  </div>
+                </TooltipTrigger>
+                {(!aiRating || estimatedIncome === null) && (
+                  <TooltipContent>
+                    <p>Please get your AI Rating and estimate your income first.</p>
+                  </TooltipContent>
+                )}
+              </UiTooltip>
+            </TooltipProvider>
+
+            {loanEligibility && (
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="p-4 bg-muted rounded-lg">
+                    <h4 className="font-semibold flex items-center gap-2"><Wallet className="h-5 w-5 text-primary"/>Repayment Capacity</h4>
+                    <p className="text-sm text-muted-foreground">Remaining amount you can afford for a new EMI per month.</p>
+                    <p className="text-3xl font-bold text-primary mt-2">
+                        ₹{loanEligibility.repaymentCapacity.toLocaleString('en-IN')}
+                    </p>
+                    </div>
+                    <div className="p-4 bg-muted rounded-lg">
+                    <h4 className="font-semibold">Eligible Loan Amount</h4>
+                    <p className="text-2xl font-bold text-primary">
+                        ₹{loanEligibility.eligibleLoanAmount.toLocaleString('en-IN')}
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                        at an estimated interest rate of{' '}
+                        <strong>{loanEligibility.estimatedInterestRate}</strong>
+                    </p>
+                    </div>
+                    <div className="md:col-span-2">
+                    <Alert className="mt-4">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Eligibility Summary</AlertTitle>
+                        <AlertDescription>
+                        {loanEligibility.eligibilitySummary}
+                        </AlertDescription>
+                    </Alert>
+                    </div>
+                    {loanEligibility.suggestionsToIncreaseEligibility.length > 0 && (
+                    <div className="md:col-span-2 mt-4">
+                      <h4 className="font-semibold text-lg flex items-center mb-2">
+                        <Lightbulb className="mr-2 h-5 w-5 text-yellow-400" />
+                        How to Increase Your Loan Eligibility
+                      </h4>
+                      <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
+                        {loanEligibility.suggestionsToIncreaseEligibility.map((suggestion, i) => (
+                          <li key={i}>{suggestion}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+            )}
+          </CardContent>
+        </Card>
+      ),
+      aiAnalysis: (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center"><BrainCircuit className="mr-3 h-6 w-6 text-primary" />AI Credit Report Analysis</CardTitle>
+                <CardDescription>An AI-generated breakdown of your credit strengths and weaknesses.</CardDescription>
+            </CardHeader>
+             <CardContent>
+              <Button onClick={handleAnalyze} disabled={isAnalyzing || !rawText}>
+                {isAnalyzing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                Analyze with AI
+              </Button>
+              {aiAnalysis && (
+                <Card className="mt-6 bg-muted/50">
+                  <CardContent className="pt-6 space-y-6">
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                        <h3>Strengths in CIBIL</h3>
+                        <p>{aiAnalysis.strengths}</p>
+                        <hr />
+                        <h3>Weaknesses in CIBIL</h3>
+                        <p>{aiAnalysis.weaknesses}</p>
+                        <hr />
+                        <h3>Active Accounts Analysis</h3>
+                        <p>{aiAnalysis.activeAccounts}</p>
+                        <hr />
+                        <h3>Closed Accounts Analysis</h3>
+                        <p>{aiAnalysis.closedAccounts}</p>
+                        <hr />
+                        <h3>DPD (Days Past Due) Analysis</h3>
+                        <p>{aiAnalysis.dpdAnalysis}</p>
+                        <hr />
+                        <h3>EMI Paying for Loan Analysis</h3>
+                        <p>{aiAnalysis.emiAnalysis}</p>
+                        <hr />
+                        <h3>Credit Utilization</h3>
+                        <p>{aiAnalysis.creditUtilization}</p>
+                        <hr />
+                        <h3>Credit History Length</h3>
+                        <p>{aiAnalysis.creditHistoryLength}</p>
+                        <hr />
+                        <h3>Credit Mix</h3>
+                        <p>{aiAnalysis.creditMix}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </CardContent>
+        </Card>
+      ),
+      creditUnderwriting: (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center"><Gavel className="mr-3 h-6 w-6 text-primary" />AI Credit Underwriting</CardTitle>
+            <CardDescription>Get a simulated underwriting decision from our AI. This is the final step.</CardDescription>
+          </CardHeader>
+          <form onSubmit={handleGetUnderwriting}>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                    <Label htmlFor="employmentType">Employment Type</Label>
+                    <Select value={employmentType} onValueChange={setEmploymentType}>
+                    <SelectTrigger id="employmentType">
+                        <SelectValue placeholder="Select employment type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="Salaried">Salaried</SelectItem>
+                        <SelectItem value="Self-employed">Self-employed</SelectItem>
+                        <SelectItem value="Daily Wage Earner">Daily Wage Earner</SelectItem>
+                    </SelectContent>
+                    </Select>
+                </div>
+                 <div>
+                    <Label htmlFor="loanType">Loan Type</Label>
+                    <Select value={loanType} onValueChange={setLoanType}>
+                    <SelectTrigger id="loanType">
+                        <SelectValue placeholder="Select loan type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="Personal Loan">Personal Loan</SelectItem>
+                        <SelectItem value="Home Loan">Home Loan</SelectItem>
+                        <SelectItem value="Auto Loan">Auto Loan</SelectItem>
+                        <SelectItem value="Loan Against Property">Loan Against Property</SelectItem>
+                    </SelectContent>
+                    </Select>
+                </div>
+                <div>
+                    <Label htmlFor="desiredLoanAmount">Desired Loan Amount (₹)</Label>
+                    <Input
+                    id="desiredLoanAmount"
+                    type="number"
+                    placeholder="e.g., 500000"
+                    value={desiredLoanAmount}
+                    onChange={(e) => setDesiredLoanAmount(e.target.value)}
+                    required
+                    />
+                </div>
+                <div>
+                    <Label htmlFor="desiredTenure">Desired Tenure (Months)</Label>
+                    <Input
+                    id="desiredTenure"
+                    type="number"
+                    placeholder="e.g., 60"
+                    value={desiredTenure}
+                    onChange={(e) => setDesiredTenure(e.target.value)}
+                    required
+                    />
+                </div>
+              </div>
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Prerequisites</AlertTitle>
+                <AlertDescription>
+                  Ensure you have already run the "AI Loan Eligibility" and "Income Estimator" steps for an accurate underwriting assessment.
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+            <CardFooter>
+               <Button type="submit" disabled={isUnderwriting || !aiRating || estimatedIncome === null || !loanEligibility}>
+                {isUnderwriting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Gavel className="mr-2 h-4 w-4" />}
+                Start Final Underwriting
+              </Button>
+            </CardFooter>
+          </form>
+          
+          {underwritingResult && (
+            <CardContent>
+              <div className={cn('p-4 rounded-lg border-l-4 mb-6', getUnderwritingDecisionColor(underwritingResult.underwritingDecision))}>
+                <h4 className="font-bold text-lg">Underwriting Decision: {underwritingResult.underwritingDecision}</h4>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <SummaryItem label="Approved Amount" value={`₹${underwritingResult.approvedLoanAmount.toLocaleString('en-IN')}`} />
+                  <SummaryItem label="Interest Rate" value={`${underwritingResult.recommendedInterestRate}`} />
+                  <SummaryItem label="Tenure (Months)" value={underwritingResult.recommendedTenure} />
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <h5 className="font-semibold text-lg mb-2">Underwriting Summary</h5>
+                  <p className="text-sm text-foreground/80 whitespace-pre-line">{underwritingResult.underwritingSummary}</p>
+                </div>
+                
+                {underwritingResult.conditions.length > 0 && (
+                  <div>
+                    <h5 className="font-semibold text-lg mb-2">Conditions for Approval</h5>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                      {underwritingResult.conditions.map((condition, i) => <li key={i}>{condition}</li>)}
+                    </ul>
+                  </div>
+                )}
+
+                <div>
+                  <h5 className="font-semibold text-lg mb-2">Required Documents</h5>
+                   <ul className="list-disc list-inside space-y-1 text-sm">
+                      {underwritingResult.requiredDocuments.map((doc, i) => <li key={i}>{doc}</li>)}
+                    </ul>
+                </div>
+              </div>
+
+               <div className="mt-8 space-y-6">
+                <h4 className="text-xl font-semibold border-b pb-2">Advanced Risk Metrics</h4>
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                   <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg">
+                     <p className="text-sm text-muted-foreground">Probability of Default (PD)</p>
+                     <p className="text-3xl font-bold text-destructive">{underwritingResult.probabilityOfDefault}%</p>
+                   </div>
+                   <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg">
+                     <p className="text-sm text-muted-foreground">Loss Given Default (LGD)</p>
+                     <p className="text-3xl font-bold text-destructive">{underwritingResult.lossGivenDefault}%</p>
+                   </div>
+                   <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg">
+                     <p className="text-sm text-muted-foreground">Exposure at Default (EAD)</p>
+                     <p className="text-3xl font-bold text-destructive">₹{underwritingResult.exposureAtDefault.toLocaleString('en-IN')}</p>
+                   </div>
+                   <div className="flex flex-col items-center text-center p-4 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                     <p className="text-sm text-red-700 dark:text-red-300">Expected Loss (EL)</p>
+                     <p className="text-3xl font-bold text-red-600 dark:text-red-400">₹{underwritingResult.expectedLoss.toLocaleString('en-IN')}</p>
+                   </div>
+                 </div>
+                 <div className="prose prose-sm dark:prose-invert max-w-none space-y-4">
+                    <div>
+                        <h5>Probability of Default (PD) Explanation</h5>
+                        <p>{underwritingResult.riskMetricsExplanation.pd}</p>
+                    </div>
+                    <div>
+                        <h5>Loss Given Default (LGD) Explanation</h5>
+                        <p>{underwritingResult.riskMetricsExplanation.lgd}</p>
+                    </div>
+                    <div>
+                        <h5>Exposure at Default (EAD) Explanation</h5>
+                        <p>{underwritingResult.riskMetricsExplanation.ead}</p>
+                    </div>
+                 </div>
+               </div>
+
+                <div className="mt-8">
+                    <div className={cn('p-4 rounded-lg border-l-4 font-semibold text-lg', getRiskColorClass(underwritingResult.finalProfileRating))}>
+                        Final Profile Rating: {underwritingResult.finalProfileRating}
+                    </div>
+                </div>
+
+            </CardContent>
+          )}
+
+        </Card>
+      ),
+      riskAssessment: (
+        <Card>
+          <CardHeader>
+              <CardTitle className="flex items-center"><ShieldAlert className="mr-3 h-6 w-6 text-primary" />AI Risk Assessment</CardTitle>
+              <CardDescription>This AI acts as a conservative risk analyst. Its primary job is to identify potential negative factors that could pose a risk to a lender. A higher score means lower risk.</CardDescription>
+          </CardHeader>
+          <CardContent>
+              {isAssessingRisk ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>AI is assessing your credit risk...</span>
+                </div>
+              ) : riskAssessment ? (
+                <div className="space-y-6">
+                  <div className={cn('p-4 rounded-lg border-l-4', getRiskColorClass(riskAssessment.level))}>
+                      <h4 className="font-bold text-lg">{riskAssessment.level} Risk</h4>
+                      <p className="text-sm">Your AI-assessed credit risk score is <strong>{riskAssessment.score}/100</strong>. A higher score indicates lower risk.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h5 className="font-semibold mb-2">Probability of Default (PD)</h5>
+                      <div className="flex items-center gap-4">
+                        <div className="text-4xl font-bold text-destructive">{riskAssessment.probabilityOfDefault}%</div>
+                        <p className="text-sm text-muted-foreground">{riskAssessment.defaultProbabilityExplanation}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <h5 className="font-semibold mb-2">Expected Loss (EL)</h5>
+                      <div className="text-4xl font-bold text-destructive">₹{riskAssessment.expectedLoss.toLocaleString('en-IN')}</div>
+                      <p className="text-sm text-muted-foreground">
+                        Based on EAD of ₹{riskAssessment.exposureAtDefault.toLocaleString('en-IN')} and LGD of {riskAssessment.lossGivenDefault}%.
+                      </p>
+                    </div>
+                  </div>
+
+
+                  {riskAssessment.factors.length > 0 && (
+                      <div>
+                          <h5 className="font-semibold mb-2">Key Risk Factors:</h5>
+                          <ul className="list-disc list-inside space-y-1 text-sm">
+                              {riskAssessment.factors.map((factor, i) => <li key={i}><strong>{factor.factor} ({factor.severity} risk):</strong> {factor.details}</li>)}
+                          </ul>
+                      </div>
+                  )}
+                  {riskAssessment.mitigations.length > 0 && (
+                      <div>
+                          <h5 className="font-semibold mb-2">Risk Mitigation Strategies:</h5>
+                          <ul className="list-disc list-inside space-y-1 text-sm">
+                              {riskAssessment.mitigations.map((m, i) => <li key={i}><strong>{m.factor}:</strong> {m.action}</li>)}
+                          </ul>
+                      </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No risk assessment available. The assessment will be generated automatically when you upload a report.</p>
+              )}
+          </CardContent>
+        </Card>
+      ),
+      financialRisk: (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <BadgeCent className="mr-3 h-6 w-6 text-primary" />
+              AI Financial Risk Assessment
+            </CardTitle>
+            <CardDescription>
+              Get an AI-based analysis of your overall financial stability. This requires your income to be estimated first.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TooltipProvider>
+              <UiTooltip>
+                <TooltipTrigger asChild>
+                  <div className="inline-block">
+                    <Button
+                      onClick={handleGetFinancialRisk}
+                      disabled={isAssessingFinancialRisk || estimatedIncome === null}
+                    >
+                      {isAssessingFinancialRisk ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="mr-2 h-4 w-4" />
+                      )}
+                      Assess Financial Risk
+                    </Button>
+                  </div>
+                </TooltipTrigger>
+                {estimatedIncome === null && (
+                  <TooltipContent>
+                    <p>Please use the 'Income Estimator' to estimate your income first.</p>
+                  </TooltipContent>
+                )}
+              </UiTooltip>
+            </TooltipProvider>
+
+            {financialRisk && (
+              <div className="mt-6 space-y-6">
+                <div className={cn('p-4 rounded-lg border-l-4', getRiskColorClass(financialRisk.financialRiskRating))}>
+                  <h4 className="font-bold text-lg">Financial Risk Rating: {financialRisk.financialRiskRating}</h4>
+                </div>
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <div className="p-4 rounded-lg bg-muted/50">
+                        <h5 className="font-semibold mt-0">Debt-to-Income (DTI) Analysis</h5>
+                        <p className="whitespace-pre-line">{financialRisk.dtiAnalysis.explanation}</p>
+                    </div>
+                    <div className="p-4 rounded-lg bg-muted/50">
+                        <h5 className="font-semibold mt-0">Debt Composition Analysis</h5>
+                        <p className="whitespace-pre-line">{financialRisk.debtComposition.explanation}</p>
+                    </div>
+                    <div className="p-4 rounded-lg bg-muted/50">
+                        <h5 className="font-semibold mt-0">Credit Utilization Analysis</h5>
+                        <p className="whitespace-pre-line">{financialRisk.creditUtilizationAnalysis.explanation}</p>
+                    </div>
+                     <div className="p-4 rounded-lg bg-muted/50">
+                        <h5 className="font-semibold mt-0">Overall Financial Outlook</h5>
+                        <p className="whitespace-pre-line">{financialRisk.overallOutlook}</p>
+                    </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ),
+      creditImprovement: (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center"><ShieldCheck className="mr-3 h-6 w-6 text-primary" />AI Credit Improvement Suggestions</CardTitle>
+            <CardDescription>Get personalized credit improvement advice based on your full report.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={handleGetSuggestions} disabled={isSuggesting || !rawText}>
+              {isSuggesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lightbulb className="mr-2 h-4 w-4" />}
+              Get AI Credit Improvement Suggestions
+            </Button>
+            {aiSuggestions && (
+              <Card className="mt-6 bg-muted/50">
+                  <CardHeader>
+                      <CardTitle className="flex items-center text-primary"><Sparkles className="mr-2 h-6 w-6"/>Your Personalized Suggestions</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="prose dark:prose-invert max-w-none prose-p:text-foreground/80 prose-headings:text-foreground prose-strong:text-foreground">{aiSuggestions}</div>
+                  </CardContent>
+              </Card>
+            )}
+          </CardContent>
+        </Card>
+      ),
+      incomeEstimator: (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center"><Calculator className="mr-3 h-6 w-6 text-primary" />AI Income Estimator &amp; Debt Management</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="total-emi">Total Monthly EMI</Label>
+              <div className="flex items-center gap-2">
+                <Input id="total-emi" type="text" placeholder="AI is calculating..." value={totalEmi} onChange={(e) => setTotalEmi(e.target.value)} disabled={isCalculatingEmi} />
+                {isCalculatingEmi && <Loader2 className="h-5 w-5 animate-spin" />}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">This is auto-calculated from your report by AI. You can override it if needed.</p>
+            </div>
+            
+            {activeLoanDetails.length > 0 && (
+              <div className="mt-4">
+                  <h4 className="font-semibold mb-2">Active Loan Details</h4>
+                  <div className="space-y-4">
+                      {activeLoanDetails.map((loan) => (
+                          <Card key={loan.id} className="p-4 bg-muted/50">
+                              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 items-center">
+                                  <SummaryItem label="Loan Type" value={loan.loanType} />
+                                  <SummaryItem label="Ownership" value={loan.ownership} />
+                                  <SummaryItem label="Sanctioned Amt." value={`₹${loan.sanctionedAmount.toLocaleString('en-IN')}`} />
+                                  <SummaryItem label="Current Balance" value={`₹${loan.currentBalance.toLocaleString('en-IN')}`} />
+                                  <SummaryItem label="EMI" value={`₹${loan.emi.toLocaleString('en-IN')}`} />
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                  <div>
+                                      <Label htmlFor={`obligation-${loan.id}`} className="text-xs">Include in EMI?</Label>
+                                      <Select
+                                          value={loan.considerForObligation}
+                                          onValueChange={(value: 'Yes' | 'No') => handleLoanDetailChange(loan.id, 'considerForObligation', value)}
+                                      >
+                                          <SelectTrigger id={`obligation-${loan.id}`}>
+                                              <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                              <SelectItem value="Yes">Yes</SelectItem>
+                                              <SelectItem value="No">No</SelectItem>
+                                          </SelectContent>
+                                      </Select>
+                                  </div>
+                                  <div>
+                                      <Label htmlFor={`comment-${loan.id}`} className="text-xs">Comments</Label>
+                                      <Textarea
+                                          id={`comment-${loan.id}`}
+                                          placeholder="e.g., Guarantor loan, paid by primary."
+                                          value={loan.comment}
+                                          onChange={(e) => handleLoanDetailChange(loan.id, 'comment', e.target.value)}
+                                          className="h-10 text-sm"
+                                      />
+                                  </div>
+                              </div>
+                          </Card>
+                      ))}
+                  </div>
+              </div>
+            )}
+
+            <div>
+              <Label htmlFor="other-obligations">Other Monthly Obligations (Rent, etc.)</Label>
+              <Input id="other-obligations" type="text" placeholder="e.g. 15000" value={otherObligations} onChange={(e) => setOtherObligations(e.target.value)} />
+            </div>
+            <div>
+              <Label htmlFor="dti-ratio">Target Debt-to-Income (DTI) Ratio</Label>
+              <Select value={dtiRatio} onValueChange={setDtiRatio}>
+                <SelectTrigger id="dti-ratio">
+                  <SelectValue placeholder="Select DTI Ratio" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="30">30% (Ideal)</SelectItem>
+                  <SelectItem value="40">40% (Manageable)</SelectItem>
+                  <SelectItem value="50">50% (High)</SelectItem>
+                  <SelectItem value="custom">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+              {dtiRatio === 'custom' && (
+                <Input type="text" placeholder="Enter custom DTI %" value={customDti} onChange={(e) => setCustomDti(e.target.value)} className="mt-2" />
+              )}
+            </div>
+            <Button onClick={handleCalculateIncome}>Estimate My Income</Button>
+            {estimatedIncome !== null && (
+              <Alert>
+                <BrainCircuit className="h-4 w-4"/>
+                <AlertTitle>Estimated Monthly Income</AlertTitle>
+                <AlertDescription>
+                  Your estimated income is <strong className="text-primary">₹{Math.round(estimatedIncome).toLocaleString('en-IN')}</strong> per month.
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {estimatedIncome !== null && (
+              <Button onClick={handleGetDebtAdvice} disabled={isAdvising}>
+                  {isAdvising ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lightbulb className="mr-2 h-4 w-4" />}
+                  Get AI Debt Management Advice
+              </Button>
+            )}
+            {aiDebtAdvice && (
+              <Card className="mt-6 bg-muted/50">
+                  <CardHeader>
+                      <CardTitle className="flex items-center text-primary"><Sparkles className="mr-2 h-6 w-6"/>Your Debt Management Plan</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="prose dark:prose-invert max-w-none prose-p:text-foreground/80 prose-headings:text-foreground prose-strong:text-foreground">{aiDebtAdvice}</div>
+                  </CardContent>
+              </Card>
+            )}
+          </CardContent>
+        </Card>
+      ),
+    };
+    return views[activeView!];
+  };
 
   return (
     <div className={cn("min-h-screen bg-background font-body text-foreground", theme)}>
@@ -1076,607 +1673,9 @@ export default function CreditWiseAIPage() {
                     </CardContent>
                   </Card>
                   
-                  {activeView === 'aiMeter' && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center"><Bot className="mr-3 h-6 w-6 text-primary" />AI Credit Analysis Meter</CardTitle>
-                        <CardDescription>This AI acts as a holistic credit advisor. It provides a comprehensive score of your overall credit health by balancing both the positive and negative factors in your report.</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <Button onClick={handleGetAiRating} disabled={isRating || !riskAssessment}>
-                          {isRating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                          Get AI Rating
-                        </Button>
-                        
-                        {aiRating && (
-                          <div className="mt-6">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-                              <div className="text-center">
-                                <div className={cn("text-7xl font-bold", getRatingColorClass(aiRating.rating))}>
-                                  {aiRating.aiScore}
-                                </div>
-                                <div className={cn("text-2xl font-semibold", getRatingColorClass(aiRating.rating))}>
-                                  {aiRating.rating}
-                                </div>
-                                <p className="text-sm text-muted-foreground mt-1">AI Score / 100</p>
-                              </div>
-                              <div className="md:col-span-2">
-                                <p className="text-sm text-muted-foreground">{aiRating.summary}</p>
-                                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                      <h4 className="font-semibold flex items-center mb-2"><ThumbsUp className="h-5 w-5 mr-2 text-green-500" />Positive Factors</h4>
-                                      <ul className="list-disc list-inside space-y-1 text-sm">
-                                        {aiRating.positiveFactors.map((factor, i) => <li key={i}>{factor}</li>)}
-                                      </ul>
-                                    </div>
-                                    <div>
-                                      <h4 className="font-semibold flex items-center mb-2"><ThumbsDown className="h-5 w-5 mr-2 text-red-500" />Negative Factors</h4>
-                                      <ul className="list-disc list-inside space-y-1 text-sm">
-                                        {aiRating.negativeFactors.map((factor, i) => <li key={i}>{factor}</li>)}
-                                      </ul>
-                                    </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  )}
-                  
-                  {activeView === 'loanEligibility' && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center">
-                          <Banknote className="mr-3 h-6 w-6 text-primary" />
-                          AI Loan Eligibility
-                        </CardTitle>
-                        <CardDescription>
-                          Estimate your potential loan eligibility and repayment capacity based on your AI rating and financial details.
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <TooltipProvider>
-                          <UiTooltip>
-                            <TooltipTrigger asChild>
-                              <div className="inline-block">
-                                  <Button
-                                    onClick={handleGetLoanEligibility}
-                                    disabled={isCalculatingEligibility || !aiRating || estimatedIncome === null}
-                                  >
-                                    {isCalculatingEligibility ? (
-                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    ) : (
-                                      <Sparkles className="mr-2 h-4 w-4" />
-                                    )}
-                                    Calculate Loan Eligibility
-                                  </Button>
-                              </div>
-                            </TooltipTrigger>
-                            {(!aiRating || estimatedIncome === null) && (
-                              <TooltipContent>
-                                <p>Please get your AI Rating and estimate your income first.</p>
-                              </TooltipContent>
-                            )}
-                          </UiTooltip>
-                        </TooltipProvider>
-
-                        {loanEligibility && (
-                            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="p-4 bg-muted rounded-lg">
-                                <h4 className="font-semibold flex items-center gap-2"><Wallet className="h-5 w-5 text-primary"/>Repayment Capacity</h4>
-                                <p className="text-sm text-muted-foreground">Remaining amount you can afford for a new EMI per month.</p>
-                                <p className="text-3xl font-bold text-primary mt-2">
-                                    ₹{loanEligibility.repaymentCapacity.toLocaleString('en-IN')}
-                                </p>
-                                </div>
-                                <div className="p-4 bg-muted rounded-lg">
-                                <h4 className="font-semibold">Eligible Loan Amount</h4>
-                                <p className="text-2xl font-bold text-primary">
-                                    ₹{loanEligibility.eligibleLoanAmount.toLocaleString('en-IN')}
-                                </p>
-                                <p className="text-muted-foreground text-sm">
-                                    at an estimated interest rate of{' '}
-                                    <strong>{loanEligibility.estimatedInterestRate}</strong>
-                                </p>
-                                </div>
-                                <div className="md:col-span-2">
-                                <Alert className="mt-4">
-                                    <AlertCircle className="h-4 w-4" />
-                                    <AlertTitle>Eligibility Summary</AlertTitle>
-                                    <AlertDescription>
-                                    {loanEligibility.eligibilitySummary}
-                                    </AlertDescription>
-                                </Alert>
-                                </div>
-                                {loanEligibility.suggestionsToIncreaseEligibility.length > 0 && (
-                                <div className="md:col-span-2 mt-4">
-                                  <h4 className="font-semibold text-lg flex items-center mb-2">
-                                    <Lightbulb className="mr-2 h-5 w-5 text-yellow-400" />
-                                    How to Increase Your Loan Eligibility
-                                  </h4>
-                                  <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
-                                    {loanEligibility.suggestionsToIncreaseEligibility.map((suggestion, i) => (
-                                      <li key={i}>{suggestion}</li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-                            </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  )}
-                  
-                  {activeView === 'aiAnalysis' && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center"><BrainCircuit className="mr-3 h-6 w-6 text-primary" />AI Credit Report Analysis</CardTitle>
-                            <CardDescription>An AI-generated breakdown of your credit strengths and weaknesses.</CardDescription>
-                        </CardHeader>
-                         <CardContent>
-                          <Button onClick={handleAnalyze} disabled={isAnalyzing || !rawText}>
-                            {isAnalyzing ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                              <Sparkles className="mr-2 h-4 w-4" />
-                            )}
-                            Analyze with AI
-                          </Button>
-                          {aiAnalysis && (
-                            <Card className="mt-6 bg-muted/50">
-                              <CardContent className="pt-6 space-y-6">
-                                <div className="prose prose-sm dark:prose-invert max-w-none">
-                                    <h3>Strengths in CIBIL</h3>
-                                    <p>{aiAnalysis.strengths}</p>
-                                    <hr />
-                                    <h3>Weaknesses in CIBIL</h3>
-                                    <p>{aiAnalysis.weaknesses}</p>
-                                    <hr />
-                                    <h3>Active Accounts Analysis</h3>
-                                    <p>{aiAnalysis.activeAccounts}</p>
-                                    <hr />
-                                    <h3>Closed Accounts Analysis</h3>
-                                    <p>{aiAnalysis.closedAccounts}</p>
-                                    <hr />
-                                    <h3>DPD (Days Past Due) Analysis</h3>
-                                    <p>{aiAnalysis.dpdAnalysis}</p>
-                                    <hr />
-                                    <h3>EMI Paying for Loan Analysis</h3>
-                                    <p>{aiAnalysis.emiAnalysis}</p>
-                                    <hr />
-                                    <h3>Credit Utilization</h3>
-                                    <p>{aiAnalysis.creditUtilization}</p>
-                                    <hr />
-                                    <h3>Credit History Length</h3>
-                                    <p>{aiAnalysis.creditHistoryLength}</p>
-                                    <hr />
-                                    <h3>Credit Mix</h3>
-                                    <p>{aiAnalysis.creditMix}</p>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          )}
-                        </CardContent>
-                    </Card>
-                  )}
-
-                  {activeView === 'creditUnderwriting' && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center"><Gavel className="mr-3 h-6 w-6 text-primary" />AI Credit Underwriting</CardTitle>
-                        <CardDescription>Get a simulated underwriting decision from our AI. This is the final step.</CardDescription>
-                      </CardHeader>
-                      <form onSubmit={handleGetUnderwriting}>
-                        <CardContent className="space-y-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <div>
-                                <Label htmlFor="employmentType">Employment Type</Label>
-                                <Select value={employmentType} onValueChange={setEmploymentType}>
-                                <SelectTrigger id="employmentType">
-                                    <SelectValue placeholder="Select employment type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Salaried">Salaried</SelectItem>
-                                    <SelectItem value="Self-employed">Self-employed</SelectItem>
-                                    <SelectItem value="Daily Wage Earner">Daily Wage Earner</SelectItem>
-                                </SelectContent>
-                                </Select>
-                            </div>
-                             <div>
-                                <Label htmlFor="loanType">Loan Type</Label>
-                                <Select value={loanType} onValueChange={setLoanType}>
-                                <SelectTrigger id="loanType">
-                                    <SelectValue placeholder="Select loan type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Personal Loan">Personal Loan</SelectItem>
-                                    <SelectItem value="Home Loan">Home Loan</SelectItem>
-                                    <SelectItem value="Auto Loan">Auto Loan</SelectItem>
-                                    <SelectItem value="Loan Against Property">Loan Against Property</SelectItem>
-                                </SelectContent>
-                                </Select>
-                            </div>
-                            <div>
-                                <Label htmlFor="desiredLoanAmount">Desired Loan Amount (₹)</Label>
-                                <Input
-                                id="desiredLoanAmount"
-                                type="number"
-                                placeholder="e.g., 500000"
-                                value={desiredLoanAmount}
-                                onChange={(e) => setDesiredLoanAmount(e.target.value)}
-                                required
-                                />
-                            </div>
-                            <div>
-                                <Label htmlFor="desiredTenure">Desired Tenure (Months)</Label>
-                                <Input
-                                id="desiredTenure"
-                                type="number"
-                                placeholder="e.g., 60"
-                                value={desiredTenure}
-                                onChange={(e) => setDesiredTenure(e.target.value)}
-                                required
-                                />
-                            </div>
-                          </div>
-                          <Alert>
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>Prerequisites</AlertTitle>
-                            <AlertDescription>
-                              Ensure you have already run the "AI Loan Eligibility" and "Income Estimator" steps for an accurate underwriting assessment.
-                            </AlertDescription>
-                          </Alert>
-                        </CardContent>
-                        <CardFooter>
-                           <Button type="submit" disabled={isUnderwriting || !aiRating || estimatedIncome === null || !loanEligibility}>
-                            {isUnderwriting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Gavel className="mr-2 h-4 w-4" />}
-                            Start Final Underwriting
-                          </Button>
-                        </CardFooter>
-                      </form>
-                      
-                      {underwritingResult && (
-                        <CardContent>
-                          <div className={cn('p-4 rounded-lg border-l-4 mb-6', getUnderwritingDecisionColor(underwritingResult.underwritingDecision))}>
-                            <h4 className="font-bold text-lg">Underwriting Decision: {underwritingResult.underwritingDecision}</h4>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                              <SummaryItem label="Approved Amount" value={`₹${underwritingResult.approvedLoanAmount.toLocaleString('en-IN')}`} />
-                              <SummaryItem label="Interest Rate" value={`${underwritingResult.recommendedInterestRate}`} />
-                              <SummaryItem label="Tenure (Months)" value={underwritingResult.recommendedTenure} />
-                          </div>
-
-                          <div className="space-y-4">
-                            <div>
-                              <h5 className="font-semibold text-lg mb-2">Underwriting Summary</h5>
-                              <p className="text-sm text-foreground/80 whitespace-pre-line">{underwritingResult.underwritingSummary}</p>
-                            </div>
-                            
-                            {underwritingResult.conditions.length > 0 && (
-                              <div>
-                                <h5 className="font-semibold text-lg mb-2">Conditions for Approval</h5>
-                                <ul className="list-disc list-inside space-y-1 text-sm">
-                                  {underwritingResult.conditions.map((condition, i) => <li key={i}>{condition}</li>)}
-                                </ul>
-                              </div>
-                            )}
-
-                            <div>
-                              <h5 className="font-semibold text-lg mb-2">Required Documents</h5>
-                               <ul className="list-disc list-inside space-y-1 text-sm">
-                                  {underwritingResult.requiredDocuments.map((doc, i) => <li key={i}>{doc}</li>)}
-                                </ul>
-                            </div>
-                          </div>
-
-                           <div className="mt-8 space-y-6">
-                            <h4 className="text-xl font-semibold border-b pb-2">Advanced Risk Metrics</h4>
-                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                               <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg">
-                                 <p className="text-sm text-muted-foreground">Probability of Default (PD)</p>
-                                 <p className="text-3xl font-bold text-destructive">{underwritingResult.probabilityOfDefault}%</p>
-                               </div>
-                               <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg">
-                                 <p className="text-sm text-muted-foreground">Loss Given Default (LGD)</p>
-                                 <p className="text-3xl font-bold text-destructive">{underwritingResult.lossGivenDefault}%</p>
-                               </div>
-                               <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg">
-                                 <p className="text-sm text-muted-foreground">Exposure at Default (EAD)</p>
-                                 <p className="text-3xl font-bold text-destructive">₹{underwritingResult.exposureAtDefault.toLocaleString('en-IN')}</p>
-                               </div>
-                               <div className="flex flex-col items-center text-center p-4 bg-red-100 dark:bg-red-900/30 rounded-lg">
-                                 <p className="text-sm text-red-700 dark:text-red-300">Expected Loss (EL)</p>
-                                 <p className="text-3xl font-bold text-red-600 dark:text-red-400">₹{underwritingResult.expectedLoss.toLocaleString('en-IN')}</p>
-                               </div>
-                             </div>
-                             <div className="prose prose-sm dark:prose-invert max-w-none space-y-4">
-                                <div>
-                                    <h5>Probability of Default (PD) Explanation</h5>
-                                    <p>{underwritingResult.riskMetricsExplanation.pd}</p>
-                                </div>
-                                <div>
-                                    <h5>Loss Given Default (LGD) Explanation</h5>
-                                    <p>{underwritingResult.riskMetricsExplanation.lgd}</p>
-                                </div>
-                                <div>
-                                    <h5>Exposure at Default (EAD) Explanation</h5>
-                                    <p>{underwritingResult.riskMetricsExplanation.ead}</p>
-                                </div>
-                             </div>
-                           </div>
-
-                        </CardContent>
-                      )}
-
-                    </Card>
-                  )}
-
-                  {activeView === 'riskAssessment' && (
-                    <Card>
-                      <CardHeader>
-                          <CardTitle className="flex items-center"><ShieldAlert className="mr-3 h-6 w-6 text-primary" />AI Risk Assessment</CardTitle>
-                          <CardDescription>This AI acts as a conservative risk analyst. Its primary job is to identify potential negative factors that could pose a risk to a lender. A higher score means lower risk.</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                          {isAssessingRisk ? (
-                            <div className="flex items-center gap-2">
-                              <Loader2 className="h-5 w-5 animate-spin" />
-                              <span>AI is assessing your credit risk...</span>
-                            </div>
-                          ) : riskAssessment ? (
-                            <div className="space-y-6">
-                              <div className={cn('p-4 rounded-lg border-l-4', getRiskColorClass(riskAssessment.level))}>
-                                  <h4 className="font-bold text-lg">{riskAssessment.level} Risk</h4>
-                                  <p className="text-sm">Your AI-assessed credit risk score is <strong>{riskAssessment.score}/100</strong>. A higher score indicates lower risk.</p>
-                              </div>
-
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                  <h5 className="font-semibold mb-2">Probability of Default (PD)</h5>
-                                  <div className="flex items-center gap-4">
-                                    <div className="text-4xl font-bold text-destructive">{riskAssessment.probabilityOfDefault}%</div>
-                                    <p className="text-sm text-muted-foreground">{riskAssessment.defaultProbabilityExplanation}</p>
-                                  </div>
-                                </div>
-                                <div>
-                                  <h5 className="font-semibold mb-2">Expected Loss (EL)</h5>
-                                  <div className="text-4xl font-bold text-destructive">₹{riskAssessment.expectedLoss.toLocaleString('en-IN')}</div>
-                                  <p className="text-sm text-muted-foreground">
-                                    Based on EAD of ₹{riskAssessment.exposureAtDefault.toLocaleString('en-IN')} and LGD of {riskAssessment.lossGivenDefault}%.
-                                  </p>
-                                </div>
-                              </div>
-
-
-                              {riskAssessment.factors.length > 0 && (
-                                  <div>
-                                      <h5 className="font-semibold mb-2">Key Risk Factors:</h5>
-                                      <ul className="list-disc list-inside space-y-1 text-sm">
-                                          {riskAssessment.factors.map((factor, i) => <li key={i}><strong>{factor.factor} ({factor.severity} risk):</strong> {factor.details}</li>)}
-                                      </ul>
-                                  </div>
-                              )}
-                              {riskAssessment.mitigations.length > 0 && (
-                                  <div>
-                                      <h5 className="font-semibold mb-2">Risk Mitigation Strategies:</h5>
-                                      <ul className="list-disc list-inside space-y-1 text-sm">
-                                          {riskAssessment.mitigations.map((m, i) => <li key={i}><strong>{m.factor}:</strong> {m.action}</li>)}
-                                      </ul>
-                                  </div>
-                              )}
-                            </div>
-                          ) : (
-                            <p className="text-muted-foreground">No risk assessment available. The assessment will be generated automatically when you upload a report.</p>
-                          )}
-                      </CardContent>
-                    </Card>
-                  )}
-                  
-                  {activeView === 'financialRisk' && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center">
-                          <BadgeCent className="mr-3 h-6 w-6 text-primary" />
-                          AI Financial Risk Assessment
-                        </CardTitle>
-                        <CardDescription>
-                          Get an AI-based analysis of your overall financial stability. This requires your income to be estimated first.
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <TooltipProvider>
-                          <UiTooltip>
-                            <TooltipTrigger asChild>
-                              <div className="inline-block">
-                                <Button
-                                  onClick={handleGetFinancialRisk}
-                                  disabled={isAssessingFinancialRisk || estimatedIncome === null}
-                                >
-                                  {isAssessingFinancialRisk ? (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Sparkles className="mr-2 h-4 w-4" />
-                                  )}
-                                  Assess Financial Risk
-                                </Button>
-                              </div>
-                            </TooltipTrigger>
-                            {estimatedIncome === null && (
-                              <TooltipContent>
-                                <p>Please use the 'Income Estimator' to estimate your income first.</p>
-                              </TooltipContent>
-                            )}
-                          </UiTooltip>
-                        </TooltipProvider>
-
-                        {financialRisk && (
-                          <div className="mt-6 space-y-6">
-                            <div className={cn('p-4 rounded-lg border-l-4', getRiskColorClass(financialRisk.financialRiskRating))}>
-                              <h4 className="font-bold text-lg">Financial Risk Rating: {financialRisk.financialRiskRating}</h4>
-                            </div>
-                            <div className="prose prose-sm dark:prose-invert max-w-none">
-                                <div className="p-4 rounded-lg bg-muted/50">
-                                    <h5 className="font-semibold mt-0">Debt-to-Income (DTI) Analysis</h5>
-                                    <p className="whitespace-pre-line">{financialRisk.dtiAnalysis.explanation}</p>
-                                </div>
-                                <div className="p-4 rounded-lg bg-muted/50">
-                                    <h5 className="font-semibold mt-0">Debt Composition Analysis</h5>
-                                    <p className="whitespace-pre-line">{financialRisk.debtComposition.explanation}</p>
-                                </div>
-                                <div className="p-4 rounded-lg bg-muted/50">
-                                    <h5 className="font-semibold mt-0">Credit Utilization Analysis</h5>
-                                    <p className="whitespace-pre-line">{financialRisk.creditUtilizationAnalysis.explanation}</p>
-                                </div>
-                                 <div className="p-4 rounded-lg bg-muted/50">
-                                    <h5 className="font-semibold mt-0">Overall Financial Outlook</h5>
-                                    <p className="whitespace-pre-line">{financialRisk.overallOutlook}</p>
-                                </div>
-                            </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {activeView === 'creditImprovement' && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center"><ShieldCheck className="mr-3 h-6 w-6 text-primary" />AI Credit Improvement Suggestions</CardTitle>
-                        <CardDescription>Get personalized credit improvement advice based on your full report.</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <Button onClick={handleGetSuggestions} disabled={isSuggesting || !rawText}>
-                          {isSuggesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lightbulb className="mr-2 h-4 w-4" />}
-                          Get AI Credit Improvement Suggestions
-                        </Button>
-                        {aiSuggestions && (
-                          <Card className="mt-6 bg-muted/50">
-                              <CardHeader>
-                                  <CardTitle className="flex items-center text-primary"><Sparkles className="mr-2 h-6 w-6"/>Your Personalized Suggestions</CardTitle>
-                              </CardHeader>
-                              <CardContent>
-                                <div className="prose dark:prose-invert max-w-none prose-p:text-foreground/80 prose-headings:text-foreground prose-strong:text-foreground">{aiSuggestions}</div>
-                              </CardContent>
-                          </Card>
-                        )}
-                      </CardContent>
-                    </Card>
-                  )}
-                  
-                  {activeView === 'incomeEstimator' && (
-                    <div className="lg:col-span-2">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center"><Calculator className="mr-3 h-6 w-6 text-primary" />AI Income Estimator &amp; Debt Management</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div>
-                            <Label htmlFor="total-emi">Total Monthly EMI</Label>
-                            <div className="flex items-center gap-2">
-                              <Input id="total-emi" type="text" placeholder="AI is calculating..." value={totalEmi} onChange={(e) => setTotalEmi(e.target.value)} disabled={isCalculatingEmi} />
-                              {isCalculatingEmi && <Loader2 className="h-5 w-5 animate-spin" />}
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">This is auto-calculated from your report by AI. You can override it if needed.</p>
-                          </div>
-                          
-                          {activeLoanDetails.length > 0 && (
-                            <div className="mt-4">
-                                <h4 className="font-semibold mb-2">Active Loan Details</h4>
-                                <div className="space-y-4">
-                                    {activeLoanDetails.map((loan) => (
-                                        <Card key={loan.id} className="p-4 bg-muted/50">
-                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 items-center">
-                                                <SummaryItem label="Loan Type" value={loan.loanType} />
-                                                <SummaryItem label="Ownership" value={loan.ownership} />
-                                                <SummaryItem label="Sanctioned Amt." value={`₹${loan.sanctionedAmount.toLocaleString('en-IN')}`} />
-                                                <SummaryItem label="Current Balance" value={`₹${loan.currentBalance.toLocaleString('en-IN')}`} />
-                                                <SummaryItem label="EMI" value={`₹${loan.emi.toLocaleString('en-IN')}`} />
-                                            </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                                <div>
-                                                    <Label htmlFor={`obligation-${loan.id}`} className="text-xs">Include in EMI?</Label>
-                                                    <Select
-                                                        value={loan.considerForObligation}
-                                                        onValueChange={(value: 'Yes' | 'No') => handleLoanDetailChange(loan.id, 'considerForObligation', value)}
-                                                    >
-                                                        <SelectTrigger id={`obligation-${loan.id}`}>
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="Yes">Yes</SelectItem>
-                                                            <SelectItem value="No">No</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                                <div>
-                                                    <Label htmlFor={`comment-${loan.id}`} className="text-xs">Comments</Label>
-                                                    <Textarea
-                                                        id={`comment-${loan.id}`}
-                                                        placeholder="e.g., Guarantor loan, paid by primary."
-                                                        value={loan.comment}
-                                                        onChange={(e) => handleLoanDetailChange(loan.id, 'comment', e.target.value)}
-                                                        className="h-10 text-sm"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </Card>
-                                    ))}
-                                </div>
-                            </div>
-                          )}
-
-                          <div>
-                            <Label htmlFor="other-obligations">Other Monthly Obligations (Rent, etc.)</Label>
-                            <Input id="other-obligations" type="text" placeholder="e.g. 15000" value={otherObligations} onChange={(e) => setOtherObligations(e.target.value)} />
-                          </div>
-                          <div>
-                            <Label htmlFor="dti-ratio">Target Debt-to-Income (DTI) Ratio</Label>
-                            <Select value={dtiRatio} onValueChange={setDtiRatio}>
-                              <SelectTrigger id="dti-ratio">
-                                <SelectValue placeholder="Select DTI Ratio" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="30">30% (Ideal)</SelectItem>
-                                <SelectItem value="40">40% (Manageable)</SelectItem>
-                                <SelectItem value="50">50% (High)</SelectItem>
-                                <SelectItem value="custom">Custom</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            {dtiRatio === 'custom' && (
-                              <Input type="text" placeholder="Enter custom DTI %" value={customDti} onChange={(e) => setCustomDti(e.target.value)} className="mt-2" />
-                            )}
-                          </div>
-                          <Button onClick={handleCalculateIncome}>Estimate My Income</Button>
-                          {estimatedIncome !== null && (
-                            <Alert>
-                              <BrainCircuit className="h-4 w-4"/>
-                              <AlertTitle>Estimated Monthly Income</AlertTitle>
-                              <AlertDescription>
-                                Your estimated income is <strong className="text-primary">₹{Math.round(estimatedIncome).toLocaleString('en-IN')}</strong> per month.
-                              </AlertDescription>
-                            </Alert>
-                          )}
-                          
-                          {estimatedIncome !== null && (
-                            <Button onClick={handleGetDebtAdvice} disabled={isAdvising}>
-                                {isAdvising ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lightbulb className="mr-2 h-4 w-4" />}
-                                Get AI Debt Management Advice
-                            </Button>
-                          )}
-                          {aiDebtAdvice && (
-                            <Card className="mt-6 bg-muted/50">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center text-primary"><Sparkles className="mr-2 h-6 w-6"/>Your Debt Management Plan</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  <div className="prose dark:prose-invert max-w-none prose-p:text-foreground/80 prose-headings:text-foreground prose-strong:text-foreground">{aiDebtAdvice}</div>
-                                </CardContent>
-                            </Card>
-                          )}
-                        </CardContent>
-                      </Card>
+                  {activeView && (
+                    <div className="my-8">
+                      {renderActiveView()}
                     </div>
                   )}
                   
@@ -1762,4 +1761,3 @@ export default function CreditWiseAIPage() {
     </div>
   );
 }
-
