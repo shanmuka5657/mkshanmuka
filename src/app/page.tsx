@@ -35,6 +35,9 @@ import {
   Gavel,
   BadgeCent,
   Wallet,
+  CheckCircle,
+  XCircle,
+  Clock,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -574,7 +577,7 @@ export default function CreditWiseAIPage() {
         aiScore: aiRating.aiScore,
         rating: aiRating.rating,
         monthlyIncome: estimatedIncome,
-        totalMonthlyEMI: parseFloat(totalEmi),
+        totalMonthlyEMI: parseFloat(totalEmi || '0'),
         creditReportText: rawText,
       });
       setLoanEligibility(result);
@@ -597,19 +600,19 @@ export default function CreditWiseAIPage() {
   
   const handleGetUnderwriting = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!aiRating || estimatedIncome === null) {
+    if (!aiRating || !loanEligibility || estimatedIncome === null) {
       toast({
         variant: 'destructive',
         title: 'Missing Information',
-        description: 'Please get your AI Rating and estimate your income first.',
+        description: 'Please get your AI Rating, Loan Eligibility, and estimate your income first.',
       });
       return;
     }
-    if (!desiredLoanAmount || !desiredTenure || !desiredInterestRate) {
+    if (!desiredLoanAmount || !desiredTenure) {
       toast({
         variant: 'destructive',
         title: 'Missing Loan Details',
-        description: 'Please enter all the required loan details.',
+        description: 'Please enter the desired loan amount and tenure.',
       });
       return;
     }
@@ -620,17 +623,18 @@ export default function CreditWiseAIPage() {
       const result = await getCreditUnderwriting({
         creditReportText: rawText,
         aiRating: aiRating,
+        loanEligibility: loanEligibility,
         estimatedIncome: estimatedIncome,
         employmentType: employmentType as any,
         loanType: loanType as any,
         desiredLoanAmount: parseFloat(desiredLoanAmount),
         desiredTenure: parseInt(desiredTenure),
-        desiredInterestRate: parseFloat(desiredInterestRate),
       });
       setUnderwritingResult(result);
+      setActiveView(null); // Close the accordion
       toast({
         title: 'AI Underwriting Complete',
-        description: 'Your simulated underwriting assessment is ready.',
+        description: 'Your final analysis and profile summary is ready.',
       });
 
       // Automatically save the full analysis as a training candidate
@@ -693,14 +697,16 @@ export default function CreditWiseAIPage() {
 
   const scoreProgress = creditScore ? (creditScore - 300) / 6 : 0;
 
-  const getRiskColorClass = (level: string = 'Low') => {
-    switch (level) {
-      case 'Low': return 'bg-green-100 border-green-500 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-300';
-      case 'Medium': return 'bg-yellow-100 border-yellow-500 text-yellow-800 dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-300';
-      case 'High': return 'bg-orange-100 border-orange-500 text-orange-800 dark:bg-orange-900/30 dark:border-orange-700 dark:text-orange-300';
-      case 'Very High': return 'bg-red-100 border-red-500 text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300';
-      default: return 'bg-muted border-border';
-    }
+  const getRiskColorClass = (level: string = 'Low', type: 'bg' | 'text' | 'border' = 'bg') => {
+    const mapping: { [key: string]: { bg: string; text: string; border: string } } = {
+        'very low risk': { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-emerald-500' },
+        'low': { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-800 dark:text-green-300', border: 'border-green-500' },
+        'moderate risk': { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-800 dark:text-yellow-300', border: 'border-yellow-500' },
+        'medium': { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-800 dark:text-yellow-300', border: 'border-yellow-500' },
+        'high': { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-800 dark:text-orange-300', border: 'border-orange-500' },
+        'very high risk': { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-800 dark:text-red-300', border: 'border-red-500' },
+    };
+    return mapping[level.toLowerCase()]?.[type] || 'bg-muted border-border';
   };
   
   const getRatingColorClass = (rating: string = '') => {
@@ -751,10 +757,10 @@ export default function CreditWiseAIPage() {
     </Button>
   );
 
-  const SummaryItem = ({ label, value }: { label: string; value: string | number }) => (
-    <div className="flex flex-col items-center justify-center text-center">
+  const SummaryItem = ({ label, value, valueClassName }: { label: string; value: string | number; valueClassName?: string }) => (
+    <div className="flex flex-col items-center justify-center text-center p-2">
       <p className="text-xs text-muted-foreground uppercase tracking-wider">{label}</p>
-      <p className="text-base font-medium text-foreground">{value}</p>
+      <p className={cn("text-base font-medium text-foreground", valueClassName)}>{value}</p>
     </div>
   );
 
@@ -875,6 +881,49 @@ export default function CreditWiseAIPage() {
                     <p className="text-muted-foreground">This may take a moment.</p>
                     <Progress value={progress} className="w-full max-w-md mx-auto mt-4" />
                 </Card>
+            )}
+
+            {underwritingResult && (
+              <Card className="mb-8 border-2" style={{ borderColor: 'hsl(var(--primary))' }}>
+                  <CardHeader>
+                      <CardTitle className="text-2xl flex items-center justify-between">
+                          <span>Final Profile Summary</span>
+                           <div className={cn('px-4 py-1.5 rounded-full text-base font-semibold flex items-center gap-2 border', getRiskColorClass(underwritingResult.finalProfileRating, 'bg'), getRiskColorClass(underwritingResult.finalProfileRating, 'text'), getRiskColorClass(underwritingResult.finalProfileRating, 'border'))}>
+                                {underwritingResult.finalProfileRating === 'Very Low Risk' || underwritingResult.finalProfileRating === 'Low Risk' ? <CheckCircle /> : <ShieldAlert />}
+                                {underwritingResult.finalProfileRating}
+                           </div>
+                      </CardTitle>
+                      <CardDescription>This card provides a consolidated view of the entire analysis.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-b pb-4 mb-4">
+                          <div><span className="font-semibold">Name:</span> {consumerInfo['Name'] || 'N/A'}</div>
+                          <div><span className="font-semibold">PAN:</span> {consumerInfo['PAN'] || 'N/A'}</div>
+                           <div className={cn("font-semibold text-lg", getUnderwritingDecisionColor(underwritingResult.underwritingDecision))}>
+                                Decision: {underwritingResult.underwritingDecision}
+                           </div>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                          <SummaryItem label="CIBIL Score" value={creditScore || 'N/A'} valueClassName="text-primary" />
+                          <SummaryItem label="AI Credit Score" value={aiRating?.aiScore || 'N/A'} valueClassName={getRatingColorClass(aiRating?.rating || '')} />
+                          <SummaryItem label="Risk Score" value={riskAssessment?.score || 'N/A'} valueClassName={getRiskColorClass(riskAssessment?.level || 'Low', 'text')} />
+                          <SummaryItem label="Approved Amount" value={`₹${underwritingResult.approvedLoanAmount.toLocaleString('en-IN')}`} />
+                          <SummaryItem label="Interest Rate" value={`${underwritingResult.recommendedInterestRate}`} />
+                          <SummaryItem label="Tenure" value={`${underwritingResult.recommendedTenure} months`} />
+                          <SummaryItem label="PD" value={`${underwritingResult.probabilityOfDefault}%`} valueClassName="text-destructive" />
+                          <SummaryItem label="LGD" value={`${underwritingResult.lossGivenDefault}%`} valueClassName="text-destructive" />
+                          <SummaryItem label="EAD" value={`₹${underwritingResult.exposureAtDefault.toLocaleString('en-IN')}`} valueClassName="text-destructive" />
+                           <SummaryItem label="Expected Loss" value={`₹${underwritingResult.expectedLoss.toLocaleString('en-IN')}`} valueClassName="text-destructive" />
+                      </div>
+                  </CardContent>
+                  <CardFooter>
+                      <Alert>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>AI Underwriting Summary</AlertTitle>
+                        <AlertDescription>{underwritingResult.underwritingSummary}</AlertDescription>
+                      </Alert>
+                  </CardFooter>
+              </Card>
             )}
             
             {rawText && !isLoading && (
@@ -1117,7 +1166,7 @@ export default function CreditWiseAIPage() {
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center"><Gavel className="mr-3 h-6 w-6 text-primary" />AI Credit Underwriting</CardTitle>
-                        <CardDescription>Get a simulated underwriting decision from our AI. Please provide your loan requirements below.</CardDescription>
+                        <CardDescription>Get a simulated underwriting decision from our AI. This is the final step.</CardDescription>
                       </CardHeader>
                       <form onSubmit={handleGetUnderwriting}>
                         <CardContent className="space-y-4">
@@ -1171,31 +1220,19 @@ export default function CreditWiseAIPage() {
                                 required
                                 />
                             </div>
-                            <div>
-                                <Label htmlFor="desiredInterestRate">Desired Interest Rate (%)</Label>
-                                <Input
-                                id="desiredInterestRate"
-                                type="number"
-                                step="0.1"
-                                placeholder="e.g., 12.5"
-                                value={desiredInterestRate}
-                                onChange={(e) => setDesiredInterestRate(e.target.value)}
-                                required
-                                />
-                            </div>
                           </div>
                           <Alert>
                             <AlertCircle className="h-4 w-4" />
                             <AlertTitle>Prerequisites</AlertTitle>
                             <AlertDescription>
-                              Ensure you have already generated your AI Rating and estimated your income for the most accurate underwriting assessment.
+                              Ensure you have already run the "AI Loan Eligibility" and "Income Estimator" steps for an accurate underwriting assessment.
                             </AlertDescription>
                           </Alert>
                         </CardContent>
                         <CardFooter>
-                           <Button type="submit" disabled={isUnderwriting || !aiRating || estimatedIncome === null}>
+                           <Button type="submit" disabled={isUnderwriting || !aiRating || estimatedIncome === null || !loanEligibility}>
                             {isUnderwriting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Gavel className="mr-2 h-4 w-4" />}
-                            Start AI Underwriting
+                            Start Final Underwriting
                           </Button>
                         </CardFooter>
                       </form>
@@ -1576,5 +1613,7 @@ export default function CreditWiseAIPage() {
     </div>
   );
 }
+
+    
 
     
