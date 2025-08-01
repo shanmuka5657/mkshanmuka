@@ -1361,13 +1361,17 @@ export default function CreditWiseAIPage() {
                                         <p className="text-xs">Sanctioned: ₹{loan.sanctionedAmount.toLocaleString('en-IN')}</p>
                                     </TableCell>
                                     <TableCell>
-                                        <Input
-                                            type="number"
-                                            value={loan.emi}
-                                            onChange={(e) => handleLoanDetailChange(loan.id, 'emi', parseInt(e.target.value) || 0)}
-                                            className="h-8 w-28"
-                                            placeholder="Enter EMI"
-                                        />
+                                        {loan.emi > 0 ? (
+                                            <p className="px-3 py-2 text-sm">{loan.emi.toLocaleString('en-IN')}</p>
+                                        ) : (
+                                            <Input
+                                                type="number"
+                                                defaultValue={loan.emi}
+                                                onBlur={(e) => handleLoanDetailChange(loan.id, 'emi', parseInt(e.target.value) || 0)}
+                                                className="h-8 w-28"
+                                                placeholder="Enter EMI"
+                                            />
+                                        )}
                                     </TableCell>
                                     <TableCell>
                                         <Select
@@ -1752,4 +1756,3 @@ export default function CreditWiseAIPage() {
     </div>
   );
 }
-
