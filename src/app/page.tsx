@@ -59,6 +59,7 @@ import { getFinancialRiskAssessment, FinancialRiskOutput } from '@/ai/flows/fina
 import { calculateTotalEmi, CalculateTotalEmiOutput } from '@/ai/flows/calculate-total-emi';
 import { getReportSummary, ReportSummaryOutput } from '@/ai/flows/report-summary';
 import { getCreditSummary, CreditSummaryOutput } from '@/ai/flows/credit-summary';
+import { getCustomerDetails, CustomerDetailsOutput } from '@/ai/flows/customer-details';
 import { ShanAIChat } from '@/components/CreditChat';
 import { cn } from '@/lib/utils';
 import {
@@ -162,6 +163,13 @@ const initialAiAnalysis: AnalyzeCreditReportOutput = {
   },
 };
 
+const initialCustomerDetails: CustomerDetailsOutput = {
+  name: 'N/A',
+  dateOfBirth: 'N/A',
+  pan: 'N/A',
+  gender: 'N/A',
+  address: 'N/A',
+};
 
 type ActiveView = 
   | 'aiMeter' 
@@ -198,7 +206,8 @@ export default function CreditWiseAIPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [creditScore, setCreditScore] = useState<number | null>(null);
-  const [consumerInfo, setConsumerInfo] = useState<Record<string, string>>({});
+  const [consumerInfo, setConsumerInfo] = useState<CustomerDetailsOutput>(initialCustomerDetails);
+  const [isFetchingConsumerInfo, setIsFetchingConsumerInfo] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<AnalyzeCreditReportOutput | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [totalEmi, setTotalEmi] = useState('');
@@ -330,7 +339,8 @@ export default function CreditWiseAIPage() {
     setIsLoading(false);
     setProgress(0);
     setCreditScore(null);
-    setConsumerInfo({});
+    setConsumerInfo(initialCustomerDetails);
+    setIsFetchingConsumerInfo(false);
     setAiAnalysis(null);
     setIsAnalyzing(false);
     setTotalEmi('');
@@ -392,10 +402,16 @@ export default function CreditWiseAIPage() {
             setProgress(30 + Math.round((70 * i) / pdf.numPages));
           }
           setRawText(textContent);
-          parseBasicInfo(textContent);
-          handleGetReportSummary(textContent); // Trigger AI summary fetch
-          handleCalculateTotalEmi(textContent); // Trigger AI EMI calculation
-          handleAnalyze(textContent); // Trigger main AI analysis
+          
+          const normalizedText = textContent.replace(/\s+/g, ' ').trim();
+          const scoreMatch = normalizedText.match(/(?:CIBIL (?:TRANSUNION )?SCORE|CREDITVISION. SCORE)\s*(\d{3})/i);
+          setCreditScore(scoreMatch ? parseInt(scoreMatch[1], 10) : null);
+
+          // Trigger all AI data extractions in parallel
+          handleGetCustomerDetails(textContent);
+          handleGetReportSummary(textContent);
+          handleCalculateTotalEmi(textContent);
+          handleAnalyze(textContent);
         }
       };
       reader.readAsArrayBuffer(selectedFile);
@@ -408,6 +424,26 @@ export default function CreditWiseAIPage() {
       })
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  const handleGetCustomerDetails = async (text: string) => {
+    if (!text) return;
+    setIsFetchingConsumerInfo(true);
+    setConsumerInfo(initialCustomerDetails);
+    try {
+      const { output, usage } = await getCustomerDetails({ creditReportText: text });
+      setConsumerInfo(output);
+      updateTokenUsage(usage);
+    } catch (error: any) {
+      console.error('Error getting AI customer details:', error);
+       toast({
+        variant: "destructive",
+        title: "AI Details Failed",
+        description: error.message?.includes('429') ? "You've exceeded the daily limit for the AI. Please try again tomorrow." : (error.message || "Could not get AI customer details. Please try again."),
+      })
+    } finally {
+      setIsFetchingConsumerInfo(false);
     }
   };
 
@@ -459,34 +495,6 @@ export default function CreditWiseAIPage() {
       setIsCalculatingEmi(false);
     }
   };
-
-
-  const parseBasicInfo = (text: string) => {
-    const normalizedText = text.replace(/\s+/g, ' ').trim();
-
-    // --- Basic Info Parsing ---
-    const scoreMatch = normalizedText.match(/(?:CIBIL (?:TRANSUNION )?SCORE|CREDITVISION. SCORE)\s*(\d{3})/i);
-    setCreditScore(scoreMatch ? parseInt(scoreMatch[1], 10) : null);
-
-    let info: Record<string, string> = {};
-    const nameMatch = normalizedText.match(/NAME:\s*([\w\s]+?)\s*(?:DATE OF BIRTH|DOB)/i);
-    if (nameMatch) info['Name'] = nameMatch[1].trim();
-
-    const dobMatch = normalizedText.match(/(?:DATE OF BIRTH|DOB):\s*(\d{2}-\d{2}-\d{4})/i);
-    if (dobMatch) info['Date of Birth'] = dobMatch[1];
-    
-    const panMatch = normalizedText.match(/(?:INCOME TAX ID NUMBER \(PAN\)|PAN)\s*([A-Z]{5}[0-9]{4}[A-Z]{1})/i);
-    if (panMatch) info['PAN'] = panMatch[1];
-    
-    const genderMatch = normalizedText.match(/GENDER:\s*(Male|Female|MALE|FEMALE)/i);
-    if (genderMatch) info['Gender'] = genderMatch[1].charAt(0).toUpperCase() + genderMatch[1].slice(1).toLowerCase();
-
-    const addressMatch = normalizedText.match(/ADDRESS\s*:(.*?)(?:CATEGORY|PERMANENT ADDRESS|IDENTIFICATION|CONTACT)/i);
-    if (addressMatch) info['Address'] = addressMatch[1].replace(/\s+/g, ' ').trim();
-    
-    setConsumerInfo(info);
-  };
-
 
   const handleAnalyze = async (text: string) => {
     if (!text) return;
@@ -801,6 +809,13 @@ export default function CreditWiseAIPage() {
     </div>
   );
   
+  const InfoItem = ({ label, value, isLoading = false }: { label: string; value: string; isLoading?: boolean }) => (
+     <div>
+        <p className="font-semibold">{label}:</p>
+        {isLoading ? <Loader2 className="h-4 w-4 mt-1 animate-spin" /> : <p className="truncate">{value}</p>}
+    </div>
+  );
+
   const renderActiveView = () => {
     if (!activeView) return null;
 
@@ -1599,8 +1614,8 @@ export default function CreditWiseAIPage() {
                   </CardHeader>
                   <CardContent>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-b pb-4 mb-4">
-                          <div><span className="font-semibold">Name:</span> {consumerInfo['Name'] || 'N/A'}</div>
-                          <div><span className="font-semibold">PAN:</span> {consumerInfo['PAN'] || 'N/A'}</div>
+                          <InfoItem label="Name" value={consumerInfo.name} isLoading={isFetchingConsumerInfo}/>
+                          <InfoItem label="PAN" value={consumerInfo.pan} isLoading={isFetchingConsumerInfo}/>
                            <div className={cn("font-semibold text-lg p-2 rounded-md text-center", getUnderwritingDecisionColor(underwritingResult.underwritingDecision))}>
                                 Decision: {underwritingResult.underwritingDecision}
                            </div>
@@ -1641,21 +1656,22 @@ export default function CreditWiseAIPage() {
                               {creditScore && <Progress value={scoreProgress} className="mt-4" />}
                           </div>
                           <div>
-                              <h4 className="font-semibold mb-4">Consumer Information</h4>
+                              <h4 className="font-semibold mb-4">AI-Extracted Consumer Information</h4>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
                                 <div>
-                                  <p className="font-semibold">Name:</p>
-                                  <p className="truncate">{consumerInfo['Name'] || 'N/A'}</p>
-                                  <p className="font-semibold mt-2">Date of Birth:</p>
-                                  <p>{consumerInfo['Date of Birth'] || 'N/A'}</p>
-                                  <p className="font-semibold mt-2">Gender:</p>
-                                  <p>{consumerInfo['Gender'] || 'N/A'}</p>
+                                    <InfoItem label="Name" value={consumerInfo.name} isLoading={isFetchingConsumerInfo}/>
+                                    <div className="mt-2">
+                                        <InfoItem label="Date of Birth" value={consumerInfo.dateOfBirth} isLoading={isFetchingConsumerInfo}/>
+                                    </div>
+                                    <div className="mt-2">
+                                        <InfoItem label="Gender" value={consumerInfo.gender} isLoading={isFetchingConsumerInfo}/>
+                                    </div>
                                 </div>
                                 <div>
-                                  <p className="font-semibold">PAN:</p>
-                                  <p>{consumerInfo['PAN'] || 'N/A'}</p>
-                                  <p className="font-semibold mt-2">Address:</p>
-                                  <p className="line-clamp-3">{consumerInfo['Address'] || 'N/A'}</p>
+                                    <InfoItem label="PAN" value={consumerInfo.pan} isLoading={isFetchingConsumerInfo}/>
+                                    <div className="mt-2">
+                                        <InfoItem label="Address" value={consumerInfo.address} isLoading={isFetchingConsumerInfo}/>
+                                    </div>
                                 </div>
                               </div>
                           </div>
