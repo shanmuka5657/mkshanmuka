@@ -108,14 +108,6 @@ const initialReportSummary: ReportSummaryOutput = {
 
 const initialCreditSummary: CreditSummaryOutput = {
     allAccounts: [],
-    dpdSummary: {
-      onTime: 0,
-      late30: 0,
-      late60: 0,
-      late90: 0,
-      late90Plus: 0,
-      default: 0,
-    },
 };
 
 
@@ -410,6 +402,7 @@ export default function CreditWiseAIPage() {
           handleGetReportSummary(textContent);
           handleCalculateTotalEmi(textContent);
           handleAnalyze(textContent);
+          handleGetCreditSummary(textContent); // Also fetch the detailed summary
         }
       };
       reader.readAsArrayBuffer(selectedFile);
@@ -626,8 +619,8 @@ export default function CreditWiseAIPage() {
     }
   };
   
-  const handleGetCreditSummary = async () => {
-    if (!rawText) {
+  const handleGetCreditSummary = async (text: string) => {
+    if (!text) {
       toast({ variant: "destructive", title: "No Report Loaded", description: "Please upload a credit report first."});
       return;
     }
@@ -635,7 +628,7 @@ export default function CreditWiseAIPage() {
     setCreditSummary(initialCreditSummary);
     try {
       const { output, usage } = await getCreditSummary({
-        creditReportText: rawText,
+        creditReportText: text,
       });
       setCreditSummary(output);
       updateTokenUsage(usage);
@@ -747,11 +740,11 @@ export default function CreditWiseAIPage() {
         maxSingleEMI: 0,
         creditUtilization: "N/A",
         debtToLimitRatio: "N/A",
+        dpd: { onTime: 0, late30: 0, late60: 0, late90: 0, late90Plus: 0, default: 0 },
       };
     }
 
     const summary = {
-      totalAccounts: allAccounts.length,
       totalCreditLimit: 0,
       totalOutstanding: 0,
       writtenOff: 0,
@@ -760,6 +753,7 @@ export default function CreditWiseAIPage() {
       closedAccounts: 0,
       totalMonthlyEMI: 0,
       maxSingleEMI: 0,
+      dpd: { onTime: 0, late30: 0, late60: 0, late90: 0, late90Plus: 0, default: 0 },
     };
 
     let creditCardLimit = 0;
@@ -789,12 +783,38 @@ export default function CreditWiseAIPage() {
           creditCardBalance += outstanding;
           creditCardPayments += emi;
       }
+      
+      // DPD Calculation from payment history string
+      if (acc.paymentHistory && acc.paymentHistory !== 'NA') {
+        const paymentMonths = acc.paymentHistory.split('|');
+        for (const monthStatus of paymentMonths) {
+          const status = monthStatus.trim().toUpperCase();
+          if (status === 'STD' || status === '000' || status === 'XXX') {
+            summary.dpd.onTime++;
+          } else if (status === 'SUB') {
+            summary.dpd.late90Plus++;
+          } else if (status === 'DBT') {
+            summary.dpd.default++;
+          } else if (status === 'LSS') {
+            summary.dpd.default++;
+          } else {
+            const daysLate = parseInt(status, 10);
+            if (!isNaN(daysLate)) {
+              if (daysLate >= 1 && daysLate <= 30) summary.dpd.late30++;
+              else if (daysLate >= 31 && daysLate <= 60) summary.dpd.late60++;
+              else if (daysLate >= 61 && daysLate <= 90) summary.dpd.late90++;
+              else if (daysLate > 90) summary.dpd.late90Plus++;
+            }
+          }
+        }
+      }
     }
     
-    const activeAccounts = summary.totalAccounts - summary.closedAccounts;
+    const totalAccounts = allAccounts.length;
+    const activeAccounts = totalAccounts - summary.closedAccounts;
     
     let creditUtilization: string;
-    if (creditCardPayments === 0 || creditCardLimit === 0) {
+    if (creditCardLimit === 0) {
         creditUtilization = "N/A";
     } else {
         creditUtilization = `${Math.round((creditCardBalance / creditCardLimit) * 100)}%`;
@@ -809,6 +829,7 @@ export default function CreditWiseAIPage() {
 
     return {
       ...summary,
+      totalAccounts,
       activeAccounts,
       creditUtilization,
       debtToLimitRatio,
@@ -948,19 +969,19 @@ export default function CreditWiseAIPage() {
                     <SummaryItem label="Credit Card Payments" value={`₹${calculatedSummary.creditCardPayments.toLocaleString('en-IN')}`} valueClassName="text-foreground" />
                   </div>
 
-                  {creditSummary.dpdSummary && (
+                  {calculatedSummary.dpd && (
                      <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center"><Clock className="mr-3 h-5 w-5" />DPD Analysis</CardTitle>
                             <CardDescription>Your payment history at a glance.</CardDescription>
                         </CardHeader>
                         <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                            <DpdSummaryItem label="On Time" value={creditSummary.dpdSummary.onTime} colorClass="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300" />
-                            <DpdSummaryItem label="1-30 Days" value={creditSummary.dpdSummary.late30} colorClass="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300" />
-                            <DpdSummaryItem label="31-60 Days" value={creditSummary.dpdSummary.late60} colorClass="bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300" />
-                            <DpdSummaryItem label="61-90 Days" value={creditSummary.dpdSummary.late90} colorClass="bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300" />
-                            <DpdSummaryItem label="90+ Days" value={creditSummary.dpdSummary.late90Plus} colorClass="bg-red-200 text-red-900 dark:bg-red-800/50 dark:text-red-200" />
-                            <DpdSummaryItem label="Default" value={creditSummary.dpdSummary.default} colorClass="bg-black text-white dark:bg-red-950 dark:text-red-100" />
+                            <DpdSummaryItem label="On Time" value={calculatedSummary.dpd.onTime} colorClass="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300" />
+                            <DpdSummaryItem label="1-30 Days" value={calculatedSummary.dpd.late30} colorClass="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300" />
+                            <DpdSummaryItem label="31-60 Days" value={calculatedSummary.dpd.late60} colorClass="bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300" />
+                            <DpdSummaryItem label="61-90 Days" value={calculatedSummary.dpd.late90} colorClass="bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300" />
+                            <DpdSummaryItem label="90+ Days" value={calculatedSummary.dpd.late90Plus} colorClass="bg-red-200 text-red-900 dark:bg-red-800/50 dark:text-red-200" />
+                            <DpdSummaryItem label="Default" value={calculatedSummary.dpd.default} colorClass="bg-black text-white dark:bg-red-950 dark:text-red-100" />
                         </CardContent>
                     </Card>
                   )}
@@ -1788,7 +1809,7 @@ export default function CreditWiseAIPage() {
                       <CardDescription>Select a section to view its detailed analysis. Some sections require previous steps to be completed.</CardDescription>
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                      <NavButton view="creditSummary" label="Credit Summary" icon={<LayoutGrid size={24} />} onClick={handleGetCreditSummary} />
+                      <NavButton view="creditSummary" label="Credit Summary" icon={<LayoutGrid size={24} />} onClick={() => { if(creditSummary.allAccounts.length === 0) handleGetCreditSummary(rawText) }} />
                       <NavButton view="aiAnalysis" label="AI Report Analysis" icon={<BrainCircuit size={24} />} />
                       <NavButton view="aiMeter" label="AI Credit Meter" icon={<Bot size={24} />} disabled={!aiAnalysis}/>
                       <NavButton view="incomeEstimator" label="Financials & Obligations" icon={<Calculator size={24} />} />
@@ -1898,4 +1919,3 @@ export default function CreditWiseAIPage() {
     </div>
   );
 }
-
