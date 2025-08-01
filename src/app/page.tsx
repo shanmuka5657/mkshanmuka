@@ -183,9 +183,7 @@ export default function CreditWiseAIPage() {
   const [activeLoanDetails, setActiveLoanDetails] = useState<ActiveLoanDetail[]>([]);
   const [isCalculatingEmi, setIsCalculatingEmi] = useState(false);
   const [otherObligations, setOtherObligations] = useState('');
-  const [dtiRatio, setDtiRatio] = useState('40');
-  const [customDti, setCustomDti] = useState('');
-  const [estimatedIncome, setEstimatedIncome] = useState<number | null>(null);
+  const [estimatedIncome, setEstimatedIncome] = useState<string>('');
   const [aiDebtAdvice, setAiDebtAdvice] = useState('');
   const [isAdvising, setIsAdvising] = useState(false);
   const [theme, setTheme] = useState('light');
@@ -308,9 +306,7 @@ export default function CreditWiseAIPage() {
     setActiveLoanDetails([]);
     setIsCalculatingEmi(false);
     setOtherObligations('');
-    setDtiRatio('40');
-    setCustomDti('');
-    setEstimatedIncome(null);
+    setEstimatedIncome('');
     setAiDebtAdvice('');
     setIsAdvising(false);
     setShowRawText(false);
@@ -573,30 +569,18 @@ export default function CreditWiseAIPage() {
     }
   };
   
-  const handleCalculateIncome = () => {
-      if (!totalEmi && !otherObligations) {
-          toast({ variant: "destructive", title: "Missing fields", description: "Please fill Total EMI and/or Other Obligations."})
-          return;
-      }
-      const finalDti = dtiRatio === 'custom' ? parseFloat(customDti) || 40 : parseFloat(dtiRatio);
-      const totalObligations = parseFloat(totalEmi || '0') + parseFloat(otherObligations || '0');
-      const income = (totalObligations / (finalDti / 100));
-      setEstimatedIncome(income);
-  };
-
   const handleGetDebtAdvice = async () => {
-    if (estimatedIncome === null) {
-        toast({ variant: "destructive", title: "Calculate Income First", description: "Please estimate your income before getting advice."})
+    if (!estimatedIncome) {
+        toast({ variant: "destructive", title: "Enter Income First", description: "Please enter your income before getting advice."})
         return;
     }
     setIsAdvising(true);
     setAiDebtAdvice('');
     try {
-        const finalDti = dtiRatio === 'custom' ? parseFloat(customDti) || 40 : parseFloat(dtiRatio);
         const result = await getDebtManagementAdvice({
             totalEmi: parseFloat(totalEmi || '0'),
             otherObligations: parseFloat(otherObligations || '0'),
-            dtiRatio: finalDti,
+            dtiRatio: 40, // Since we are not asking for DTI anymore, using a default.
             creditReportText: rawText
         });
         setAiDebtAdvice(result.advice);
@@ -609,12 +593,12 @@ export default function CreditWiseAIPage() {
   };
   
   const handleGetLoanEligibility = async () => {
-    if (!aiRating || estimatedIncome === null) {
+    if (!aiRating || !estimatedIncome) {
       toast({
         variant: 'destructive',
         title: 'Missing Information',
         description:
-          'Please get your AI Rating and estimate your income first.',
+          'Please get your AI Rating and enter your income first.',
       });
       return;
     }
@@ -624,7 +608,7 @@ export default function CreditWiseAIPage() {
       const result = await getLoanEligibility({
         aiScore: aiRating.aiScore,
         rating: aiRating.rating,
-        monthlyIncome: estimatedIncome,
+        monthlyIncome: parseFloat(estimatedIncome),
         totalMonthlyEMI: parseFloat(totalEmi || '0'),
         creditReportText: rawText,
       });
@@ -649,15 +633,15 @@ export default function CreditWiseAIPage() {
   };
 
   const handleGetFinancialRisk = async () => {
-    if (estimatedIncome === null) {
-      toast({ variant: "destructive", title: "Calculate Income First", description: "Please estimate your income before getting advice."});
+    if (!estimatedIncome) {
+      toast({ variant: "destructive", title: "Enter Income First", description: "Please enter your income before getting advice."});
       return;
     }
     setIsAssessingFinancialRisk(true);
     setFinancialRisk(null);
     try {
       const result = await getFinancialRiskAssessment({
-        estimatedIncome,
+        estimatedIncome: parseFloat(estimatedIncome),
         creditReportText: rawText,
       });
       setFinancialRisk(result);
@@ -682,7 +666,7 @@ export default function CreditWiseAIPage() {
 
   const handleGetUnderwriting = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!aiRating || estimatedIncome === null || !loanEligibility || !desiredLoanAmount || !desiredTenure) {
+    if (!aiRating || !estimatedIncome || !loanEligibility || !desiredLoanAmount || !desiredTenure) {
       toast({
         variant: 'destructive',
         title: 'Missing Prerequisites',
@@ -703,7 +687,7 @@ export default function CreditWiseAIPage() {
         creditReportText: rawText,
         aiRating: aiRating,
         loanEligibility: loanEligibility,
-        estimatedIncome: estimatedIncome,
+        estimatedIncome: parseFloat(estimatedIncome),
         employmentType: employmentType as "Salaried" | "Self-employed" | "Daily Wage Earner",
         loanType: loanType as "Personal Loan" | "Home Loan" | "Auto Loan" | "Loan Against Property",
         desiredLoanAmount: parseFloat(desiredLoanAmount),
@@ -890,7 +874,7 @@ export default function CreditWiseAIPage() {
                   <div className="inline-block">
                       <Button
                         onClick={handleGetLoanEligibility}
-                        disabled={isCalculatingEligibility || !aiRating || estimatedIncome === null}
+                        disabled={isCalculatingEligibility || !aiRating || !estimatedIncome}
                       >
                         {isCalculatingEligibility ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -901,9 +885,9 @@ export default function CreditWiseAIPage() {
                       </Button>
                   </div>
                 </TooltipTrigger>
-                {(!aiRating || estimatedIncome === null) && (
+                {(!aiRating || !estimatedIncome) && (
                   <TooltipContent>
-                    <p>Please get your AI Rating and estimate your income first.</p>
+                    <p>Please get your AI Rating and enter your income first.</p>
                   </TooltipContent>
                 )}
               </UiTooltip>
@@ -1070,12 +1054,12 @@ export default function CreditWiseAIPage() {
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Prerequisites</AlertTitle>
                 <AlertDescription>
-                  Ensure you have already run the "AI Loan Eligibility" and "Income Estimator" steps for an accurate underwriting assessment.
+                  Ensure you have already run the "AI Loan Eligibility" and provided your income for an accurate underwriting assessment.
                 </AlertDescription>
               </Alert>
             </CardContent>
             <CardFooter>
-               <Button type="submit" disabled={isUnderwriting || !aiRating || estimatedIncome === null || !loanEligibility}>
+               <Button type="submit" disabled={isUnderwriting || !aiRating || !estimatedIncome || !loanEligibility}>
                 {isUnderwriting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Gavel className="mr-2 h-4 w-4" />}
                 Start Final Underwriting
               </Button>
@@ -1232,7 +1216,7 @@ export default function CreditWiseAIPage() {
               AI Financial Risk Assessment
             </CardTitle>
             <CardDescription>
-              Get an AI-based analysis of your overall financial stability. This requires your income to be estimated first.
+              Get an AI-based analysis of your overall financial stability. This requires your income to be entered first.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -1242,7 +1226,7 @@ export default function CreditWiseAIPage() {
                   <div className="inline-block">
                     <Button
                       onClick={handleGetFinancialRisk}
-                      disabled={isAssessingFinancialRisk || estimatedIncome === null}
+                      disabled={isAssessingFinancialRisk || !estimatedIncome}
                     >
                       {isAssessingFinancialRisk ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1253,9 +1237,9 @@ export default function CreditWiseAIPage() {
                     </Button>
                   </div>
                 </TooltipTrigger>
-                {estimatedIncome === null && (
+                {!estimatedIncome && (
                   <TooltipContent>
-                    <p>Please use the 'Income Estimator' to estimate your income first.</p>
+                    <p>Please use the 'Financials & Obligations' section to enter your income first.</p>
                   </TooltipContent>
                 )}
               </UiTooltip>
@@ -1316,102 +1300,100 @@ export default function CreditWiseAIPage() {
       incomeEstimator: (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center"><Calculator className="mr-3 h-6 w-6 text-primary" />AI Income Estimator &amp; Debt Management</CardTitle>
+            <CardTitle className="flex items-center"><Calculator className="mr-3 h-6 w-6 text-primary" />Financials &amp; Obligations</CardTitle>
+            <CardDescription>Provide your financial details to enable more accurate analysis and loan eligibility checks.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="estimatedIncome">Your Estimated Monthly Income (₹)</Label>
+                  <Input 
+                    id="estimatedIncome" 
+                    type="number" 
+                    placeholder="e.g., 50000" 
+                    value={estimatedIncome} 
+                    onChange={(e) => setEstimatedIncome(e.target.value)} 
+                  />
+                </div>
+                <div>
+                    <Label htmlFor="other-obligations">Other Monthly Obligations (Rent, etc.)</Label>
+                    <Input 
+                      id="other-obligations" 
+                      type="number" 
+                      placeholder="e.g., 15000" 
+                      value={otherObligations} 
+                      onChange={(e) => setOtherObligations(e.target.value)} 
+                    />
+                </div>
+            </div>
+
             <div>
-              <Label htmlFor="total-emi">Total Monthly EMI</Label>
+              <Label htmlFor="total-emi">Total Monthly Loan EMI</Label>
               <div className="flex items-center gap-2">
-                <Input id="total-emi" type="text" placeholder="AI is calculating..." value={totalEmi} onChange={(e) => setTotalEmi(e.target.value)} disabled={isCalculatingEmi} />
+                <Input id="total-emi" type="number" placeholder="AI is calculating..." value={totalEmi} onChange={(e) => setTotalEmi(e.target.value)} disabled={isCalculatingEmi} />
                 {isCalculatingEmi && <Loader2 className="h-5 w-5 animate-spin" />}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">This is auto-calculated from your report by AI. You can override it if needed.</p>
+              <p className="text-xs text-muted-foreground mt-1">This is auto-calculated from your report and your selections below. You can override it.</p>
             </div>
             
             {activeLoanDetails.length > 0 && (
-              <div className="mt-4">
+              <div>
                   <h4 className="font-semibold mb-2">Active Loan Details</h4>
-                  <div className="space-y-4">
-                      {activeLoanDetails.map((loan) => (
-                          <Card key={loan.id} className="p-4 bg-muted/50">
-                              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 items-center">
-                                  <SummaryItem label="Loan Type" value={loan.loanType} />
-                                  <SummaryItem label="Ownership" value={loan.ownership} />
-                                  <SummaryItem label="Sanctioned Amt." value={`₹${loan.sanctionedAmount.toLocaleString('en-IN')}`} />
-                                  <SummaryItem label="Current Balance" value={`₹${loan.currentBalance.toLocaleString('en-IN')}`} />
-                                  <SummaryItem label="EMI" value={`₹${loan.emi.toLocaleString('en-IN')}`} />
-                              </div>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                  <div>
-                                      <Label htmlFor={`obligation-${loan.id}`} className="text-xs">Include in EMI?</Label>
-                                      <Select
-                                          value={loan.considerForObligation}
-                                          onValueChange={(value: 'Yes' | 'No') => handleLoanDetailChange(loan.id, 'considerForObligation', value)}
-                                      >
-                                          <SelectTrigger id={`obligation-${loan.id}`}>
-                                              <SelectValue />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                              <SelectItem value="Yes">Yes</SelectItem>
-                                              <SelectItem value="No">No</SelectItem>
-                                          </SelectContent>
-                                      </Select>
-                                  </div>
-                                  <div>
-                                      <Label htmlFor={`comment-${loan.id}`} className="text-xs">Comments</Label>
-                                      <Textarea
-                                          id={`comment-${loan.id}`}
-                                          placeholder="e.g., Guarantor loan, paid by primary."
-                                          value={loan.comment}
-                                          onChange={(e) => handleLoanDetailChange(loan.id, 'comment', e.target.value)}
-                                          className="h-10 text-sm"
-                                      />
-                                  </div>
-                              </div>
-                          </Card>
-                      ))}
-                  </div>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Loan Details</TableHead>
+                                <TableHead>Amounts</TableHead>
+                                <TableHead>Include in EMI?</TableHead>
+                                <TableHead>Comments</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {activeLoanDetails.map((loan) => (
+                                <TableRow key={loan.id}>
+                                    <TableCell>
+                                        <p className="font-semibold">{loan.loanType}</p>
+                                        <p className="text-xs text-muted-foreground">{loan.ownership}</p>
+                                    </TableCell>
+                                    <TableCell>
+                                        <p>EMI: ₹{loan.emi.toLocaleString('en-IN')}</p>
+                                        <p className="text-xs">Balance: ₹{loan.currentBalance.toLocaleString('en-IN')}</p>
+                                        <p className="text-xs">Sanctioned: ₹{loan.sanctionedAmount.toLocaleString('en-IN')}</p>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Select
+                                            value={loan.considerForObligation}
+                                            onValueChange={(value: 'Yes' | 'No') => handleLoanDetailChange(loan.id, 'considerForObligation', value)}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Yes">Yes</SelectItem>
+                                                <SelectItem value="No">No</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Textarea
+                                            placeholder="e.g., Guarantor loan, paid by primary."
+                                            value={loan.comment}
+                                            onChange={(e) => handleLoanDetailChange(loan.id, 'comment', e.target.value)}
+                                            className="h-16 text-xs"
+                                        />
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
               </div>
             )}
-
-            <div>
-              <Label htmlFor="other-obligations">Other Monthly Obligations (Rent, etc.)</Label>
-              <Input id="other-obligations" type="text" placeholder="e.g. 15000" value={otherObligations} onChange={(e) => setOtherObligations(e.target.value)} />
-            </div>
-            <div>
-              <Label htmlFor="dti-ratio">Target Debt-to-Income (DTI) Ratio</Label>
-              <Select value={dtiRatio} onValueChange={setDtiRatio}>
-                <SelectTrigger id="dti-ratio">
-                  <SelectValue placeholder="Select DTI Ratio" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="30">30% (Ideal)</SelectItem>
-                  <SelectItem value="40">40% (Manageable)</SelectItem>
-                  <SelectItem value="50">50% (High)</SelectItem>
-                  <SelectItem value="custom">Custom</SelectItem>
-                </SelectContent>
-              </Select>
-              {dtiRatio === 'custom' && (
-                <Input type="text" placeholder="Enter custom DTI %" value={customDti} onChange={(e) => setCustomDti(e.target.value)} className="mt-2" />
-              )}
-            </div>
-            <Button onClick={handleCalculateIncome}>Estimate My Income</Button>
-            {estimatedIncome !== null && (
-              <Alert>
-                <BrainCircuit className="h-4 w-4"/>
-                <AlertTitle>Estimated Monthly Income</AlertTitle>
-                <AlertDescription>
-                  Your estimated income is <strong className="text-primary">₹{Math.round(estimatedIncome).toLocaleString('en-IN')}</strong> per month.
-                </AlertDescription>
-              </Alert>
-            )}
             
-            {estimatedIncome !== null && (
-              <Button onClick={handleGetDebtAdvice} disabled={isAdvising}>
-                  {isAdvising ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lightbulb className="mr-2 h-4 w-4" />}
-                  Get AI Debt Management Advice
-              </Button>
-            )}
+            <Button onClick={handleGetDebtAdvice} disabled={isAdvising || !estimatedIncome}>
+                {isAdvising ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lightbulb className="mr-2 h-4 w-4" />}
+                Get AI Debt Management Advice
+            </Button>
+
             {aiDebtAdvice && (
               <Card className="mt-6 bg-muted/50">
                   <CardHeader>
@@ -1664,11 +1646,11 @@ export default function CreditWiseAIPage() {
                     <CardContent className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
                       <NavButton view="aiMeter" label="AI Credit Analysis Meter" icon={<Bot size={24} />} />
                       <NavButton view="aiAnalysis" label="AI Credit Report Analysis" icon={<BrainCircuit size={24} />} />
-                      <NavButton view="loanEligibility" label="AI Loan Eligibility" icon={<Banknote size={24} />} disabled={!aiRating || estimatedIncome === null} />
-                      <NavButton view="incomeEstimator" label="Income Estimator & Debt Management" icon={<Calculator size={24} />} />
+                      <NavButton view="loanEligibility" label="AI Loan Eligibility" icon={<Banknote size={24} />} disabled={!aiRating || !estimatedIncome} />
+                      <NavButton view="incomeEstimator" label="Financials & Obligations" icon={<Calculator size={24} />} />
                       <NavButton view="creditImprovement" label="AI Credit Improvement" icon={<Lightbulb size={24} />} />
                       <NavButton view="riskAssessment" label="AI Risk Assessment" icon={<ShieldAlert size={24} />} />
-                      <NavButton view="financialRisk" label="AI Financial Risk" icon={<BadgeCent size={24} />} disabled={estimatedIncome === null}/>
+                      <NavButton view="financialRisk" label="AI Financial Risk" icon={<BadgeCent size={24} />} disabled={!estimatedIncome}/>
                       <NavButton view="creditUnderwriting" label="AI Credit Underwriting" icon={<Gavel size={24} />} disabled={!loanEligibility} />
                     </CardContent>
                   </Card>
@@ -1761,3 +1743,4 @@ export default function CreditWiseAIPage() {
     </div>
   );
 }
+
