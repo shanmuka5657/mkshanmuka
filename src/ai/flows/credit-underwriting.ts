@@ -64,7 +64,7 @@ const CreditUnderwritingOutputSchema = z.object({
     .describe('The final underwriting decision.'),
   approvedLoanAmount: z
     .number()
-    .describe('The loan amount the AI has approved in INR. Cannot exceed the pre-calculated eligible amount.'),
+    .describe('The loan amount the AI has approved in INR. Cannot exceed the pre-calculated eligible amount or the desired amount.'),
   recommendedInterestRate: z
     .string()
     .describe('The recommended annual interest rate for the loan (e.g., "10.5% - 11.5%").'),
@@ -109,9 +109,11 @@ const prompt = ai.definePrompt({
   name: 'creditUnderwritingPrompt',
   input: {schema: CreditUnderwritingInputSchema},
   output: {schema: CreditUnderwritingOutputSchema},
-  prompt: `You are a senior credit underwriter for a major bank in India. Your task is to perform a final, comprehensive underwriting analysis and provide a definitive overall rating for the profile.
+  prompt: `You are a senior credit underwriter for a major bank in India. Your task is to perform a final, comprehensive underwriting analysis and provide a definitive overall rating for the profile. You must act like a real, prudent underwriter.
 
-**CRITICAL CONSTRAINT:** The maximum loan amount you can approve is strictly limited by the pre-calculated 'repaymentCapacity' from the loan eligibility step. You CANNOT approve a loan amount higher than what the eligibility calculation has deemed affordable. If the 'repaymentCapacity' is 0, you must decline the loan.
+**CRITICAL RULES:**
+1.  **NEVER APPROVE MORE THAN REQUESTED:** The 'approvedLoanAmount' CANNOT be higher than the 'desiredLoanAmount'. You can approve a lower amount if risk factors warrant it, but never more.
+2.  **RESPECT ELIGIBILITY LIMITS:** The 'approvedLoanAmount' must ALSO NOT exceed the 'Pre-Calculated Max Eligible Loan Amount'. If the 'repaymentCapacity' is 0, you MUST decline the loan. Your final approved amount must be the lower of the desired amount and the eligible amount.
 
 **Applicant's Profile & Pre-Calculated Data:**
 - **Loan Type Requested:** {{{loanType}}}
@@ -130,15 +132,19 @@ const prompt = ai.definePrompt({
 
 **Your Underwriting Task:**
 
-1.  **Adhere to Eligibility Limits:** Your decision MUST respect the pre-calculated eligibility. If the desired loan amount is higher than the 'Pre-Calculated Max Eligible Loan Amount', you should either reduce the approved amount or decline. If 'repaymentCapacity' is zero, you must decline.
-2.  **Make a Final Decision:** Based on a holistic analysis of all data (the report, income, employment stability, and eligibility limits), decide on one outcome: 'Approved', 'Conditionally Approved', 'Declined', 'Requires Manual Review'.
-3.  **Determine and Justify Loan Terms:** If approved, determine a final 'approvedLoanAmount' (cannot exceed {{{loanEligibility.eligibleLoanAmount}}}), 'recommendedInterestRate', and 'recommendedTenure'. Explain *why* the terms might differ from the user's request, linking it to specific risk factors.
-4.  **Write a Comprehensive Summary:** Provide a multi-paragraph summary explaining the decision. Reference specific positive and negative factors from the report and how they, combined with the eligibility constraints, led to the final outcome.
-5.  **List Documents and Conditions:** Provide a standard list of 'requiredDocuments' for the specified 'loanType' and 'employmentType'. If conditionally approved, list the 'conditions'.
-6.  **Calculate and Explain Risk Metrics:** Determine 'probabilityOfDefault' (PD), 'lossGivenDefault' (LGD), and 'exposureAtDefault' (EAD). For each, provide a detailed 'riskMetricsExplanation' justifying your calculation based on report specifics. EAD should be the sum of all current balances on active accounts.
-7.  **Assign a Final, Overall Profile Rating:** This is the most important output. Synthesize every piece of information—CIBIL score, AI score, income stability, DTI, the entire report analysis, and the final underwriting decision—into a single, definitive 'finalProfileRating'. The rating must be one of: 'Very Low Risk', 'Low Risk', 'Moderate Risk', 'High Risk', 'Very High Risk'. This rating should be the ultimate summary of the applicant's profile.
+1.  **Make a Final Decision:** Based on a holistic analysis of all data, decide on one outcome: 'Approved', 'Conditionally Approved', 'Declined', 'Requires Manual Review'.
+2.  **Determine and Justify Loan Terms:** If approved, determine the final loan terms.
+    *   **approvedLoanAmount:** Adhere strictly to the critical rules above.
+    *   **recommendedInterestRate:** Provide a clear interest rate or range.
+    *   **recommendedTenure:** Usually the same as desired, unless risk warrants a change.
+3.  **Write a Comprehensive Summary:** This is critical. Provide a detailed, multi-paragraph summary. Explain *exactly* how you reached your decision. Reference specific positive and negative factors from the report. If you reduce the loan amount, explain *why*, linking it to specific risks (e.g., "While the applicant requested ₹6,00,000, the approved amount was reduced to ₹4,50,000 due to a high DTI ratio and a recent 30-day delinquency on their credit card...").
+4.  **List Documents and Conditions:**
+    *   Provide a standard list of 'requiredDocuments'.
+    *   **Add Conditions Based on Risk:** If you see a potential inconsistency (e.g., a 'Daily Wage Earner' with an unusually high estimated income of > ₹50,000/month), add a condition like "Income verification via bank statements and ITR for the last 2 years is mandatory." to the 'conditions' array.
+5.  **Calculate and Explain Risk Metrics:** Determine 'probabilityOfDefault' (PD), 'lossGivenDefault' (LGD), and 'exposureAtDefault' (EAD). For each, provide a detailed 'riskMetricsExplanation' justifying your calculation based on report specifics. EAD should be the sum of all current balances on active accounts.
+6.  **Assign a Final, Overall Profile Rating:** Synthesize every piece of information into a single, definitive 'finalProfileRating': 'Very Low Risk', 'Low Risk', 'Moderate Risk', 'High Risk', 'Very High Risk'. This rating is the ultimate summary of the applicant's profile.
 
-Generate the final, structured output. Do not calculate 'expectedLoss'; the system will handle it.`,
+Generate the final, structured output.`,
 });
 
 const creditUnderwritingFlow = ai.defineFlow(
