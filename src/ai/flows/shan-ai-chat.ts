@@ -68,7 +68,7 @@ const shanAiChatFlow = ai.defineFlow(
     const llmResponse = await ai.generate({
       messages: history,
       system: systemPrompt,
-      model: 'googleai/gemini-2.0-flash',
+      model: 'googleai/gemini-1.5-flash-latest',
     });
 
     const responseText = llmResponse.text;
