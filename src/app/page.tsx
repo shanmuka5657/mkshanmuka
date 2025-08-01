@@ -128,9 +128,9 @@ type ActiveLoanDetail = CalculateTotalEmiOutput['activeLoans'][0] & {
     comment: string;
 };
 
-// Pricing for gemini-1.5-flash-latest model per 1M tokens
-const INPUT_PRICE_PER_MILLION_TOKENS = 0.35; 
-const OUTPUT_PRICE_PER_MILLION_TOKENS = 1.05; 
+// Pricing for gemini-pro model per 1M tokens
+const INPUT_PRICE_PER_MILLION_TOKENS = 0.5; 
+const OUTPUT_PRICE_PER_MILLION_TOKENS = 1.5; 
 
 const parseCurrency = (currencyString: string): number => {
     if (typeof currencyString !== 'string' || currencyString === '₹NaN') return 0;
