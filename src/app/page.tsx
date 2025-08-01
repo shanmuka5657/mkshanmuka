@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -53,13 +52,9 @@ import { useToast } from "@/hooks/use-toast"
 import { analyzeCreditReport, AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
 import { getAiRating, AiRatingOutput } from '@/ai/flows/ai-rating';
 import { getLoanEligibility, LoanEligibilityOutput } from '@/ai/flows/loan-eligibility';
-import { getRiskAssessment, RiskAssessmentOutput } from '@/ai/flows/risk-assessment';
-import { getCreditUnderwriting, CreditUnderwritingOutput, CreditUnderwritingInput } from '@/ai/flows/credit-underwriting';
 import { getFinancialRiskAssessment, FinancialRiskOutput } from '@/ai/flows/financial-risk-assessment';
+import { getCreditUnderwriting, CreditUnderwritingOutput, CreditUnderwritingInput } from '@/ai/flows/credit-underwriting';
 import { calculateTotalEmi, CalculateTotalEmiOutput } from '@/ai/flows/calculate-total-emi';
-import { getReportSummary, ReportSummaryOutput } from '@/ai/flows/report-summary';
-import { getCreditSummary, CreditSummaryOutput } from '@/ai/flows/credit-summary';
-import { getCustomerDetails, CustomerDetailsOutput } from '@/ai/flows/customer-details';
 import { ShanAIChat } from '@/components/CreditChat';
 import { cn } from '@/lib/utils';
 import {
@@ -87,74 +82,35 @@ import { Textarea } from '@/components/ui/textarea';
 import type { FlowUsage } from 'genkit/flow';
 
 
-const initialReportSummary: ReportSummaryOutput = {
-  accountSummary: {
-    total: 'N/A',
-    zeroBalance: 'N/A',
-    highCredit: 'N/A',
-    currentBalance: 'N/A',
-    overdue: 'N/A',
-    recentDate: 'N/A',
-    oldestDate: 'N/A',
+const initialAnalysis: AnalyzeCreditReportOutput = {
+  customerDetails: {
+    name: 'N/A',
+    dateOfBirth: 'N/A',
+    pan: 'N/A',
+    gender: 'N/A',
+    address: 'N/A',
   },
-  enquirySummary: {
-    total: 'N/A',
-    past30Days: 'N/A',
-    past12Months: 'N/A',
-    past24Months: 'N/A',
-    recentDate: 'N/A',
-  }
-};
-
-const initialCreditSummary: CreditSummaryOutput = {
-    allAccounts: [],
-};
-
-
-const initialRiskAssessment: RiskAssessmentOutput = {
-  score: 0,
-  level: 'Low',
-  factors: [],
-  mitigations: [],
-  probabilityOfDefault: 0,
-  defaultProbabilityExplanation: '',
-  exposureAtDefault: 0,
-  lossGivenDefault: 0,
-  expectedLoss: 0,
-};
-
-const initialAiAnalysis: AnalyzeCreditReportOutput = {
-  analysis: {
-    strengths: '',
-    weaknesses: '',
-    activeAccounts: '',
-    closedAccounts: '',
-    dpdAnalysis: '',
-    emiAnalysis: '',
-    creditUtilization: '',
-    creditHistoryLength: '',
-    creditMix: '',
+  reportSummary: {
+    accountSummary: {
+      total: 'N/A',
+      zeroBalance: 'N/A',
+      highCredit: 'N/A',
+      currentBalance: 'N/A',
+      overdue: 'N/A',
+      recentDate: 'N/A',
+      oldestDate: 'N/A',
+    },
+    enquirySummary: {
+      total: 'N/A',
+      past30Days: 'N/A',
+      past12Months: 'N/A',
+      past24Months: 'N/A',
+      recentDate: 'N/A',
+    }
   },
-  risk: {
-    score: 0,
-    level: 'Low',
-    factors: [],
-    mitigations: [],
-    probabilityOfDefault: 0,
-    defaultProbabilityExplanation: '',
-    exposureAtDefault: 0,
-    lossGivenDefault: 0,
-    expectedLoss: 0,
-  },
+  allAccounts: [],
 };
 
-const initialCustomerDetails: CustomerDetailsOutput = {
-  name: 'N/A',
-  dateOfBirth: 'N/A',
-  pan: 'N/A',
-  gender: 'N/A',
-  address: 'N/A',
-};
 
 type ActiveView = 
   | 'aiMeter' 
@@ -173,8 +129,8 @@ type ActiveLoanDetail = CalculateTotalEmiOutput['activeLoans'][0] & {
 };
 
 // Pricing for gemini-1.5-flash-latest model per 1M tokens
-const INPUT_PRICE_PER_MILLION_TOKENS = 0.35; // Example price
-const OUTPUT_PRICE_PER_MILLION_TOKENS = 1.05; // Example price
+const INPUT_PRICE_PER_MILLION_TOKENS = 0.35; 
+const OUTPUT_PRICE_PER_MILLION_TOKENS = 1.05; 
 
 const parseCurrency = (currencyString: string): number => {
     if (typeof currencyString !== 'string' || currencyString === '₹NaN') return 0;
@@ -196,18 +152,17 @@ export default function CreditWiseAIPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [creditScore, setCreditScore] = useState<number | null>(null);
-  const [consumerInfo, setConsumerInfo] = useState<CustomerDetailsOutput>(initialCustomerDetails);
-  const [isFetchingConsumerInfo, setIsFetchingConsumerInfo] = useState(false);
-  const [aiAnalysis, setAiAnalysis] = useState<AnalyzeCreditReportOutput | null>(null);
+
+  const [analysisResult, setAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(initialAnalysis);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
   const [totalEmi, setTotalEmi] = useState('');
   const [activeLoanDetails, setActiveLoanDetails] = useState<ActiveLoanDetail[]>([]);
   const [isCalculatingEmi, setIsCalculatingEmi] = useState(false);
   const [otherObligations, setOtherObligations] = useState('');
   const [estimatedIncome, setEstimatedIncome] = useState<string>('');
   const [theme, setTheme] = useState('light');
-  const [reportSummary, setReportSummary] = useState<ReportSummaryOutput>(initialReportSummary);
-  const [isFetchingSummary, setIsFetchingSummary] = useState(false);
+  
   const [aiRating, setAiRating] = useState<AiRatingOutput | null>(null);
   const [isRating, setIsRating] = useState(false);
   const [loanEligibility, setLoanEligibility] = useState<LoanEligibilityOutput | null>(null);
@@ -225,10 +180,6 @@ export default function CreditWiseAIPage() {
   // New state for Financial Risk
   const [financialRisk, setFinancialRisk] = useState<FinancialRiskOutput | null>(null);
   const [isAssessingFinancialRisk, setIsAssessingFinancialRisk] = useState(false);
-
-  // New state for Credit Summary
-  const [creditSummary, setCreditSummary] = useState<CreditSummaryOutput>(initialCreditSummary);
-  const [isFetchingCreditSummary, setIsFetchingCreditSummary] = useState(false);
 
   // New state for token tracking and cost
   const [tokenUsage, setTokenUsage] = useState({ inputTokens: 0, outputTokens: 0 });
@@ -329,18 +280,17 @@ export default function CreditWiseAIPage() {
     setIsLoading(false);
     setProgress(0);
     setCreditScore(null);
-    setConsumerInfo(initialCustomerDetails);
-    setIsFetchingConsumerInfo(false);
-    setAiAnalysis(null);
+    
+    setAnalysisResult(initialAnalysis);
     setIsAnalyzing(false);
+    
     setTotalEmi('');
     setActiveLoanDetails([]);
     setIsCalculatingEmi(false);
     setOtherObligations('');
     setEstimatedIncome('');
     setShowRawText(false);
-    setReportSummary(initialReportSummary);
-    setIsFetchingSummary(false);
+    
     setAiRating(null);
     setIsRating(false);
     setLoanEligibility(null);
@@ -356,9 +306,6 @@ export default function CreditWiseAIPage() {
     setIsAssessingFinancialRisk(false);
     setTokenUsage({ inputTokens: 0, outputTokens: 0 });
     setEstimatedCost(0);
-    setCreditSummary(initialCreditSummary);
-    setIsFetchingCreditSummary(false);
-
 
     if(fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -397,12 +344,9 @@ export default function CreditWiseAIPage() {
           const scoreMatch = normalizedText.match(/(?:CIBIL (?:TRANSUNION )?SCORE|CREDITVISION. SCORE)\s*(\d{3})/i);
           setCreditScore(scoreMatch ? parseInt(scoreMatch[1], 10) : null);
 
-          // Trigger all AI data extractions in parallel
-          handleGetCustomerDetails(textContent);
-          handleGetReportSummary(textContent);
-          handleCalculateTotalEmi(textContent);
+          // Trigger the single, consolidated AI data extraction
           handleAnalyze(textContent);
-          handleGetCreditSummary(textContent); // Also fetch the detailed summary
+          handleCalculateTotalEmi(textContent); // Keep this separate for user interaction
         }
       };
       reader.readAsArrayBuffer(selectedFile);
@@ -418,43 +362,27 @@ export default function CreditWiseAIPage() {
     }
   };
   
-  const handleGetCustomerDetails = async (text: string) => {
+  const handleAnalyze = async (text: string) => {
     if (!text) return;
-    setIsFetchingConsumerInfo(true);
-    setConsumerInfo(initialCustomerDetails);
+    setIsAnalyzing(true);
+    setAnalysisResult(initialAnalysis);
     try {
-      const { output, usage } = await getCustomerDetails({ creditReportText: text });
-      setConsumerInfo(output);
+      const { output, usage } = await analyzeCreditReport({ creditReportText: text });
+      setAnalysisResult(output);
       updateTokenUsage(usage);
+      toast({
+        title: "AI Analysis Complete",
+        description: "Your credit report has been analyzed.",
+      })
     } catch (error: any) {
-      console.error('Error getting AI customer details:', error);
+      console.error('Error analyzing report:', error);
        toast({
         variant: "destructive",
-        title: "AI Details Failed",
-        description: error.message?.includes('429') ? "You've exceeded the daily limit for the AI. Please try again tomorrow." : (error.message || "Could not get AI customer details. Please try again."),
+        title: "Analysis Failed",
+        description: error.message?.includes('429') ? "You've exceeded the daily limit for the AI. Please try again tomorrow." : (error.message || "Could not get AI analysis. Please try again."),
       })
     } finally {
-      setIsFetchingConsumerInfo(false);
-    }
-  };
-
-  const handleGetReportSummary = async (text: string) => {
-    if (!text) return;
-    setIsFetchingSummary(true);
-    setReportSummary(initialReportSummary);
-    try {
-      const { output, usage } = await getReportSummary({ creditReportText: text });
-      setReportSummary(output);
-      updateTokenUsage(usage);
-    } catch (error: any) {
-      console.error('Error getting AI report summary:', error);
-       toast({
-        variant: "destructive",
-        title: "AI Summary Failed",
-        description: error.message?.includes('429') ? "You've exceeded the daily limit for the AI. Please try again tomorrow." : (error.message || "Could not get AI report summary. Please try again."),
-      })
-    } finally {
-      setIsFetchingSummary(false);
+      setIsAnalyzing(false);
     }
   };
     
@@ -486,33 +414,9 @@ export default function CreditWiseAIPage() {
       setIsCalculatingEmi(false);
     }
   };
-
-  const handleAnalyze = async (text: string) => {
-    if (!text) return;
-    setIsAnalyzing(true);
-    setAiAnalysis(null);
-    try {
-      const { output, usage } = await analyzeCreditReport({ creditReportText: text });
-      setAiAnalysis(output);
-      updateTokenUsage(usage);
-      toast({
-        title: "AI Analysis Complete",
-        description: "Your credit report has been analyzed.",
-      })
-    } catch (error: any) {
-      console.error('Error analyzing report:', error);
-       toast({
-        variant: "destructive",
-        title: "Analysis Failed",
-        description: error.message?.includes('429') ? "You've exceeded the daily limit for the AI. Please try again tomorrow." : (error.message || "Could not get AI analysis. Please try again."),
-      })
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
   
   const handleGetAiRating = async () => {
-    if (!rawText || !aiAnalysis) {
+    if (!rawText || !analysisResult) {
       toast({
         variant: "destructive",
         title: "Missing Information",
@@ -522,10 +426,26 @@ export default function CreditWiseAIPage() {
     }
     setIsRating(true);
     setAiRating(null);
+    
+    // We create a temporary risk assessment object here for the ai-rating flow.
+    // In a future step, we might want a dedicated risk flow.
+    const riskAssessmentForRating = {
+        score: 75, // Placeholder, as this should come from a dedicated risk model
+        level: "Medium",
+        factors: [],
+        mitigations: [],
+        probabilityOfDefault: 0,
+        defaultProbabilityExplanation: '',
+        exposureAtDefault: 0,
+        lossGivenDefault: 0,
+        expectedLoss: 0,
+    };
+
+
     try {
       const { output, usage } = await getAiRating({
         creditReportText: rawText,
-        riskAssessment: aiAnalysis.risk,
+        riskAssessment: riskAssessmentForRating,
       });
       setAiRating(output);
       updateTokenUsage(usage);
@@ -619,38 +539,6 @@ export default function CreditWiseAIPage() {
     }
   };
   
-  const handleGetCreditSummary = async (text: string) => {
-    if (!text) {
-      toast({ variant: "destructive", title: "No Report Loaded", description: "Please upload a credit report first."});
-      return;
-    }
-    setIsFetchingCreditSummary(true);
-    setCreditSummary(initialCreditSummary);
-    try {
-      const { output, usage } = await getCreditSummary({
-        creditReportText: text,
-      });
-      setCreditSummary(output);
-      updateTokenUsage(usage);
-      toast({
-        title: 'Credit Summary Generated',
-        description: 'The detailed credit summary is ready.',
-      });
-    } catch (error: any) {
-      console.error('Error getting credit summary:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Credit Summary Failed',
-        description:
-          error.message?.includes('429')
-            ? "You've exceeded the daily limit for the AI. Please try again tomorrow."
-            : error.message || 'Could not generate credit summary.',
-      });
-    } finally {
-      setIsFetchingCreditSummary(false);
-    }
-  };
-
 
   const handleGetUnderwriting = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -725,7 +613,7 @@ export default function CreditWiseAIPage() {
 
   // Perform calculations on the client-side for accuracy
   const calculatedSummary = useMemo(() => {
-    const allAccounts = creditSummary?.allAccounts || [];
+    const allAccounts = analysisResult?.allAccounts || [];
     if (allAccounts.length === 0) {
       return {
         totalAccounts: 0,
@@ -835,7 +723,7 @@ export default function CreditWiseAIPage() {
       debtToLimitRatio,
       creditCardPayments,
     };
-  }, [creditSummary]);
+  }, [analysisResult]);
 
 
   const scoreProgress = creditScore ? (creditScore - 300) / 6 : 0;
@@ -945,18 +833,17 @@ export default function CreditWiseAIPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {isFetchingCreditSummary ? (
+            {isAnalyzing ? (
               <div className="flex items-center justify-center py-10">
                 <Loader2 className="mr-3 h-8 w-8 animate-spin text-primary" />
-                <span className="text-muted-foreground">AI is analyzing your report...</span>
+                <span className="text-muted-foreground">AI is extracting report data...</span>
               </div>
-            ) : creditSummary.allAccounts.length > 0 && (
+            ) : analysisResult && analysisResult.allAccounts.length > 0 && (
                 <div className="space-y-8">
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                     <SummaryItem label="Total Accounts" value={calculatedSummary.totalAccounts} valueClassName="text-foreground" />
                     <SummaryItem label="Total Credit Limit" value={`₹${calculatedSummary.totalCreditLimit.toLocaleString('en-IN')}`} valueClassName="text-foreground" />
                     <SummaryItem label="Total Outstanding" value={`₹${calculatedSummary.totalOutstanding.toLocaleString('en-IN')}`} valueClassName="text-destructive" />
-                    <SummaryItem label="Total Debt" value={`₹${calculatedSummary.totalOutstanding.toLocaleString('en-IN')}`} valueClassName="text-destructive" />
                     <SummaryItem label="Credit Utilization" value={calculatedSummary.creditUtilization} valueClassName="text-foreground" />
                     <SummaryItem label="Debt-to-Limit Ratio" value={calculatedSummary.debtToLimitRatio} valueClassName="text-foreground" />
                     <SummaryItem label="Active Accounts" value={calculatedSummary.activeAccounts} valueClassName="text-green-600" />
@@ -965,8 +852,6 @@ export default function CreditWiseAIPage() {
                     <SummaryItem label="Settled" value={calculatedSummary.settled} valueClassName="text-orange-500" />
                     <SummaryItem label="Doubtful" value={calculatedSummary.doubtful} valueClassName="text-destructive" />
                     <SummaryItem label="Total Monthly EMI" value={`₹${calculatedSummary.totalMonthlyEMI.toLocaleString('en-IN')}`} valueClassName="text-foreground" />
-                    <SummaryItem label="Max Single EMI" value={`₹${calculatedSummary.maxSingleEMI.toLocaleString('en-IN')}`} valueClassName="text-foreground" />
-                    <SummaryItem label="Credit Card Payments" value={`₹${calculatedSummary.creditCardPayments.toLocaleString('en-IN')}`} valueClassName="text-foreground" />
                   </div>
 
                   {calculatedSummary.dpd && (
@@ -986,7 +871,7 @@ export default function CreditWiseAIPage() {
                     </Card>
                   )}
                   
-                  {creditSummary.allAccounts && creditSummary.allAccounts.length > 0 && (
+                  {analysisResult.allAccounts && analysisResult.allAccounts.length > 0 && (
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center">
@@ -1010,7 +895,7 @@ export default function CreditWiseAIPage() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {creditSummary.allAccounts.map((account, index) => (
+                            {analysisResult.allAccounts.map((account, index) => (
                               <TableRow key={index}>
                                 <TableCell className="font-semibold">{account.type}</TableCell>
                                 <TableCell>{account.ownership}</TableCell>
@@ -1042,7 +927,7 @@ export default function CreditWiseAIPage() {
             <CardDescription>This AI acts as a holistic credit advisor. It provides a comprehensive score of your overall credit health by balancing both the positive and negative factors in your report.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={handleGetAiRating} disabled={isRating || !aiAnalysis}>
+            <Button onClick={handleGetAiRating} disabled={isRating || !analysisResult}>
               {isRating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
               Get AI Rating
             </Button>
@@ -1172,72 +1057,7 @@ export default function CreditWiseAIPage() {
                 <CardDescription>An AI-generated breakdown of your credit strengths and weaknesses.</CardDescription>
             </CardHeader>
              <CardContent>
-              {isAnalyzing && !aiAnalysis?.analysis ? (
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    <span>AI is performing a detailed analysis of your report...</span>
-                  </div>
-              ) : (
-                aiAnalysis?.analysis && (
-                  <Card className="mt-6 bg-muted/50">
-                    <CardContent className="pt-6 space-y-6">
-                      <div className="prose prose-sm dark:prose-invert max-w-none">
-                          <h3>Strengths in CIBIL</h3>
-                          <p>{aiAnalysis.analysis.strengths}</p>
-                          <hr />
-                          <h3>Weaknesses in CIBIL</h3>
-                          <p>{aiAnalysis.analysis.weaknesses}</p>
-                          <hr />
-                          <h3>Active Accounts Analysis</h3>
-                          <p>{aiAnalysis.analysis.activeAccounts}</p>
-                          <hr />
-                          <h3>Closed Accounts Analysis</h3>
-                          <p>{aiAnalysis.analysis.closedAccounts}</p>
-                          <hr />
-                          <h3>DPD (Days Past Due) Analysis</h3>
-                          <p>{aiAnalysis.analysis.dpdAnalysis}</p>
-                          <hr />
-                          <h3>EMI Paying for Loan Analysis</h3>
-                          <p>{aiAnalysis.analysis.emiAnalysis}</p>
-                          <hr />
-                          <h3>Credit Utilization</h3>
-                          <p>{aiAnalysis.analysis.creditUtilization}</p>
-                          <hr />
-                          <h3>Credit History Length</h3>
-                          <p>{aiAnalysis.analysis.creditHistoryLength}</p>
-                          <hr />
-                          <h3>Credit Mix</h3>
-                          <p>{aiAnalysis.analysis.creditMix}</p>
-                      </div>
-                      
-                      <div className="mt-8 space-y-6">
-                        <h3 className="text-xl font-semibold border-b pb-2">Risk Analysis</h3>
-                        <div className={cn('p-4 rounded-lg border-l-4', getRiskColorClass(aiAnalysis.risk.level))}>
-                            <h4 className="font-bold text-lg">{aiAnalysis.risk.level} Risk</h4>
-                            <p className="text-sm">Your AI-assessed credit risk score is <strong>{aiAnalysis.risk.score}/100</strong>. A higher score indicates lower risk.</p>
-                        </div>
-
-                        {aiAnalysis.risk.factors.length > 0 && (
-                            <div>
-                                <h5 className="font-semibold mb-2">Key Risk Factors:</h5>
-                                <ul className="list-disc list-inside space-y-1 text-sm">
-                                    {aiAnalysis.risk.factors.map((factor, i) => <li key={i}><strong>{factor.factor} ({factor.severity} risk):</strong> {factor.details}</li>)}
-                                </ul>
-                            </div>
-                        )}
-                        {aiAnalysis.risk.mitigations.length > 0 && (
-                            <div>
-                                <h5 className="font-semibold mb-2">Risk Mitigation Strategies:</h5>
-                                <ul className="list-disc list-inside space-y-1 text-sm">
-                                    {aiAnalysis.risk.mitigations.map((m, i) => <li key={i}><strong>{m.factor}:</strong> {m.action}</li>)}
-                                </ul>
-                            </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              )}
+                <p>This feature is currently under development. The full analysis will be re-integrated in a future step.</p>
             </CardContent>
         </Card>
       ),
@@ -1573,6 +1393,8 @@ export default function CreditWiseAIPage() {
     };
     return views[activeView!];
   };
+  
+  const { customerDetails, reportSummary } = analysisResult || initialAnalysis;
 
   return (
     <div className={cn("min-h-screen bg-background font-body text-foreground", theme)}>
@@ -1707,8 +1529,8 @@ export default function CreditWiseAIPage() {
                   </CardHeader>
                   <CardContent>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-b pb-4 mb-4">
-                          <InfoItem label="Name" value={consumerInfo.name} isLoading={isFetchingConsumerInfo}/>
-                          <InfoItem label="PAN" value={consumerInfo.pan} isLoading={isFetchingConsumerInfo}/>
+                          <InfoItem label="Name" value={customerDetails.name} isLoading={isAnalyzing}/>
+                          <InfoItem label="PAN" value={customerDetails.pan} isLoading={isAnalyzing}/>
                            <div className={cn("font-semibold text-lg p-2 rounded-md text-center", getUnderwritingDecisionColor(underwritingResult.underwritingDecision))}>
                                 Decision: {underwritingResult.underwritingDecision}
                            </div>
@@ -1716,7 +1538,7 @@ export default function CreditWiseAIPage() {
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                           <SummaryItem label="CIBIL Score" value={creditScore || 'N/A'} valueClassName="text-primary" />
                           <SummaryItem label="AI Credit Score" value={aiRating?.aiScore || 'N/A'} valueClassName={getRatingColorClass(aiRating?.rating || '')} />
-                          <SummaryItem label="Risk Score" value={aiAnalysis?.risk.score || 'N/A'} valueClassName={getRiskColorClass(aiAnalysis?.risk.level || 'Low', 'text')} />
+                          <SummaryItem label="Risk Score" value={'N/A'} valueClassName={'text-foreground'} />
                           <SummaryItem label="Approved Amount" value={`₹${underwritingResult.approvedLoanAmount.toLocaleString('en-IN')}`} />
                           <SummaryItem label="Interest Rate" value={`${underwritingResult.recommendedInterestRate}`} />
                           <SummaryItem label="Tenure" value={`${underwritingResult.recommendedTenure} months`} />
@@ -1752,18 +1574,18 @@ export default function CreditWiseAIPage() {
                               <h4 className="font-semibold mb-4">AI-Extracted Consumer Information</h4>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
                                 <div>
-                                    <InfoItem label="Name" value={consumerInfo.name} isLoading={isFetchingConsumerInfo}/>
+                                    <InfoItem label="Name" value={customerDetails.name} isLoading={isAnalyzing}/>
                                     <div className="mt-2">
-                                        <InfoItem label="Date of Birth" value={consumerInfo.dateOfBirth} isLoading={isFetchingConsumerInfo}/>
+                                        <InfoItem label="Date of Birth" value={customerDetails.dateOfBirth} isLoading={isAnalyzing}/>
                                     </div>
                                     <div className="mt-2">
-                                        <InfoItem label="Gender" value={consumerInfo.gender} isLoading={isFetchingConsumerInfo}/>
+                                        <InfoItem label="Gender" value={customerDetails.gender} isLoading={isAnalyzing}/>
                                     </div>
                                 </div>
                                 <div>
-                                    <InfoItem label="PAN" value={consumerInfo.pan} isLoading={isFetchingConsumerInfo}/>
+                                    <InfoItem label="PAN" value={customerDetails.pan} isLoading={isAnalyzing}/>
                                     <div className="mt-2">
-                                        <InfoItem label="Address" value={consumerInfo.address} isLoading={isFetchingConsumerInfo}/>
+                                        <InfoItem label="Address" value={customerDetails.address} isLoading={isAnalyzing}/>
                                     </div>
                                 </div>
                               </div>
@@ -1780,23 +1602,23 @@ export default function CreditWiseAIPage() {
                         <div>
                             <h3 className="font-semibold text-lg mb-2 border-b pb-1">Account Summary</h3>
                             <div className="grid grid-cols-2 gap-4">
-                                <SummaryItem isLoading={isFetchingSummary} label="Total Accounts" value={reportSummary.accountSummary.total} valueClassName="text-foreground" />
-                                <SummaryItem isLoading={isFetchingSummary} label="Zero-Balance" value={reportSummary.accountSummary.zeroBalance} valueClassName="text-foreground" />
-                                <SummaryItem isLoading={isFetchingSummary} label="High Credit/Sanc. Amt" value={reportSummary.accountSummary.highCredit} valueClassName="text-foreground" />
-                                <SummaryItem isLoading={isFetchingSummary} label="Current Balance" value={reportSummary.accountSummary.currentBalance} valueClassName="text-destructive" />
-                                <SummaryItem isLoading={isFetchingSummary} label="Overdue Amount" value={reportSummary.accountSummary.overdue} valueClassName="text-destructive" />
-                                <SummaryItem isLoading={isFetchingSummary} label="Most Recent Account" value={reportSummary.accountSummary.recentDate} valueClassName="text-foreground" />
-                                <SummaryItem isLoading={isFetchingSummary} label="Oldest Account" value={reportSummary.accountSummary.oldestDate} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isAnalyzing} label="Total Accounts" value={reportSummary.accountSummary.total} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isAnalyzing} label="Zero-Balance" value={reportSummary.accountSummary.zeroBalance} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isAnalyzing} label="High Credit/Sanc. Amt" value={reportSummary.accountSummary.highCredit} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isAnalyzing} label="Current Balance" value={reportSummary.accountSummary.currentBalance} valueClassName="text-destructive" />
+                                <SummaryItem isLoading={isAnalyzing} label="Overdue Amount" value={reportSummary.accountSummary.overdue} valueClassName="text-destructive" />
+                                <SummaryItem isLoading={isAnalyzing} label="Most Recent Account" value={reportSummary.accountSummary.recentDate} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isAnalyzing} label="Oldest Account" value={reportSummary.accountSummary.oldestDate} valueClassName="text-foreground" />
                             </div>
                         </div>
                         <div>
                             <h3 className="font-semibold text-lg mb-2 border-b pb-1">Enquiry Summary</h3>
                              <div className="grid grid-cols-2 gap-4">
-                                <SummaryItem isLoading={isFetchingSummary} label="Total Enquiries" value={reportSummary.enquirySummary.total} valueClassName="text-foreground" />
-                                <SummaryItem isLoading={isFetchingSummary} label="Last 30 Days" value={reportSummary.enquirySummary.past30Days} valueClassName="text-foreground" />
-                                <SummaryItem isLoading={isFetchingSummary} label="Last 12 Months" value={reportSummary.enquirySummary.past12Months} valueClassName="text-foreground" />
-                                <SummaryItem isLoading={isFetchingSummary} label="Last 24 Months" value={reportSummary.enquirySummary.past24Months} valueClassName="text-foreground" />
-                                <SummaryItem isLoading={isFetchingSummary} label="Most Recent Enquiry" value={reportSummary.enquirySummary.recentDate} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isAnalyzing} label="Total Enquiries" value={reportSummary.enquirySummary.total} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isAnalyzing} label="Last 30 Days" value={reportSummary.enquirySummary.past30Days} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isAnalyzing} label="Last 12 Months" value={reportSummary.enquirySummary.past12Months} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isAnalyzing} label="Last 24 Months" value={reportSummary.enquirySummary.past24Months} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isAnalyzing} label="Most Recent Enquiry" value={reportSummary.enquirySummary.recentDate} valueClassName="text-foreground" />
                             </div>
                         </div>
                     </CardContent>
@@ -1809,9 +1631,9 @@ export default function CreditWiseAIPage() {
                       <CardDescription>Select a section to view its detailed analysis. Some sections require previous steps to be completed.</CardDescription>
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                      <NavButton view="creditSummary" label="Credit Summary" icon={<LayoutGrid size={24} />} onClick={() => { if(creditSummary.allAccounts.length === 0) handleGetCreditSummary(rawText) }} />
+                      <NavButton view="creditSummary" label="Credit Summary" icon={<LayoutGrid size={24} />} />
                       <NavButton view="aiAnalysis" label="AI Report Analysis" icon={<BrainCircuit size={24} />} />
-                      <NavButton view="aiMeter" label="AI Credit Meter" icon={<Bot size={24} />} disabled={!aiAnalysis}/>
+                      <NavButton view="aiMeter" label="AI Credit Meter" icon={<Bot size={24} />} disabled={!analysisResult}/>
                       <NavButton view="incomeEstimator" label="Financials & Obligations" icon={<Calculator size={24} />} />
                       <NavButton view="loanEligibility" label="AI Loan Eligibility" icon={<Banknote size={24} />} disabled={!aiRating || !estimatedIncome} />
                       <NavButton view="financialRisk" label="AI Financial Risk" icon={<BadgeCent size={24} />} disabled={!estimatedIncome}/>
