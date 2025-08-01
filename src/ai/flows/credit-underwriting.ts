@@ -114,7 +114,7 @@ const prompt = ai.definePrompt({
   name: 'creditUnderwritingPrompt',
   input: {schema: CreditUnderwritingInputSchema},
   output: {schema: CreditUnderwritingOutputSchema},
-  model: 'googleai/gemini-1.5-flash-latest',
+  model: 'googleai/gemini-pro',
   prompt: `You are a senior credit underwriter for a major bank in India. Your task is to perform a final, comprehensive underwriting analysis and provide a definitive overall rating for the profile. You must act like a real, prudent underwriter.
 
 **CRITICAL RULES:**
