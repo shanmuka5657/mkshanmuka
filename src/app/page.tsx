@@ -375,7 +375,7 @@ export default function CreditWiseAIPage() {
        toast({
         variant: "destructive",
         title: "AI Risk Assessment Failed",
-        description: error.message?.includes('503') ? "The AI model is currently overloaded. Please try again in a moment." : (error.message || "Could not get AI risk assessment. Please try again."),
+        description: error.message?.includes('429') ? "You've exceeded the daily limit for the AI. Please try again tomorrow." : (error.message || "Could not get AI risk assessment. Please try again."),
       })
     } finally {
       setIsAssessingRisk(false);
@@ -395,7 +395,7 @@ export default function CreditWiseAIPage() {
       toast({
         variant: "destructive",
         title: "AI EMI Calculation Failed",
-        description: error.message?.includes('503') ? "The AI model is currently overloaded. Please try again in a moment." : (error.message || "Could not calculate total EMI. Please try again."),
+        description: error.message?.includes('429') ? "You've exceeded the daily limit for the AI. Please try again tomorrow." : (error.message || "Could not calculate total EMI. Please try again."),
       })
     } finally {
       setIsCalculatingEmi(false);
@@ -486,7 +486,7 @@ export default function CreditWiseAIPage() {
        toast({
         variant: "destructive",
         title: "Analysis Failed",
-        description: error.message?.includes('503') ? "The AI model is currently overloaded. Please try again in a moment." : (error.message || "Could not get AI analysis. Please try again."),
+        description: error.message?.includes('429') ? "You've exceeded the daily limit for the AI. Please try again tomorrow." : (error.message || "Could not get AI analysis. Please try again."),
       })
     } finally {
       setIsAnalyzing(false);
@@ -519,7 +519,7 @@ export default function CreditWiseAIPage() {
        toast({
         variant: "destructive",
         title: "AI Rating Failed",
-        description: error.message?.includes('503') ? "The AI model is currently overloaded. Please try again in a moment." : (error.message || "Could not get AI rating. Please try again."),
+        description: error.message?.includes('429') ? "You've exceeded the daily limit for the AI. Please try again tomorrow." : (error.message || "Could not get AI rating. Please try again."),
       })
     } finally {
       setIsRating(false);
@@ -546,7 +546,7 @@ export default function CreditWiseAIPage() {
        toast({
         variant: "destructive",
         title: "Failed to get suggestions",
-        description: error.message?.includes('503') ? "The AI model is currently overloaded. Please try again in a moment." : (error.message || "Could not get AI suggestions. Please try again."),
+        description: error.message?.includes('429') ? "You've exceeded the daily limit for the AI. Please try again tomorrow." : (error.message || "Could not get AI suggestions. Please try again."),
       })
     } finally {
       setIsSuggesting(false);
@@ -582,7 +582,7 @@ export default function CreditWiseAIPage() {
         setAiDebtAdvice(result.advice);
     } catch (error: any) {
        console.error('Error getting debt advice:', error);
-       toast({ variant: "destructive", title: "Failed to get advice", description: error.message?.includes('503') ? "The AI model is currently overloaded. Please try again in a moment." : (error.message || "Could not get AI debt advice. Please try again.")})
+       toast({ variant: "destructive", title: "Failed to get advice", description: error.message?.includes('429') ? "You've exceeded the daily limit for the AI. Please try again tomorrow." : (error.message || "Could not get AI debt advice. Please try again.")})
     } finally {
         setIsAdvising(false);
     }
@@ -619,7 +619,7 @@ export default function CreditWiseAIPage() {
         variant: 'destructive',
         title: 'Eligibility Calculation Failed',
         description:
-          error.message?.includes('503') ? "The AI model is currently overloaded. Please try again in a moment." : (error.message || 'Could not calculate your loan eligibility. Please try again.'),
+          error.message?.includes('429') ? "You've exceeded the daily limit for the AI. Please try again tomorrow." : (error.message || 'Could not calculate your loan eligibility. Please try again.'),
       });
     } finally {
       setIsCalculatingEligibility(false);
@@ -682,7 +682,7 @@ export default function CreditWiseAIPage() {
       toast({
         variant: 'destructive',
         title: 'Underwriting Failed',
-        description: error.message?.includes('503') ? "The AI model is currently overloaded. Please try again in a moment." : (error.message || 'Could not get underwriting details. Please try again.'),
+        description: error.message?.includes('429') ? "You've exceeded the daily limit for the AI. Please try again tomorrow." : (error.message || 'Could not get underwriting details. Please try again.'),
       });
     } finally {
       setIsUnderwriting(false);
@@ -716,7 +716,7 @@ export default function CreditWiseAIPage() {
       toast({
         variant: 'destructive',
         title: 'Financial Risk Assessment Failed',
-        description: error.message?.includes('503') ? "The AI model is currently overloaded. Please try again in a moment." : (error.message || 'Could not get financial risk details. Please try again.'),
+        description: error.message?.includes('429') ? "You've exceeded the daily limit for the AI. Please try again tomorrow." : (error.message || 'Could not get financial risk details. Please try again.'),
       });
     } finally {
       setIsAssessingFinancialRisk(false);
@@ -927,7 +927,7 @@ export default function CreditWiseAIPage() {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-b pb-4 mb-4">
                           <div><span className="font-semibold">Name:</span> {consumerInfo['Name'] || 'N/A'}</div>
                           <div><span className="font-semibold">PAN:</span> {consumerInfo['PAN'] || 'N/A'}</div>
-                           <div className={cn("font-semibold text-lg", getUnderwritingDecisionColor(underwritingResult.underwritingDecision))}>
+                           <div className={cn("font-semibold text-lg p-2 rounded-md text-center", getUnderwritingDecisionColor(underwritingResult.underwritingDecision))}>
                                 Decision: {underwritingResult.underwritingDecision}
                            </div>
                       </div>
@@ -1106,7 +1106,7 @@ export default function CreditWiseAIPage() {
                                 </p>
                                 <p className="text-muted-foreground text-sm">
                                     at an estimated interest rate of{' '}
-                                    <strong>{loanEligibility.estimatedInterestRate}% p.a.</strong>
+                                    <strong>{loanEligibility.estimatedInterestRate}</strong>
                                 </p>
                                 </div>
                                 <div className="md:col-span-2">
@@ -1673,8 +1673,3 @@ export default function CreditWiseAIPage() {
     </div>
   );
 }
-
-    
-
-    
-
