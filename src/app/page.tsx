@@ -40,6 +40,7 @@ import {
   Clock,
   Coins,
   LayoutGrid,
+  Pencil,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -120,6 +121,7 @@ const initialCreditSummary: CreditSummaryOutput = {
     maxSingleEMI: 0,
     creditCardPayments: 0,
     flaggedAccounts: [],
+    allAccounts: [],
 };
 
 
@@ -226,7 +228,7 @@ export default function CreditWiseAIPage() {
   const [isAssessingFinancialRisk, setIsAssessingFinancialRisk] = useState(false);
 
   // New state for Credit Summary
-  const [creditSummary, setCreditSummary] = useState<CreditSummaryOutput | null>(null);
+  const [creditSummary, setCreditSummary] = useState<CreditSummaryOutput>(initialCreditSummary);
   const [isFetchingCreditSummary, setIsFetchingCreditSummary] = useState(false);
 
   // New state for token tracking and cost
@@ -354,7 +356,7 @@ export default function CreditWiseAIPage() {
     setIsAssessingFinancialRisk(false);
     setTokenUsage({ inputTokens: 0, outputTokens: 0 });
     setEstimatedCost(0);
-    setCreditSummary(null);
+    setCreditSummary(initialCreditSummary);
     setIsFetchingCreditSummary(false);
 
 
@@ -624,7 +626,7 @@ export default function CreditWiseAIPage() {
       return;
     }
     setIsFetchingCreditSummary(true);
-    setCreditSummary(null);
+    setCreditSummary(initialCreditSummary);
     try {
       const { output, usage } = await getCreditSummary({
         creditReportText: rawText,
@@ -821,9 +823,26 @@ export default function CreditWiseAIPage() {
                 <span className="text-muted-foreground">AI is analyzing your report...</span>
               </div>
             ) : creditSummary && (
-                <>
+                <div className="space-y-8">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <SummaryItem label="Total Accounts" value={creditSummary.totalAccounts} valueClassName="text-foreground" />
+                    <SummaryItem label="Total Credit Limit" value={`₹${creditSummary.totalCreditLimit.toLocaleString('en-IN')}`} valueClassName="text-foreground" />
+                    <SummaryItem label="Total Outstanding" value={`₹${creditSummary.totalOutstanding.toLocaleString('en-IN')}`} valueClassName="text-destructive" />
+                    <SummaryItem label="Total Debt" value={`₹${creditSummary.totalDebt.toLocaleString('en-IN')}`} valueClassName="text-destructive" />
+                    <SummaryItem label="Credit Utilization" value={creditSummary.creditUtilization} valueClassName="text-foreground" />
+                    <SummaryItem label="Debt-to-Limit Ratio" value={creditSummary.debtToLimitRatio} valueClassName="text-foreground" />
+                    <SummaryItem label="Active Accounts" value={creditSummary.activeAccounts} valueClassName="text-green-600" />
+                    <SummaryItem label="Closed Accounts" value={creditSummary.closedAccounts} valueClassName="text-foreground" />
+                    <SummaryItem label="Written Off" value={creditSummary.writtenOff} valueClassName="text-destructive" />
+                    <SummaryItem label="Settled" value={creditSummary.settled} valueClassName="text-orange-500" />
+                    <SummaryItem label="Doubtful" value={creditSummary.doubtful} valueClassName="text-destructive" />
+                    <SummaryItem label="Total Monthly EMI" value={`₹${creditSummary.totalMonthlyEMI.toLocaleString('en-IN')}`} valueClassName="text-foreground" />
+                    <SummaryItem label="Max Single EMI" value={`₹${creditSummary.maxSingleEMI.toLocaleString('en-IN')}`} valueClassName="text-foreground" />
+                    <SummaryItem label="Credit Card Payments" value={`₹${creditSummary.creditCardPayments.toLocaleString('en-IN')}`} valueClassName="text-foreground" />
+                  </div>
+
                   {creditSummary.flaggedAccounts && creditSummary.flaggedAccounts.length > 0 && (
-                    <Card className="mb-6 border-destructive bg-destructive/5">
+                    <Card className="border-destructive bg-destructive/5">
                         <CardHeader>
                           <CardTitle className="flex items-center text-destructive">
                             <Flag className="mr-3 h-6 w-6" /> Flagged Accounts
@@ -859,23 +878,51 @@ export default function CreditWiseAIPage() {
                     </Card>
                   )}
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                    <SummaryItem label="Total Accounts" value={creditSummary.totalAccounts} valueClassName="text-foreground" />
-                    <SummaryItem label="Total Credit Limit" value={`₹${creditSummary.totalCreditLimit.toLocaleString('en-IN')}`} valueClassName="text-foreground" />
-                    <SummaryItem label="Total Outstanding" value={`₹${creditSummary.totalOutstanding.toLocaleString('en-IN')}`} valueClassName="text-destructive" />
-                    <SummaryItem label="Total Debt" value={`₹${creditSummary.totalDebt.toLocaleString('en-IN')}`} valueClassName="text-destructive" />
-                    <SummaryItem label="Credit Utilization" value={creditSummary.creditUtilization} valueClassName="text-foreground" />
-                    <SummaryItem label="Debt-to-Limit Ratio" value={creditSummary.debtToLimitRatio} valueClassName="text-foreground" />
-                    <SummaryItem label="Active Accounts" value={creditSummary.activeAccounts} valueClassName="text-green-600" />
-                    <SummaryItem label="Closed Accounts" value={creditSummary.closedAccounts} valueClassName="text-foreground" />
-                    <SummaryItem label="Written Off" value={creditSummary.writtenOff} valueClassName="text-destructive" />
-                    <SummaryItem label="Settled" value={creditSummary.settled} valueClassName="text-orange-500" />
-                    <SummaryItem label="Doubtful" value={creditSummary.doubtful} valueClassName="text-destructive" />
-                    <SummaryItem label="Total Monthly EMI" value={`₹${creditSummary.totalMonthlyEMI.toLocaleString('en-IN')}`} valueClassName="text-foreground" />
-                    <SummaryItem label="Max Single EMI" value={`₹${creditSummary.maxSingleEMI.toLocaleString('en-IN')}`} valueClassName="text-foreground" />
-                    <SummaryItem label="Credit Card Payments" value={`₹${creditSummary.creditCardPayments.toLocaleString('en-IN')}`} valueClassName="text-foreground" />
-                  </div>
-                </>
+                  {creditSummary.allAccounts && creditSummary.allAccounts.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center">
+                          <Pencil className="mr-3 h-5 w-5" /> Account Details
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Type</TableHead>
+                              <TableHead>Ownership</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Sanctioned</TableHead>
+                              <TableHead>Outstanding</TableHead>
+                              <TableHead>Overdue</TableHead>
+                              <TableHead>EMI</TableHead>
+                              <TableHead>Opened</TableHead>
+                              <TableHead>Closed</TableHead>
+                              <TableHead>Payment History</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {creditSummary.allAccounts.map((account, index) => (
+                              <TableRow key={index}>
+                                <TableCell className="font-semibold">{account.type}</TableCell>
+                                <TableCell>{account.ownership}</TableCell>
+                                <TableCell>{account.status}</TableCell>
+                                <TableCell>{account.sanctioned}</TableCell>
+                                <TableCell>{account.outstanding}</TableCell>
+                                <TableCell>{account.overdue}</TableCell>
+                                <TableCell>{account.emi}</TableCell>
+                                <TableCell>{account.opened}</TableCell>
+                                <TableCell>{account.closed}</TableCell>
+                                <TableCell className="text-xs truncate max-w-xs">{account.paymentHistory}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                </div>
             )}
           </CardContent>
         </Card>
