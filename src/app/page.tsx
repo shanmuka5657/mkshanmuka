@@ -231,7 +231,7 @@ export default function CreditWiseAIPage() {
   useEffect(() => {
     const newTotalEmi = activeLoanDetails
       .filter(loan => loan.considerForObligation === 'Yes')
-      .reduce((sum, loan) => sum + loan.emi, 0);
+      .reduce((sum, loan) => sum + (loan.emi || 0), 0);
     setTotalEmi(newTotalEmi.toString());
   }, [activeLoanDetails]);
 
@@ -725,12 +725,12 @@ export default function CreditWiseAIPage() {
     }
   };
 
-  const handleLoanDetailChange = (id: string, field: 'considerForObligation' | 'comment', value: string) => {
-    setActiveLoanDetails(prevDetails =>
-        prevDetails.map(loan =>
-            loan.id === id ? { ...loan, [field]: value } : loan
-        )
-    );
+  const handleLoanDetailChange = (id: string, field: 'considerForObligation' | 'comment' | 'emi', value: string | number) => {
+      setActiveLoanDetails(prevDetails =>
+          prevDetails.map(loan =>
+              loan.id === id ? { ...loan, [field]: value } : loan
+          )
+      );
   };
 
   const scoreProgress = creditScore ? (creditScore - 300) / 6 : 0;
@@ -808,7 +808,7 @@ export default function CreditWiseAIPage() {
   const renderActiveView = () => {
     if (!activeView) return null;
 
-    const views: { [key in ActiveView]: React.ReactNode } = {
+    const views: { [key in NonNullable<ActiveView>]: React.ReactNode } = {
       aiMeter: (
         <Card>
           <CardHeader>
@@ -1330,7 +1330,7 @@ export default function CreditWiseAIPage() {
             <div>
               <Label htmlFor="total-emi">Total Monthly Loan EMI</Label>
               <div className="flex items-center gap-2">
-                <Input id="total-emi" type="number" placeholder="AI is calculating..." value={totalEmi} onChange={(e) => setTotalEmi(e.target.value)} disabled={isCalculatingEmi} />
+                <Input id="total-emi" type="number" placeholder="AI is calculating..." value={totalEmi} onChange={(e) => setTotalEmi(e.target.value)} disabled />
                 {isCalculatingEmi && <Loader2 className="h-5 w-5 animate-spin" />}
               </div>
               <p className="text-xs text-muted-foreground mt-1">This is auto-calculated from your report and your selections below. You can override it.</p>
@@ -1344,6 +1344,7 @@ export default function CreditWiseAIPage() {
                             <TableRow>
                                 <TableHead>Loan Details</TableHead>
                                 <TableHead>Amounts</TableHead>
+                                <TableHead>Monthly EMI (₹)</TableHead>
                                 <TableHead>Include in EMI?</TableHead>
                                 <TableHead>Comments</TableHead>
                             </TableRow>
@@ -1356,16 +1357,24 @@ export default function CreditWiseAIPage() {
                                         <p className="text-xs text-muted-foreground">{loan.ownership}</p>
                                     </TableCell>
                                     <TableCell>
-                                        <p>EMI: ₹{loan.emi.toLocaleString('en-IN')}</p>
                                         <p className="text-xs">Balance: ₹{loan.currentBalance.toLocaleString('en-IN')}</p>
                                         <p className="text-xs">Sanctioned: ₹{loan.sanctionedAmount.toLocaleString('en-IN')}</p>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Input
+                                            type="number"
+                                            value={loan.emi}
+                                            onChange={(e) => handleLoanDetailChange(loan.id, 'emi', parseInt(e.target.value) || 0)}
+                                            className="h-8 w-28"
+                                            placeholder="Enter EMI"
+                                        />
                                     </TableCell>
                                     <TableCell>
                                         <Select
                                             value={loan.considerForObligation}
                                             onValueChange={(value: 'Yes' | 'No') => handleLoanDetailChange(loan.id, 'considerForObligation', value)}
                                         >
-                                            <SelectTrigger>
+                                            <SelectTrigger className="h-8 w-24">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>

@@ -51,9 +51,11 @@ const prompt = ai.definePrompt({
 1.  Go through the "ACCOUNT INFORMATION" or "ACCOUNT DETAILS" section of the report.
 2.  For each account, look for fields like "Account Type", "Ownership", "Sanctioned Amount", "Current Balance", and "EMI Amount" (or "Instalment Amount").
 3.  Only consider accounts that appear to be active loans (e.g., Personal Loan, Auto Loan, Home Loan, Credit Card). Ignore closed accounts.
-4.  Extract the requested details for each active loan and add it to the 'activeLoans' array.
-5.  Sum up the EMI amounts for all extracted active loans to get the 'totalEmi'.
-6.  If you cannot find any EMI information, return 0 for totalEmi and an empty array for activeLoans.
+4.  **Special Rule for Credit Cards:** For accounts of type 'Credit Card', if a specific 'EMI Amount' is not present, you MUST look for the 'Minimum Amount Due' and use that value for the 'emi' field. If neither is present, use 0.
+5.  **Handling Zero EMI:** If for any loan type, the EMI amount is explicitly '0' or not mentioned (and it's not a credit card), extract it as 0. The user will have a chance to correct this.
+6.  Extract the requested details for each active loan and add it to the 'activeLoans' array.
+7.  Sum up the EMI amounts for all extracted active loans to get the 'totalEmi'.
+8.  If you cannot find any EMI information, return 0 for totalEmi and an empty array for activeLoans.
 
 **Credit Report Text:**
 \`\`\`
