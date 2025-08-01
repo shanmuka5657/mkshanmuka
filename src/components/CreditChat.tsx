@@ -19,7 +19,7 @@ interface DisplayMessage {
   mediaDataUri?: string; // Keep original data for history
 }
 
-export function ShanAIChat({ cibilReportText }: { cibilReportText?: string }) {
+export function ShanAIChat({ cibilReportText, onNewChat }: { cibilReportText?: string, onNewChat?: () => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
@@ -39,6 +39,15 @@ export function ShanAIChat({ cibilReportText }: { cibilReportText?: string }) {
         }
     }
   }, [messages, isOpen, isMinimized]);
+
+  // When a new report is loaded, clear the chat history.
+  useEffect(() => {
+    if (cibilReportText && messages.length > 0) {
+      setMessages([]);
+      onNewChat?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cibilReportText]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

@@ -11,6 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import type { FlowUsage } from 'genkit/flow';
 
 const RiskAssessmentInputSchema = z.object({
   creditReportText: z
@@ -19,7 +20,7 @@ const RiskAssessmentInputSchema = z.object({
 });
 export type RiskAssessmentInput = z.infer<typeof RiskAssessmentInputSchema>;
 
-const RiskAssessmentOutputSchema = z.object({
+export const RiskAssessmentOutputSchema = z.object({
   score: z.number().describe('A risk score from 0 to 100, where 100 is lowest risk.'),
   level: z
     .enum(['Low', 'Medium', 'High'])
@@ -49,7 +50,7 @@ export type RiskAssessmentOutput = z.infer<typeof RiskAssessmentOutputSchema>;
 
 export async function getRiskAssessment(
   input: RiskAssessmentInput
-): Promise<RiskAssessmentOutput> {
+): Promise<{ output: RiskAssessmentOutput, usage: FlowUsage }> {
   return riskAssessmentFlow(input);
 }
 
@@ -71,7 +72,7 @@ Based on your analysis, generate a comprehensive risk assessment.
 - **defaultProbabilityExplanation**: Provide a detailed, multi-sentence explanation for the 'probabilityOfDefault' score. Explain which specific factors (e.g., past DPD, high utilization, frequent inquiries, settled accounts) increased the probability, and which factors (e.g., long positive history, low debt) decreased it.
 - **exposureAtDefault (EAD)**: Calculate the total outstanding balance across all active loans and credit cards. This represents the total amount the lender would be exposed to if the borrower defaults today. Sum up all 'Current Balance' fields and provide the total in INR.
 - **lossGivenDefault (LGD)**: Based on the mix of credit (secured vs. unsecured loans), estimate the percentage of the EAD that would likely be unrecoverable in the event of a default. Unsecured debt (personal loans, credit cards) has a higher LGD (typically 50-90%) than secured debt (auto, home loans) (typically 10-50%). Provide a single, blended LGD percentage (0-100).
-- **expectedLoss (EL)**: Calculate the Expected Loss in INR using the formula: EL = (PD / 100) * (LGD / 100) * EAD.
+- **expectedLoss (EL)**: This will be calculated in code, so just provide the PD, LGD, and EAD values.
 
 **Credit Report Text:**
 \`\`\`
@@ -86,10 +87,27 @@ const riskAssessmentFlow = ai.defineFlow(
   {
     name: 'riskAssessmentFlow',
     inputSchema: RiskAssessmentInputSchema,
-    outputSchema: RiskAssessmentOutputSchema,
+    outputSchema: z.object({
+        output: RiskAssessmentOutputSchema,
+        usage: z.any(),
+    }),
   },
   async (input) => {
-    const { output } = await prompt(input);
-    return output!;
+    const result = await prompt(input);
+    const output = result.output;
+
+    if (!output) {
+        throw new Error("AI failed to provide a risk assessment.");
+    }
+
+    // Perform the Expected Loss calculation in code for accuracy.
+    const pd = output.probabilityOfDefault / 100;
+    const lgd = output.lossGivenDefault / 100;
+    const ead = output.exposureAtDefault;
+    
+    // Ensure the final EL is a number and round it for cleanliness.
+    output.expectedLoss = Math.round(pd * lgd * ead);
+
+    return { output, usage: result.usage };
   }
 );

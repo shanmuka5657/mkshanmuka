@@ -11,26 +11,20 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { FlowUsage } from 'genkit/flow';
+import type { RiskAssessmentOutput } from './risk-assessment'; // Import the type
 
 const AiRatingInputSchema = z.object({
   creditReportText: z
     .string()
     .describe('The full text extracted from the credit report.'),
   riskAssessment: z
-    .object({
-      score: z.number(),
-      level: z.string(),
-      factors: z.array(
-        z.object({
-          factor: z.string(),
-          severity: z.string(),
-          details: z.string(),
-        })
-      ),
-    })
+    .any() // Using z.any() because we can't import the Zod schema directly without circular deps.
     .describe('A client-side pre-calculated risk assessment.'),
 });
-export type AiRatingInput = z.infer<typeof AiRatingInputSchema>;
+export type AiRatingInput = Omit<z.infer<typeof AiRatingInputSchema>, 'riskAssessment'> & {
+  riskAssessment: RiskAssessmentOutput; // Use the precise TypeScript type
+};
 
 const AiRatingOutputSchema = z.object({
   aiScore: z
@@ -59,7 +53,7 @@ export type AiRatingOutput = z.infer<typeof AiRatingOutputSchema>;
 
 export async function getAiRating(
   input: AiRatingInput
-): Promise<AiRatingOutput> {
+): Promise<{ output: AiRatingOutput, usage: FlowUsage }> {
   return aiRatingFlow(input);
 }
 
@@ -94,10 +88,16 @@ const aiRatingFlow = ai.defineFlow(
   {
     name: 'aiRatingFlow',
     inputSchema: AiRatingInputSchema,
-    outputSchema: AiRatingOutputSchema,
+    outputSchema: z.object({
+        output: AiRatingOutputSchema,
+        usage: z.any(),
+    }),
   },
   async (input) => {
-    const { output } = await prompt(input);
-    return output!;
+    const result = await prompt(input);
+    if (!result.output) {
+      throw new Error("AI failed to provide a rating.");
+    }
+    return { output: result.output, usage: result.usage };
   }
 );

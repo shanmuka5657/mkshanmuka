@@ -11,6 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import type { FlowUsage } from 'genkit/flow';
 
 const ReportSummaryInputSchema = z.object({
   creditReportText: z.string().describe('The full text extracted from the credit report.'),
@@ -44,7 +45,7 @@ export type ReportSummaryOutput = z.infer<typeof ReportSummaryOutputSchema>;
 
 export async function getReportSummary(
   input: ReportSummaryInput
-): Promise<ReportSummaryOutput> {
+): Promise<{ output: ReportSummaryOutput, usage: FlowUsage }> {
   return reportSummaryFlow(input);
 }
 
@@ -78,13 +79,16 @@ const reportSummaryFlow = ai.defineFlow(
   {
     name: 'reportSummaryFlow',
     inputSchema: ReportSummaryInputSchema,
-    outputSchema: ReportSummaryOutputSchema,
+    outputSchema: z.object({
+        output: ReportSummaryOutputSchema,
+        usage: z.any(),
+    }),
   },
   async (input) => {
-    const { output } = await prompt(input);
-    if (!output) {
+    const result = await prompt(input);
+    if (!result.output) {
       throw new Error("AI failed to extract the report summary.");
     }
-    return output;
+    return { output: result.output, usage: result.usage };
   }
 );

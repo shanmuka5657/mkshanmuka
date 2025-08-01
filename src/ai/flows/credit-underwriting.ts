@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { FlowUsage } from 'genkit/flow';
 
 const CreditUnderwritingInputSchema = z.object({
   creditReportText: z
@@ -105,7 +106,7 @@ export type CreditUnderwritingOutput = z.infer<
 
 export async function getCreditUnderwriting(
   input: CreditUnderwritingInput
-): Promise<CreditUnderwritingOutput> {
+): Promise<{ output: CreditUnderwritingOutput, usage: FlowUsage }> {
   return creditUnderwritingFlow(input);
 }
 
@@ -163,10 +164,14 @@ const creditUnderwritingFlow = ai.defineFlow(
   {
     name: 'creditUnderwritingFlow',
     inputSchema: CreditUnderwritingInputSchema,
-    outputSchema: CreditUnderwritingOutputSchema,
+    outputSchema: z.object({
+        output: CreditUnderwritingOutputSchema,
+        usage: z.any(),
+    }),
   },
   async (input) => {
-    const {output} = await prompt(input);
+    const result = await prompt(input);
+    const output = result.output;
 
     if (!output) {
       throw new Error("AI failed to provide an underwriting analysis.");
@@ -180,8 +185,6 @@ const creditUnderwritingFlow = ai.defineFlow(
     // Ensure the final EL is a number and round it for cleanliness.
     output.expectedLoss = Math.round(pd * lgd * ead);
 
-    return output;
+    return { output, usage: result.usage };
   }
 );
-
-    

@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import type { FlowUsage } from 'genkit/flow';
 
 const FinancialRiskInputSchema = z.object({
   creditReportText: z
@@ -45,7 +46,7 @@ export type FinancialRiskOutput = z.infer<typeof FinancialRiskOutputSchema>;
 
 export async function getFinancialRiskAssessment(
   input: FinancialRiskInput
-): Promise<FinancialRiskOutput> {
+): Promise<{ output: FinancialRiskOutput, usage: FlowUsage }> {
   return financialRiskFlow(input);
 }
 
@@ -90,10 +91,16 @@ const financialRiskFlow = ai.defineFlow(
   {
     name: 'financialRiskFlow',
     inputSchema: FinancialRiskInputSchema,
-    outputSchema: FinancialRiskOutputSchema,
+    outputSchema: z.object({
+        output: FinancialRiskOutputSchema,
+        usage: z.any(),
+    }),
   },
   async (input) => {
-    const {output} = await prompt(input);
-    return output!;
+    const result = await prompt(input);
+    if (!result.output) {
+      throw new Error("AI failed to assess financial risk.");
+    }
+    return { output: result.output, usage: result.usage };
   }
 );

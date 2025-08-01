@@ -11,6 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import type { FlowUsage } from 'genkit/flow';
 
 const CalculateTotalEmiInputSchema = z.object({
   creditReportText: z.string().describe('The full text extracted from the credit report.'),
@@ -37,7 +38,7 @@ export type CalculateTotalEmiOutput = z.infer<typeof CalculateTotalEmiOutputSche
 
 export async function calculateTotalEmi(
   input: CalculateTotalEmiInput
-): Promise<CalculateTotalEmiOutput> {
+): Promise<{ output: CalculateTotalEmiOutput, usage: FlowUsage }> {
   return calculateTotalEmiFlow(input);
 }
 
@@ -70,13 +71,16 @@ const calculateTotalEmiFlow = ai.defineFlow(
   {
     name: 'calculateTotalEmiFlow',
     inputSchema: CalculateTotalEmiInputSchema,
-    outputSchema: CalculateTotalEmiOutputSchema,
+    outputSchema: z.object({
+        output: CalculateTotalEmiOutputSchema,
+        usage: z.any(),
+    }),
   },
   async (input) => {
-    const { output } = await prompt(input);
-    if (!output) {
+    const result = await prompt(input);
+    if (!result.output) {
       throw new Error("AI failed to calculate the total EMI.");
     }
-    return output;
+    return { output: result.output, usage: result.usage };
   }
 );

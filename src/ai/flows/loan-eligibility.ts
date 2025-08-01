@@ -11,6 +11,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import type { FlowUsage } from 'genkit/flow';
 
 const LoanEligibilityInputSchema = z.object({
   aiScore: z
@@ -52,7 +53,7 @@ export type LoanEligibilityOutput = z.infer<typeof LoanEligibilityOutputSchema>;
 
 export async function getLoanEligibility(
   input: LoanEligibilityInput
-): Promise<LoanEligibilityOutput> {
+): Promise<{ output: LoanEligibilityOutput, usage: FlowUsage }> {
   return loanEligibilityFlow(input);
 }
 
@@ -111,12 +112,16 @@ const loanEligibilityFlow = ai.defineFlow(
   {
     name: 'loanEligibilityFlow',
     inputSchema: LoanEligibilityInputSchema,
-    outputSchema: LoanEligibilityOutputSchema,
+    outputSchema: z.object({
+        output: LoanEligibilityOutputSchema,
+        usage: z.any(),
+    }),
   },
   async (input) => {
-    const { output } = await prompt(input);
-    return output!;
+    const result = await prompt(input);
+    if (!result.output) {
+      throw new Error("AI failed to calculate loan eligibility.");
+    }
+    return { output: result.output, usage: result.usage };
   }
 );
-
-    
