@@ -39,6 +39,7 @@ import {
   XCircle,
   Clock,
   Coins,
+  LayoutGrid,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -56,6 +57,7 @@ import { getCreditUnderwriting, CreditUnderwritingOutput, CreditUnderwritingInpu
 import { getFinancialRiskAssessment, FinancialRiskOutput } from '@/ai/flows/financial-risk-assessment';
 import { calculateTotalEmi, CalculateTotalEmiOutput } from '@/ai/flows/calculate-total-emi';
 import { getReportSummary, ReportSummaryOutput } from '@/ai/flows/report-summary';
+import { getCreditSummary, CreditSummaryOutput } from '@/ai/flows/credit-summary';
 import { ShanAIChat } from '@/components/CreditChat';
 import { cn } from '@/lib/utils';
 import {
@@ -80,7 +82,7 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { saveTrainingCandidate } from '@/lib/training-store';
 import { Textarea } from '@/components/ui/textarea';
-import type { FlowUsage } from 'genkit';
+import type { FlowUsage } from 'genkit/flow';
 
 
 const initialReportSummary: ReportSummaryOutput = {
@@ -100,6 +102,23 @@ const initialReportSummary: ReportSummaryOutput = {
     past24Months: 'N/A',
     recentDate: 'N/A',
   }
+};
+
+const initialCreditSummary: CreditSummaryOutput = {
+    totalAccounts: 0,
+    totalCreditLimit: 0,
+    totalOutstanding: 0,
+    totalDebt: 0,
+    creditUtilization: 'N/A',
+    debtToLimitRatio: '0%',
+    activeAccounts: 0,
+    closedAccounts: 0,
+    writtenOff: 0,
+    settled: 0,
+    doubtful: 0,
+    totalMonthlyEMI: 0,
+    maxSingleEMI: 0,
+    creditCardPayments: 0,
 };
 
 
@@ -148,6 +167,7 @@ type ActiveView =
   | 'incomeEstimator'
   | 'creditUnderwriting'
   | 'financialRisk'
+  | 'creditSummary'
   | null;
 
 type ActiveLoanDetail = CalculateTotalEmiOutput['activeLoans'][0] & {
@@ -203,6 +223,10 @@ export default function CreditWiseAIPage() {
   // New state for Financial Risk
   const [financialRisk, setFinancialRisk] = useState<FinancialRiskOutput | null>(null);
   const [isAssessingFinancialRisk, setIsAssessingFinancialRisk] = useState(false);
+
+  // New state for Credit Summary
+  const [creditSummary, setCreditSummary] = useState<CreditSummaryOutput | null>(null);
+  const [isFetchingCreditSummary, setIsFetchingCreditSummary] = useState(false);
 
   // New state for token tracking and cost
   const [tokenUsage, setTokenUsage] = useState({ inputTokens: 0, outputTokens: 0 });
@@ -329,6 +353,8 @@ export default function CreditWiseAIPage() {
     setIsAssessingFinancialRisk(false);
     setTokenUsage({ inputTokens: 0, outputTokens: 0 });
     setEstimatedCost(0);
+    setCreditSummary(null);
+    setIsFetchingCreditSummary(false);
 
 
     if(fileInputRef.current) {
@@ -590,6 +616,39 @@ export default function CreditWiseAIPage() {
       setIsAssessingFinancialRisk(false);
     }
   };
+  
+  const handleGetCreditSummary = async () => {
+    if (!rawText) {
+      toast({ variant: "destructive", title: "No Report Loaded", description: "Please upload a credit report first."});
+      return;
+    }
+    setIsFetchingCreditSummary(true);
+    setCreditSummary(null);
+    try {
+      const { output, usage } = await getCreditSummary({
+        creditReportText: rawText,
+      });
+      setCreditSummary(output);
+      updateTokenUsage(usage);
+      toast({
+        title: 'Credit Summary Generated',
+        description: 'The detailed credit summary is ready.',
+      });
+    } catch (error: any) {
+      console.error('Error getting credit summary:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Credit Summary Failed',
+        description:
+          error.message?.includes('429')
+            ? "You've exceeded the daily limit for the AI. Please try again tomorrow."
+            : error.message || 'Could not generate credit summary.',
+      });
+    } finally {
+      setIsFetchingCreditSummary(false);
+    }
+  };
+
 
   const handleGetUnderwriting = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -709,16 +768,21 @@ export default function CreditWiseAIPage() {
     view,
     label,
     icon,
-    disabled = false
+    disabled = false,
+    onClick,
   }: {
     view: ActiveView;
     label: string;
     icon: React.ReactNode;
     disabled?: boolean;
+    onClick?: () => void;
   }) => (
     <Button
       variant={activeView === view ? 'default' : 'outline'}
-      onClick={() => setActiveView(activeView === view ? null : view)}
+      onClick={() => {
+        if (onClick) onClick();
+        setActiveView(activeView === view ? null : view);
+      }}
       className="flex flex-col h-24 text-center justify-center items-center gap-2"
       disabled={disabled}
     >
@@ -728,9 +792,9 @@ export default function CreditWiseAIPage() {
   );
 
   const SummaryItem = ({ label, value, valueClassName, isLoading = false }: { label: string; value: string | number; valueClassName?: string, isLoading?: boolean }) => (
-    <div className="flex flex-col items-center justify-center text-center p-2">
-      <p className="text-xs text-muted-foreground uppercase tracking-wider">{label}</p>
-      {isLoading ? <Loader2 className="h-4 w-4 mt-1 animate-spin" /> : <p className={cn("text-base font-medium text-foreground", valueClassName)}>{value}</p>}
+    <div className="flex flex-col items-center justify-center text-center p-2 rounded-lg bg-muted/50">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      {isLoading ? <Loader2 className="h-5 w-5 mt-1 animate-spin" /> : <p className={cn("text-xl font-bold text-primary", valueClassName)}>{value}</p>}
     </div>
   );
   
@@ -738,6 +802,44 @@ export default function CreditWiseAIPage() {
     if (!activeView) return null;
 
     const views: { [key in NonNullable<ActiveView>]: React.ReactNode } = {
+       creditSummary: (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <LayoutGrid className="mr-3 h-6 w-6 text-primary" />
+              AI-Powered Credit Summary
+            </CardTitle>
+            <CardDescription>
+              This is a detailed summary of your credit profile, generated by an AI analyzing your report.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isFetchingCreditSummary ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 className="mr-3 h-8 w-8 animate-spin text-primary" />
+                <span className="text-muted-foreground">AI is analyzing your report...</span>
+              </div>
+            ) : creditSummary && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <SummaryItem label="Total Accounts" value={creditSummary.totalAccounts} valueClassName="text-foreground" />
+                  <SummaryItem label="Total Credit Limit" value={`₹${creditSummary.totalCreditLimit.toLocaleString('en-IN')}`} valueClassName="text-foreground" />
+                  <SummaryItem label="Total Outstanding" value={`₹${creditSummary.totalOutstanding.toLocaleString('en-IN')}`} valueClassName="text-destructive" />
+                  <SummaryItem label="Total Debt" value={`₹${creditSummary.totalDebt.toLocaleString('en-IN')}`} valueClassName="text-destructive" />
+                  <SummaryItem label="Credit Utilization" value={creditSummary.creditUtilization} valueClassName="text-foreground" />
+                  <SummaryItem label="Debt-to-Limit Ratio" value={creditSummary.debtToLimitRatio} valueClassName="text-foreground" />
+                  <SummaryItem label="Active Accounts" value={creditSummary.activeAccounts} valueClassName="text-green-600" />
+                  <SummaryItem label="Closed Accounts" value={creditSummary.closedAccounts} valueClassName="text-foreground" />
+                  <SummaryItem label="Written Off" value={creditSummary.writtenOff} valueClassName="text-destructive" />
+                  <SummaryItem label="Settled" value={creditSummary.settled} valueClassName="text-orange-500" />
+                  <SummaryItem label="Doubtful" value={creditSummary.doubtful} valueClassName="text-destructive" />
+                  <SummaryItem label="Total Monthly EMI" value={`₹${creditSummary.totalMonthlyEMI.toLocaleString('en-IN')}`} valueClassName="text-foreground" />
+                  <SummaryItem label="Max Single EMI" value={`₹${creditSummary.maxSingleEMI.toLocaleString('en-IN')}`} valueClassName="text-foreground" />
+                  <SummaryItem label="Credit Card Payments" value={`₹${creditSummary.creditCardPayments.toLocaleString('en-IN')}`} valueClassName="text-foreground" />
+                </div>
+            )}
+          </CardContent>
+        </Card>
+      ),
       aiMeter: (
         <Card>
           <CardHeader>
@@ -1482,23 +1584,23 @@ export default function CreditWiseAIPage() {
                         <div>
                             <h3 className="font-semibold text-lg mb-2 border-b pb-1">Account Summary</h3>
                             <div className="grid grid-cols-2 gap-4">
-                                <SummaryItem isLoading={isFetchingSummary} label="Total Accounts" value={reportSummary.accountSummary.total} />
-                                <SummaryItem isLoading={isFetchingSummary} label="Zero-Balance" value={reportSummary.accountSummary.zeroBalance} />
-                                <SummaryItem isLoading={isFetchingSummary} label="High Credit/Sanc. Amt" value={reportSummary.accountSummary.highCredit} />
-                                <SummaryItem isLoading={isFetchingSummary} label="Current Balance" value={reportSummary.accountSummary.currentBalance} />
+                                <SummaryItem isLoading={isFetchingSummary} label="Total Accounts" value={reportSummary.accountSummary.total} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isFetchingSummary} label="Zero-Balance" value={reportSummary.accountSummary.zeroBalance} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isFetchingSummary} label="High Credit/Sanc. Amt" value={reportSummary.accountSummary.highCredit} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isFetchingSummary} label="Current Balance" value={reportSummary.accountSummary.currentBalance} valueClassName="text-destructive" />
                                 <SummaryItem isLoading={isFetchingSummary} label="Overdue Amount" value={reportSummary.accountSummary.overdue} valueClassName="text-destructive" />
-                                <SummaryItem isLoading={isFetchingSummary} label="Most Recent Account" value={reportSummary.accountSummary.recentDate} />
-                                <SummaryItem isLoading={isFetchingSummary} label="Oldest Account" value={reportSummary.accountSummary.oldestDate} />
+                                <SummaryItem isLoading={isFetchingSummary} label="Most Recent Account" value={reportSummary.accountSummary.recentDate} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isFetchingSummary} label="Oldest Account" value={reportSummary.accountSummary.oldestDate} valueClassName="text-foreground" />
                             </div>
                         </div>
                         <div>
                             <h3 className="font-semibold text-lg mb-2 border-b pb-1">Enquiry Summary</h3>
                              <div className="grid grid-cols-2 gap-4">
-                                <SummaryItem isLoading={isFetchingSummary} label="Total Enquiries" value={reportSummary.enquirySummary.total} />
-                                <SummaryItem isLoading={isFetchingSummary} label="Last 30 Days" value={reportSummary.enquirySummary.past30Days} />
-                                <SummaryItem isLoading={isFetchingSummary} label="Last 12 Months" value={reportSummary.enquirySummary.past12Months} />
-                                <SummaryItem isLoading={isFetchingSummary} label="Last 24 Months" value={reportSummary.enquirySummary.past24Months} />
-                                <SummaryItem isLoading={isFetchingSummary} label="Most Recent Enquiry" value={reportSummary.enquirySummary.recentDate} />
+                                <SummaryItem isLoading={isFetchingSummary} label="Total Enquiries" value={reportSummary.enquirySummary.total} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isFetchingSummary} label="Last 30 Days" value={reportSummary.enquirySummary.past30Days} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isFetchingSummary} label="Last 12 Months" value={reportSummary.enquirySummary.past12Months} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isFetchingSummary} label="Last 24 Months" value={reportSummary.enquirySummary.past24Months} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isFetchingSummary} label="Most Recent Enquiry" value={reportSummary.enquirySummary.recentDate} valueClassName="text-foreground" />
                             </div>
                         </div>
                     </CardContent>
@@ -1511,6 +1613,7 @@ export default function CreditWiseAIPage() {
                       <CardDescription>Select a section to view its detailed analysis. Some sections require previous steps to be completed.</CardDescription>
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                      <NavButton view="creditSummary" label="Credit Summary" icon={<LayoutGrid size={24} />} onClick={handleGetCreditSummary} />
                       <NavButton view="aiAnalysis" label="AI Report Analysis" icon={<BrainCircuit size={24} />} />
                       <NavButton view="aiMeter" label="AI Credit Meter" icon={<Bot size={24} />} disabled={!aiAnalysis}/>
                       <NavButton view="incomeEstimator" label="Financials & Obligations" icon={<Calculator size={24} />} />
@@ -1546,8 +1649,8 @@ export default function CreditWiseAIPage() {
                                     <CardTitle className="text-lg flex items-center"><Coins className="mr-3 text-primary"/>Analysis Cost</CardTitle>
                                 </CardHeader>
                                 <CardContent className="grid grid-cols-3 gap-4">
-                                    <SummaryItem label="Input Tokens" value={tokenUsage.inputTokens.toLocaleString()} />
-                                    <SummaryItem label="Output Tokens" value={tokenUsage.outputTokens.toLocaleString()} />
+                                    <SummaryItem label="Input Tokens" value={tokenUsage.inputTokens.toLocaleString()} valueClassName="text-foreground" />
+                                    <SummaryItem label="Output Tokens" value={tokenUsage.outputTokens.toLocaleString()} valueClassName="text-foreground" />
                                     <SummaryItem label="Estimated Cost (USD)" value={`$${estimatedCost.toFixed(5)}`} valueClassName="text-green-600" />
                                 </CardContent>
                             </Card>
