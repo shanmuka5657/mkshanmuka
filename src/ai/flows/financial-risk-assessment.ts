@@ -81,7 +81,7 @@ const prompt = ai.definePrompt({
     *   In 'explanation', provide a point-wise analysis. Explain what credit utilization is and why it's important. Mention specific cards if they have high utilization (e.g., "Your overall utilization is X%, which is considered high. Specifically, your ICICI Credit Card is at 95% utilization (₹47,500 of ₹50,000 limit), which significantly impacts your credit score and suggests a reliance on credit for daily expenses.").
 
 6.  **Overall Outlook (overallOutlook):**
-    *   Provide a final, forward-looking summary in a point-wise format. Synthesize all the above points into a clear outlook. For example: "Given your high DTI and reliance on credit card debt, your current financial situation is under strain. While you have a good payment history, an unexpected expense could be difficult to manage. The immediate priority should be to reduce the balance on your high-utilization credit cards."
+    *   Provide a final, forward-looking summary in a a point-wise format. Synthesize all the above points into a clear outlook. For example: "Given your high DTI and reliance on credit card debt, your current financial situation is under strain. While you have a good payment history, an unexpected expense could be difficult to manage. The immediate priority should be to reduce the balance on your high-utilization credit cards."
 
 Generate the final, structured output. Ensure all explanations are detailed and directly reference the user's data where possible to avoid being generic.`,
 });
