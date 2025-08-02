@@ -61,7 +61,7 @@ const prompt = ai.definePrompt({
   name: 'loanEligibilityPrompt',
   input: { schema: LoanEligibilityInputSchema },
   output: { schema: LoanEligibilityOutputSchema },
-  model: 'googleai/gemini-1.5-pro',
+  model: 'googleai/gemini-1.5-flash',
   prompt: `You are an expert loan officer at a digital bank in India. Your task is to perform a holistic and realistic estimation of a user's eligibility for a personal loan and provide actionable, non-generic advice on how to improve it. You must be deterministic and base your calculations on clear logic.
 
 **User's Financial Profile:**
