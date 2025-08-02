@@ -40,6 +40,7 @@ import {
   Coins,
   LayoutGrid,
   Pencil,
+  PlayCircle,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -153,7 +154,7 @@ export default function CreditWiseAIPage() {
   const [progress, setProgress] = useState(0);
   const [creditScore, setCreditScore] = useState<number | null>(null);
 
-  const [analysisResult, setAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(initialAnalysis);
+  const [analysisResult, setAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const [totalEmi, setTotalEmi] = useState('');
@@ -281,7 +282,7 @@ export default function CreditWiseAIPage() {
     setProgress(0);
     setCreditScore(null);
     
-    setAnalysisResult(initialAnalysis);
+    setAnalysisResult(null);
     setIsAnalyzing(false);
     
     setTotalEmi('');
@@ -343,10 +344,6 @@ export default function CreditWiseAIPage() {
           const normalizedText = textContent.replace(/\s+/g, ' ').trim();
           const scoreMatch = normalizedText.match(/(?:CIBIL (?:TRANSUNION )?SCORE|CREDITVISION. SCORE)\s*(\d{3})/i);
           setCreditScore(scoreMatch ? parseInt(scoreMatch[1], 10) : null);
-
-          // Trigger the single, consolidated AI data extraction
-          handleAnalyze(textContent);
-          handleCalculateTotalEmi(textContent); // Keep this separate for user interaction
         }
       };
       reader.readAsArrayBuffer(selectedFile);
@@ -362,10 +359,15 @@ export default function CreditWiseAIPage() {
     }
   };
   
+  const handleStartFullAnalysis = () => {
+    handleAnalyze(rawText);
+    handleCalculateTotalEmi(rawText);
+  };
+
   const handleAnalyze = async (text: string) => {
     if (!text) return;
     setIsAnalyzing(true);
-    setAnalysisResult(initialAnalysis);
+    setAnalysisResult(null);
     try {
       const { output, usage } = await analyzeCreditReport({ creditReportText: text });
       setAnalysisResult(output);
@@ -1502,7 +1504,21 @@ export default function CreditWiseAIPage() {
                             </Button>
                         )}
                     </div>
-                    <p className="mt-4 text-xs text-muted-foreground">Note: This tool analyzes your report locally in your browser. Your data is not uploaded to any server.</p>
+                    {file && !analysisResult && (
+                      <div className="mt-4">
+                        <Alert>
+                           <AlertCircle className="h-4 w-4" />
+                           <AlertTitle>Ready to Analyze</AlertTitle>
+                           <AlertDescription>
+                            Your report has been processed. Click the button below to run the full AI analysis.
+                           </AlertDescription>
+                        </Alert>
+                        <Button onClick={handleStartFullAnalysis} disabled={isAnalyzing || isCalculatingEmi} className="mt-4">
+                          {(isAnalyzing || isCalculatingEmi) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />}
+                          Start Full AI Analysis
+                        </Button>
+                      </div>
+                    )}
                 </CardContent>
             </Card>
             
@@ -1631,10 +1647,10 @@ export default function CreditWiseAIPage() {
                       <CardDescription>Select a section to view its detailed analysis. Some sections require previous steps to be completed.</CardDescription>
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                      <NavButton view="creditSummary" label="Credit Summary" icon={<LayoutGrid size={24} />} />
-                      <NavButton view="aiAnalysis" label="AI Report Analysis" icon={<BrainCircuit size={24} />} />
+                      <NavButton view="creditSummary" label="Credit Summary" icon={<LayoutGrid size={24} />} disabled={!analysisResult} />
+                      <NavButton view="aiAnalysis" label="AI Report Analysis" icon={<BrainCircuit size={24} />} disabled={!analysisResult} />
                       <NavButton view="aiMeter" label="AI Credit Meter" icon={<Bot size={24} />} disabled={!analysisResult}/>
-                      <NavButton view="incomeEstimator" label="Financials & Obligations" icon={<Calculator size={24} />} />
+                      <NavButton view="incomeEstimator" label="Financials & Obligations" icon={<Calculator size={24} />} disabled={!analysisResult}/>
                       <NavButton view="loanEligibility" label="AI Loan Eligibility" icon={<Banknote size={24} />} disabled={!aiRating || !estimatedIncome} />
                       <NavButton view="financialRisk" label="AI Financial Risk" icon={<BadgeCent size={24} />} disabled={!estimatedIncome}/>
                       <NavButton view="creditUnderwriting" label="AI Credit Underwriting" icon={<Gavel size={24} />} disabled={!loanEligibility} />
