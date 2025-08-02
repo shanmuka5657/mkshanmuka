@@ -267,17 +267,6 @@ export default function CreditWiseAIPage() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
-      if (selectedFile.size > 5 * 1024 * 1024) { // 5MB limit
-        toast({
-          variant: "destructive",
-          title: "File Too Large",
-          description: "Please upload a PDF file smaller than 5MB.",
-        });
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
-        return;
-      }
       resetState();
       setFile(selectedFile);
       setFileName(selectedFile.name);
