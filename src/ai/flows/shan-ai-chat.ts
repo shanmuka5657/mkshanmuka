@@ -11,6 +11,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import type { FlowUsage } from 'genkit/flow';
 
 // Define the structure for a single message in the history
 const ShanAiChatMessageSchema = z.object({
@@ -42,7 +43,7 @@ export type ShanAiChatOutput = z.infer<typeof ShanAiChatOutputSchema>;
 
 export async function shanAiChat(
   input: ShanAiChatInput
-): Promise<ShanAiChatOutput> {
+): Promise<{ output: ShanAiChatOutput, usage: FlowUsage }> {
   return shanAiChatFlow(input);
 }
 
@@ -50,7 +51,10 @@ const shanAiChatFlow = ai.defineFlow(
   {
     name: 'shanAiChatFlow',
     inputSchema: ShanAiChatInputSchema,
-    outputSchema: ShanAiChatOutputSchema,
+    outputSchema: z.object({
+        output: ShanAiChatOutputSchema,
+        usage: z.any(),
+    }),
   },
   async ({ history, cibilReportText }) => {
     
@@ -82,7 +86,8 @@ const shanAiChatFlow = ai.defineFlow(
     }
 
     return {
-      answer: responseText,
+      output: { answer: responseText },
+      usage: llmResponse.usage,
     };
   }
 );

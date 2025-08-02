@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from './ui/scroll-area';
 import Image from 'next/image';
+import type { FlowUsage } from 'genkit/flow';
 
 interface DisplayMessage {
   role: 'user' | 'assistant';
@@ -19,7 +20,15 @@ interface DisplayMessage {
   mediaDataUri?: string; // Keep original data for history
 }
 
-export function ShanAIChat({ cibilReportText, onNewChat }: { cibilReportText?: string, onNewChat?: () => void }) {
+export function ShanAIChat({ 
+  cibilReportText, 
+  onNewChat,
+  onTokensUsed,
+}: { 
+  cibilReportText?: string;
+  onNewChat?: () => void;
+  onTokensUsed?: (usage: FlowUsage) => void;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
@@ -109,8 +118,9 @@ export function ShanAIChat({ cibilReportText, onNewChat }: { cibilReportText?: s
         history: conversationHistory,
         cibilReportText: cibilReportText,
       };
-      const result = await shanAiChat(flowInput);
-      const aiMessage: DisplayMessage = { role: 'assistant', content: result.answer };
+      const { output, usage } = await shanAiChat(flowInput);
+      onTokensUsed?.(usage);
+      const aiMessage: DisplayMessage = { role: 'assistant', content: output.answer };
       setMessages((prev) => [...prev, aiMessage]);
     } catch (error: any) {
       console.error('Error getting chat response:', error);

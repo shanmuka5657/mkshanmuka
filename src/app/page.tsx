@@ -313,13 +313,13 @@ export default function CreditWiseAIPage() {
     }
   };
 
-  const updateTokenUsage = (usage?: FlowUsage) => {
+  const updateTokenUsage = useCallback((usage?: FlowUsage) => {
     if (!usage) return;
     setTokenUsage(prev => ({
       inputTokens: prev.inputTokens + (usage.inputTokens || 0),
       outputTokens: prev.outputTokens + (usage.outputTokens || 0)
     }));
-  };
+  }, []);
 
 
   const processFile = async (selectedFile: File) => {
@@ -1718,7 +1718,11 @@ export default function CreditWiseAIPage() {
                 </div>
             )}
             
-            <ShanAIChat cibilReportText={rawText} onNewChat={() => setTokenUsage({ inputTokens: 0, outputTokens: 0 })} />
+            <ShanAIChat 
+              cibilReportText={rawText} 
+              onNewChat={() => setTokenUsage({ inputTokens: 0, outputTokens: 0 })}
+              onTokensUsed={updateTokenUsage}
+            />
 
           </>
         )}
