@@ -54,7 +54,7 @@ const prompt = ai.definePrompt({
   name: 'financialRiskPrompt',
   input: {schema: FinancialRiskInputSchema},
   output: {schema: FinancialRiskOutputSchema},
-  model: 'googleai/gemini-1.5-flash-latest',
+  model: 'googleai/gemini-1.5-pro',
   prompt: `You are a financial risk analyst. Your task is to assess the user's overall financial risk based on their credit report and estimated income. This is different from a loan default risk; it's about their broader financial stability. Your analysis must be detailed, non-generic, and provide real-world context in a point-wise format.
 
 **User's Profile:**
