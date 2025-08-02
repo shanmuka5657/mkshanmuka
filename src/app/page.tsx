@@ -43,6 +43,7 @@ import {
   PlayCircle,
   Landmark,
   ArrowLeft,
+  ChevronsUpDown,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -847,10 +848,10 @@ export default function CreditWiseAIPage() {
     </div>
   );
   
-  const InfoItem = ({ label, value, isLoading = false }: { label: string; value: string; isLoading?: boolean }) => (
+  const InfoItem = ({ label, value, isLoading = false }: { label: string; value: string | number; isLoading?: boolean }) => (
      <div>
-        <p className="font-semibold">{label}:</p>
-        {isLoading ? <Loader2 className="h-4 w-4 mt-1 animate-spin" /> : <p className="truncate">{value}</p>}
+        <p className="font-semibold text-sm text-muted-foreground">{label}:</p>
+        {isLoading ? <Loader2 className="h-4 w-4 mt-1 animate-spin" /> : <p className="font-semibold truncate">{value}</p>}
     </div>
   );
 
@@ -1700,14 +1701,19 @@ export default function CreditWiseAIPage() {
             </Card>
         )}
       
-       {bankAnalysisResult && (
+       {isAnalyzingBank ? (
+         <div className="flex items-center justify-center py-10">
+            <Loader2 className="mr-3 h-8 w-8 animate-spin text-primary" />
+            <span className="text-muted-foreground">AI is analyzing your statement... This can take up to a minute.</span>
+          </div>
+       ) : bankAnalysisResult && (
             <div className="space-y-8">
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center"><FileText className="mr-3 h-6 w-6 text-primary" />Account Summary</CardTitle>
                         <CardDescription>Key details extracted from the statement.</CardDescription>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
                        <InfoItem label="Account Holder" value={bankAnalysisResult.summary.accountHolder} />
                        <InfoItem label="Bank Name" value={bankAnalysisResult.summary.bankName} />
                        <InfoItem label="Account Number" value={bankAnalysisResult.summary.accountNumber} />
@@ -1728,6 +1734,19 @@ export default function CreditWiseAIPage() {
                         <SummaryItem label="Total Withdrawals" value={bankAnalysisResult.overview.totalWithdrawals} valueClassName="text-destructive" />
                         <SummaryItem label="Average Balance" value={bankAnalysisResult.overview.averageBalance} valueClassName="text-foreground" />
                         <SummaryItem label="Estimated Monthly Income" value={bankAnalysisResult.overview.estimatedMonthlyIncome} valueClassName="text-primary" />
+                    </CardContent>
+                </Card>
+                
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center"><ChevronsUpDown className="mr-3 h-6 w-6 text-primary" />Detailed Financial Overview</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                        <SummaryItem label="Salary Credits" value={bankAnalysisResult.detailedOverview.salaryCredits} valueClassName="text-green-600" />
+                        <SummaryItem label="Incentive Credits" value={bankAnalysisResult.detailedOverview.incentiveCredits} valueClassName="text-green-600" />
+                        <SummaryItem label="Mandate Debits" value={bankAnalysisResult.detailedOverview.mandateDebits} valueClassName="text-destructive" />
+                        <SummaryItem label="Cheque Inward" value={bankAnalysisResult.detailedOverview.chequeInward} valueClassName="text-green-600" />
+                        <SummaryItem label="Cheque Outward" value={bankAnalysisResult.detailedOverview.chequeOutward} valueClassName="text-destructive" />
                     </CardContent>
                 </Card>
 
@@ -1951,7 +1970,8 @@ export default function CreditWiseAIPage() {
             )}
             
             <ShanAIChat 
-              cibilReportText={rawText} 
+              cibilReportText={analysisMode === 'credit' ? rawText : undefined} 
+              bankStatementText={analysisMode === 'bank' ? rawText : undefined}
               onNewChat={() => setTokenUsage({ inputTokens: 0, outputTokens: 0 })}
               onTokensUsed={updateTokenUsage}
             />

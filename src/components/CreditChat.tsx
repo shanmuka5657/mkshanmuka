@@ -22,10 +22,12 @@ interface DisplayMessage {
 
 export function ShanAIChat({ 
   cibilReportText, 
+  bankStatementText,
   onNewChat,
   onTokensUsed,
 }: { 
   cibilReportText?: string;
+  bankStatementText?: string;
   onNewChat?: () => void;
   onTokensUsed?: (usage: FlowUsage) => void;
 }) {
@@ -51,24 +53,16 @@ export function ShanAIChat({
 
   // When a new report is loaded, clear the chat history.
   useEffect(() => {
-    if (cibilReportText && messages.length > 0) {
+    if ((cibilReportText || bankStatementText) && messages.length > 0) {
       setMessages([]);
       onNewChat?.();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cibilReportText]);
+  }, [cibilReportText, bankStatementText]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        toast({
-          variant: "destructive",
-          title: "File Too Large",
-          description: "Please upload a file smaller than 5MB.",
-        });
-        return;
-      }
       const reader = new FileReader();
       reader.onload = (e) => {
         const dataUri = e.target?.result as string;
@@ -117,6 +111,7 @@ export function ShanAIChat({
       const flowInput: ShanAiChatInput = {
         history: conversationHistory,
         cibilReportText: cibilReportText,
+        bankStatementText: bankStatementText,
       };
       const { output, usage } = await shanAiChat(flowInput);
       onTokensUsed?.(usage);

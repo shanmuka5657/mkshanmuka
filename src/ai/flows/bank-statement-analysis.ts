@@ -36,6 +36,14 @@ const FinancialOverviewSchema = z.object({
     estimatedMonthlyIncome: z.string().describe('The AI-estimated monthly income based on recurring salary-like credits, formatted as ₹X,XX,XXX.'),
 });
 
+const DetailedOverviewSchema = z.object({
+    salaryCredits: z.string().describe('The sum of all transactions identified as salary credits, formatted as ₹X,XX,XXX. Return "₹0" if none found.'),
+    incentiveCredits: z.string().describe('The sum of all transactions identified as incentives or bonuses, formatted as ₹X,XX,XXX. Return "₹0" if none found.'),
+    mandateDebits: z.string().describe('The sum of all automated mandate debits (like ACH, ECS, NACH for EMIs or bills), formatted as ₹X,XX,XXX. Return "₹0" if none found.'),
+    chequeInward: z.string().describe('The sum of all inward clearing cheques (credits), formatted as ₹X,XX,XXX. Return "₹0" if none found.'),
+    chequeOutward: z.string().describe('The sum of all outward clearing cheques (debits), formatted as ₹X,XX,XXX. Return "₹0" if none found.'),
+});
+
 const FinancialHealthSchema = z.object({
     summary: z.string().describe('A brief, one-paragraph summary of the overall financial health based on the statement.'),
     strengths: z.array(z.string()).describe('A list of positive financial habits or indicators observed (e.g., "Consistent salary credits", "Positive closing balance").'),
@@ -53,6 +61,7 @@ const TransactionDetailSchema = z.object({
 const BankStatementAnalysisOutputSchema = z.object({
   summary: AccountSummarySchema,
   overview: FinancialOverviewSchema,
+  detailedOverview: DetailedOverviewSchema,
   health: FinancialHealthSchema,
   transactions: z.array(TransactionDetailSchema).describe("A list of the 10-15 most significant or recent transactions."),
 });
@@ -85,12 +94,21 @@ const prompt = ai.definePrompt({
     *   Calculate the average balance. If not explicitly mentioned, estimate it.
     *   Analyze the credit transactions to identify recurring, salary-like deposits and provide an 'estimatedMonthlyIncome'.
 
-3.  **Financial Health (health):**
+3.  **Detailed Financial Overview (detailedOverview):**
+    *   Go through every transaction. Scrutinize the narration/description for keywords.
+    *   **Salary Credits**: Find transactions with "SALARY", "SAL", "WAGES" etc. Sum them up.
+    *   **Incentive Credits**: Find transactions with "INCENTIVE", "BONUS", "COMMISSION" etc. Sum them up.
+    *   **Mandate Debits**: Find debit transactions with "MANDATE", "NACH", "ECS", "ACH", "SI" (Standing Instruction) often related to loan EMIs or bill payments. Sum them up.
+    *   **Cheque Inward**: Find credit transactions with "CHQ-INWARD", "INWARD CLG", "CHEQUE DEPOSIT" etc. Sum them up.
+    *   **Cheque Outward**: Find debit transactions with "CHQ-OUTWARD", "OUTWARD CLG", "CHEQUE PAID" etc. Sum them up.
+    *   You MUST return a formatted currency string (e.g., "₹55,000") for each field. If no such transactions are found for a category, you MUST return "₹0".
+
+4.  **Financial Health (health):**
     *   Write a concise, one-paragraph 'summary' of the user's financial health based on cash flow, balance trends, and transaction types.
     *   List key 'strengths' (e.g., regular savings, consistent income).
     *   List key 'risks' (e.g., high expenditure on non-essentials, check bounces, low average balance).
 
-4.  **Transaction Highlights (transactions):**
+5.  **Transaction Highlights (transactions):**
     *   Identify the 10-15 most significant transactions. This includes large credits/debits, salary payments, loan EMIs, rent, etc.
     *   For each transaction, extract the date, description, type (credit/debit), and amount.
     *   Assign a logical 'category' to each transaction.

@@ -29,6 +29,7 @@ const ShanAiChatMessageSchema = z.object({
 const ShanAiChatInputSchema = z.object({
   history: z.array(ShanAiChatMessageSchema).describe('The conversation history.'),
   cibilReportText: z.string().optional().describe('The full text of the user\'s CIBIL report.'),
+  bankStatementText: z.string().optional().describe('The full text of the user\'s bank statement.'),
 });
 export type ShanAiChatHistory = z.infer<typeof ShanAiChatMessageSchema>;
 export type ShanAiChatInput = z.infer<typeof ShanAiChatInputSchema>;
@@ -56,16 +57,28 @@ const shanAiChatFlow = ai.defineFlow(
         usage: z.any(),
     }),
   },
-  async ({ history, cibilReportText }) => {
+  async ({ history, cibilReportText, bankStatementText }) => {
     
+    let contextPrompt = '';
+    if (cibilReportText) {
+      contextPrompt = `
+      IMPORTANT: You have access to the user's CIBIL credit report. Use it as the primary source of truth to answer any questions related to their credit history, score, accounts, etc. When asked about their score or other specific data, reference this report directly. Here is the report:
+      \`\`\`
+      ${cibilReportText}
+      \`\`\``
+    } else if (bankStatementText) {
+        contextPrompt = `
+        IMPORTANT: You have access to the user's Bank Statement. Use it as the primary source of truth to answer any questions related to their transactions, balance, income, etc. Here is the statement text:
+        \`\`\`
+        ${bankStatementText}
+        \`\`\``
+    } else {
+        contextPrompt = `The user has not uploaded any document. If they ask questions about their credit or finances, inform them that you need them to upload a document first.`
+    }
+
     const systemPrompt = `You are Shan AI, a powerful, general-purpose AI assistant. Your goal is to be helpful and answer the user's questions accurately and concisely. Maintain a friendly and conversational tone.
     
-    ${cibilReportText ? 
-    `IMPORTANT: You have access to the user's CIBIL credit report. Use it as the primary source of truth to answer any questions related to their credit history, score, accounts, etc. When asked about their score or other specific data, reference this report directly. Here is the report:
-    \`\`\`
-    ${cibilReportText}
-    \`\`\``
-    : `The user has not uploaded a credit report. If they ask questions about their credit, inform them that you need them to upload a report first.`}
+    ${contextPrompt}
     
     If the user provides an image or document in their message, use it as additional context for your answer.`
     
