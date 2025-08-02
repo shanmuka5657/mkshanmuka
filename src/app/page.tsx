@@ -430,7 +430,7 @@ export default function CreditWiseAIPage() {
     setAiRating(null);
     
     // We create a temporary risk assessment object here for the ai-rating flow.
-    // In a future step, we might want a dedicated risk flow.
+    // In a future step, we might want a dedicated risk model.
     const riskAssessmentForRating = {
         score: 75, // Placeholder, as this should come from a dedicated risk model
         level: "Medium",
@@ -658,7 +658,13 @@ export default function CreditWiseAIPage() {
 
       summary.totalCreditLimit += sanctioned;
       summary.totalOutstanding += outstanding;
-      summary.totalMonthlyEMI += emi;
+      
+      const isActive = !status.includes('closed') && !status.includes('written-off') && !status.includes('settled');
+
+      if (isActive) {
+        summary.totalMonthlyEMI += emi;
+      }
+      
       if (emi > summary.maxSingleEMI) {
         summary.maxSingleEMI = emi;
       }
@@ -701,7 +707,7 @@ export default function CreditWiseAIPage() {
     }
     
     const totalAccounts = allAccounts.length;
-    const activeAccounts = totalAccounts - summary.closedAccounts;
+    const activeAccounts = totalAccounts - summary.closedAccounts - summary.writtenOff - summary.settled;
     
     let creditUtilization: string;
     if (creditCardLimit === 0) {
