@@ -1504,13 +1504,13 @@ export default function CreditWiseAIPage() {
                             </Button>
                         )}
                     </div>
-                    {file && !analysisResult && (
+                    {file && !isLoading && !analysisResult && (
                       <div className="mt-4">
                         <Alert>
                            <AlertCircle className="h-4 w-4" />
                            <AlertTitle>Ready to Analyze</AlertTitle>
                            <AlertDescription>
-                            Your report has been processed. Click the button below to run the full AI analysis.
+                            Your report has been processed. Click the button below to run the full AI analysis. This may use a significant portion of your free daily quota.
                            </AlertDescription>
                         </Alert>
                         <Button onClick={handleStartFullAnalysis} disabled={isAnalyzing || isCalculatingEmi} className="mt-4">

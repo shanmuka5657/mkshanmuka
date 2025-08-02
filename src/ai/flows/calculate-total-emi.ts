@@ -46,7 +46,7 @@ const prompt = ai.definePrompt({
   name: 'calculateTotalEmiPrompt',
   input: {schema: CalculateTotalEmiInputSchema},
   output: {schema: CalculateTotalEmiOutputSchema},
-  model: 'googleai/gemini-pro',
+  model: 'googleai/gemini-1.5-flash-latest',
   prompt: `You are a financial data extraction expert. Your task is to meticulously scan the provided credit report text and extract details for all active loans and calculate the total monthly EMI (Equated Monthly Installment).
 
 **Instructions:**
