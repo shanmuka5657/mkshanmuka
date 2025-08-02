@@ -10,4 +10,6 @@ import '@/ai/flows/financial-risk-assessment.ts';
 import '@/ai/flows/shan-ai-chat.ts';
 import '@/ai/flows/calculate-total-emi.ts';
 import '@/ai/flows/risk-assessment.ts';
+import '@/ai/flows/bank-statement-analysis.ts';
+
 
