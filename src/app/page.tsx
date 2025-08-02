@@ -1707,10 +1707,12 @@ export default function CreditWiseAIPage() {
                         <CardTitle className="flex items-center"><FileText className="mr-3 h-6 w-6 text-primary" />Account Summary</CardTitle>
                         <CardDescription>Key details extracted from the statement.</CardDescription>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                        <InfoItem label="Account Holder" value={bankAnalysisResult.summary.accountHolder} />
                        <InfoItem label="Bank Name" value={bankAnalysisResult.summary.bankName} />
                        <InfoItem label="Account Number" value={bankAnalysisResult.summary.accountNumber} />
+                       <InfoItem label="Mobile Number" value={bankAnalysisResult.summary.mobileNumber} />
+                       <InfoItem label="Address" value={bankAnalysisResult.summary.address} />
                        <InfoItem label="Statement Period" value={bankAnalysisResult.summary.statementPeriod} />
                        <InfoItem label="Opening Balance" value={bankAnalysisResult.summary.openingBalance} />
                        <InfoItem label="Closing Balance" value={bankAnalysisResult.summary.closingBalance} />

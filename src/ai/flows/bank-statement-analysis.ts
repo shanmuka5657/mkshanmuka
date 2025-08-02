@@ -21,6 +21,8 @@ export type BankStatementAnalysisInput = z.infer<typeof BankStatementAnalysisInp
 const AccountSummarySchema = z.object({
     accountHolder: z.string().describe('The full name of the account holder. Return "N/A" if not found.'),
     accountNumber: z.string().describe('The account number. Mask it like "******1234". Return "N/A" if not found.'),
+    mobileNumber: z.string().describe('The account holder\'s mobile number. Return "N/A" if not found.'),
+    address: z.string().describe('The account holder\'s primary address. Return "N/A" if not found.'),
     bankName: z.string().describe('The name of the bank. Return "N/A" if not found.'),
     statementPeriod: z.string().describe('The period of the statement (e.g., "01-05-2024 to 31-05-2024"). Return "N/A" if not found.'),
     openingBalance: z.string().describe('The opening balance of the statement, formatted as ₹X,XX,XXX. Return "N/A" if not found.'),
@@ -73,10 +75,10 @@ const prompt = ai.definePrompt({
 **Extraction & Analysis Tasks:**
 
 1.  **Account Summary (summary):**
-    *   Extract the account holder's name, bank name, and full statement period.
+    *   Extract the account holder's name, mobile number, primary address, bank name, and full statement period.
     *   Find the account number and MASK it, showing only the last 4 digits (e.g., "******1234").
     *   Extract the opening and closing balance for the period.
-    *   Format all currency values as "₹X,XX,XXX". If not found, use "N/A".
+    *   Format all currency values as "₹X,XX,XXX". If a field is not found, you MUST return "N/A".
 
 2.  **Financial Overview (overview):**
     *   Calculate the sum of all credit (deposits) and debit (withdrawals) transactions.
