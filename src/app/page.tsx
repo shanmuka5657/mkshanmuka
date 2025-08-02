@@ -92,6 +92,7 @@ const initialAnalysis: AnalyzeCreditReportOutput = {
     dateOfBirth: 'N/A',
     pan: 'N/A',
     gender: 'N/A',
+    mobileNumber: 'N/A',
     address: 'N/A',
   },
   reportSummary: {
@@ -1569,6 +1570,9 @@ export default function CreditWiseAIPage() {
                             </div>
                             <div>
                                 <InfoItem label="PAN" value={customerDetails.pan} isLoading={isAnalyzing}/>
+                                <div className="mt-2">
+                                    <InfoItem label="Mobile Number" value={customerDetails.mobileNumber} isLoading={isAnalyzing}/>
+                                </div>
                                 <div className="mt-2">
                                     <InfoItem label="Address" value={customerDetails.address} isLoading={isAnalyzing}/>
                                 </div>

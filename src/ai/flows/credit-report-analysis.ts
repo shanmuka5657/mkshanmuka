@@ -25,6 +25,7 @@ const CustomerDetailsSchema = z.object({
   dateOfBirth: z.string().describe('The consumer\'s date of birth in DD-MM-YYYY format. Return "N/A" if not found.'),
   pan: z.string().describe('The consumer\'s PAN ID. Return "N/A" if not found.'),
   gender: z.string().describe('The consumer\'s gender. Return "N/A" if not found.'),
+  mobileNumber: z.string().describe('The consumer\'s primary mobile number. Return "N/A" if not found.'),
   address: z.string().describe('The consumer\'s primary address listed on the report. Return "N/A" if not found.'),
 });
 
@@ -86,8 +87,8 @@ const prompt = ai.definePrompt({
 **Extraction Tasks:**
 
 1.  **Consumer Details (customerDetails):**
-    *   Find the "PERSONAL INFORMATION" or "CONSUMER INFORMATION" section.
-    *   Extract Name, Date of Birth (DD-MM-YYYY), PAN, Gender, and the primary Address.
+    *   Find the "PERSONAL INFORMATION", "CONTACT INFORMATION", or "CONSUMER INFORMATION" section.
+    *   Extract Name, Date of Birth (DD-MM-YYYY), PAN, Gender, Mobile Number, and the primary Address.
     *   If a field is missing, you MUST return "N/A".
 
 2.  **Report Summary (reportSummary):**
