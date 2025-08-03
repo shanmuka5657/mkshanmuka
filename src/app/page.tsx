@@ -49,6 +49,7 @@ import {
   Wrench,
   User as UserIcon,
   PlusCircle,
+  Info,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -93,6 +94,7 @@ import { saveTrainingCandidate } from '@/lib/training-store';
 import { Textarea } from '@/components/ui/textarea';
 import type { FlowUsage } from 'genkit/flow';
 import { format, differenceInMonths, parseISO, isValid } from 'date-fns';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -224,7 +226,7 @@ export default function CreditWiseAIPage() {
 
   // New state for Asset Creation
   const [assets, setAssets] = useState<Asset[]>([]);
-  const [newAsset, setNewAsset] = useState<Omit<Asset, 'id' | 'purchaseDate'> & { purchaseDate: string }>({
+  const [newAsset, setNewAsset] = useState<Omit<Asset, 'id'>>({
     description: '',
     type: '',
     owner: '',
@@ -703,11 +705,11 @@ export default function CreditWiseAIPage() {
   };
 
   const handleAddAsset = () => {
-    if (!newAsset.description || !newAsset.purchaseDate) {
+    if (!newAsset.description) {
         toast({
             variant: "destructive",
             title: "Missing Fields",
-            description: "Please fill in at least the asset description and purchase date.",
+            description: "Please fill in at least the asset description.",
         });
         return;
     }
@@ -731,6 +733,14 @@ export default function CreditWiseAIPage() {
   const handleDeleteAsset = (id: string) => {
     setAssets(assets.filter(asset => asset.id !== id));
   };
+  
+  const handleAssetChange = (id: string, field: keyof Asset, value: string | number) => {
+    setAssets(prevAssets =>
+      prevAssets.map(asset =>
+        asset.id === id ? { ...asset, [field]: value } : asset
+      )
+    );
+  };
 
   const handleNewAssetChange = (field: keyof typeof newAsset, value: string | number) => {
     setNewAsset(prev => ({ ...prev, [field]: value }));
@@ -740,7 +750,7 @@ export default function CreditWiseAIPage() {
     const totalAssetValue = assets.reduce((sum, asset) => sum + asset.consideredValue, 0);
     const monthsIn4Years = 4 * 12;
     // A simple surplus/income estimation. This can be made more complex.
-    const estimatedSurplus = totalAssetValue > 0 ? totalAssetValue * 0.1 : 0; // Assuming 10% surplus
+    const estimatedSurplus = totalAssetValue > 0 ? totalAssetValue * 0.1 : 0; // Assuming 10% surplus from total value
     const approxIncome = totalAssetValue > 0 ? totalAssetValue / monthsIn4Years : 0;
 
     return {
@@ -944,22 +954,22 @@ export default function CreditWiseAIPage() {
 
   const SummaryItem = ({ label, value, valueClassName, isLoading = false }: { label: string; value: string | number; valueClassName?: string, isLoading?: boolean }) => (
     <div className="flex flex-col items-center justify-center text-center p-2 rounded-lg bg-muted/50">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      {isLoading ? <Loader2 className="h-5 w-5 mt-1 animate-spin" /> : <p className={cn("text-xl font-bold", valueClassName)}>{value}</p>}
+      <div className="text-sm text-muted-foreground">{label}</div>
+      {isLoading ? <Loader2 className="h-5 w-5 mt-1 animate-spin" /> : <div className={cn("text-xl font-bold", valueClassName)}>{value}</div>}
     </div>
   );
   
   const InfoItem = ({ label, value, isLoading = false }: { label: string | React.ReactNode; value: string | number; isLoading?: boolean }) => (
      <div className="grid grid-cols-2 gap-2">
-        <div className="font-semibold text-sm text-muted-foreground flex items-center">{label}:</div>
-        {isLoading ? <Loader2 className="h-4 w-4 mt-1 animate-spin" /> : <p className="font-semibold truncate">{value}</p>}
+        <div className="font-semibold text-sm text-muted-foreground flex items-center">{label}</div>
+        {isLoading ? <Loader2 className="h-4 w-4 mt-1 animate-spin" /> : <div className="font-semibold truncate">{value}</div>}
     </div>
   );
 
   const DpdSummaryItem = ({ label, value, colorClass }: { label: string; value: number; colorClass: string; }) => (
     <div className={cn("text-center p-3 rounded-lg", colorClass)}>
-      <p className="text-2xl font-bold">{value}</p>
-      <p className="text-xs font-medium uppercase">{label}</p>
+      <div className="text-2xl font-bold">{value}</div>
+      <div className="text-xs font-medium uppercase">{label}</div>
     </div>
   );
 
@@ -1088,10 +1098,10 @@ export default function CreditWiseAIPage() {
                     <div className={cn("text-2xl font-semibold", getRatingColorClass(aiRating.rating))}>
                       {aiRating.rating}
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">AI Score / 100</p>
+                    <div className="text-sm text-muted-foreground mt-1">AI Score / 100</div>
                   </div>
                   <div className="md:col-span-2">
-                    <p className="text-sm text-muted-foreground">{aiRating.summary}</p>
+                    <div className="text-sm text-muted-foreground">{aiRating.summary}</div>
                     <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <h4 className="font-semibold flex items-center mb-2"><ThumbsUp className="h-5 w-5 mr-2 text-green-500" />Positive Factors</h4>
@@ -1144,7 +1154,7 @@ export default function CreditWiseAIPage() {
                 </TooltipTrigger>
                 {(!aiRating || !estimatedIncome) && (
                   <TooltipContent>
-                    <p>Please get your AI Rating and enter your income first.</p>
+                    <div>Please get your AI Rating and enter your income first.</div>
                   </TooltipContent>
                 )}
               </UiTooltip>
@@ -1154,20 +1164,20 @@ export default function CreditWiseAIPage() {
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="p-4 bg-muted rounded-lg">
                     <h4 className="font-semibold flex items-center gap-2"><Wallet className="h-5 w-5 text-primary"/>Repayment Capacity</h4>
-                    <p className="text-sm text-muted-foreground">Remaining amount you can afford for a new EMI per month.</p>
-                    <p className="text-3xl font-bold text-primary mt-2">
+                    <div className="text-sm text-muted-foreground">Remaining amount you can afford for a new EMI per month.</div>
+                    <div className="text-3xl font-bold text-primary mt-2">
                         ₹{loanEligibility.repaymentCapacity.toLocaleString('en-IN')}
-                    </p>
+                    </div>
                     </div>
                     <div className="p-4 bg-muted rounded-lg">
                     <h4 className="font-semibold">Eligible Loan Amount</h4>
-                    <p className="text-2xl font-bold text-primary">
+                    <div className="text-2xl font-bold text-primary">
                         ₹{loanEligibility.eligibleLoanAmount.toLocaleString('en-IN')}
-                    </p>
-                    <p className="text-muted-foreground text-sm">
+                    </div>
+                    <div className="text-muted-foreground text-sm">
                         at an estimated interest rate of{' '}
                         <strong>{loanEligibility.estimatedInterestRate}</strong>
-                    </p>
+                    </div>
                     </div>
                     <div className="md:col-span-2">
                     <Alert className="mt-4">
@@ -1224,7 +1234,7 @@ export default function CreditWiseAIPage() {
                      <div className="prose prose-sm dark:prose-invert max-w-none space-y-4">
                         <div>
                             <h5 className="font-bold">Probability of Default Explanation</h5>
-                            <p>{riskAssessment.defaultProbabilityExplanation}</p>
+                            <div>{riskAssessment.defaultProbabilityExplanation}</div>
                         </div>
                     </div>
 
@@ -1246,8 +1256,8 @@ export default function CreditWiseAIPage() {
                          <div className="space-y-2">
                           {riskAssessment.mitigations.map((mit, i) => (
                               <div key={i} className="p-3 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-800">
-                                <p className="font-semibold text-sm text-green-800 dark:text-green-300">{mit.factor}</p>
-                                <p className="text-sm text-muted-foreground">{mit.action}</p>
+                                <div className="font-semibold text-sm text-green-800 dark:text-green-300">{mit.factor}</div>
+                                <div className="text-sm text-muted-foreground">{mit.action}</div>
                               </div>
                           ))}
                         </div>
@@ -1255,7 +1265,7 @@ export default function CreditWiseAIPage() {
                     </div>
                   </div>
                 ) : (
-                  <p>Click "Start Full AI Analysis" to generate the risk assessment.</p>
+                  <div>Click "Start Full AI Analysis" to generate the risk assessment.</div>
                 )}
             </CardContent>
         </Card>
@@ -1280,116 +1290,85 @@ export default function CreditWiseAIPage() {
               </TabsList>
               <TabsContent value="asset" className="mt-4">
                  <div className="space-y-4">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Description</TableHead>
-                                <TableHead>Type</TableHead>
-                                <TableHead>Owner</TableHead>
-                                <TableHead>Document</TableHead>
-                                <TableHead>Purchase Date</TableHead>
-                                <TableHead>Months</TableHead>
-                                <TableHead>Investment</TableHead>
-                                <TableHead>Considered</TableHead>
-                                <TableHead></TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {assets.map((asset, index) => {
-                                const purchaseDate = parseISO(asset.purchaseDate);
-                                const months = isValid(purchaseDate) ? differenceInMonths(new Date(), purchaseDate) : 0;
-                                return (
-                                <TableRow key={asset.id}>
-                                    <TableCell>{asset.description}</TableCell>
-                                    <TableCell>{asset.type}</TableCell>
-                                    <TableCell>{asset.owner}</TableCell>
-                                    <TableCell>{asset.document}</TableCell>
-                                    <TableCell>{format(purchaseDate, 'dd-MM-yyyy')}</TableCell>
-                                    <TableCell>{months}</TableCell>
-                                    <TableCell>₹{asset.investmentValue.toLocaleString('en-IN')}</TableCell>
-                                    <TableCell>₹{asset.consideredValue.toLocaleString('en-IN')}</TableCell>
-                                    <TableCell>
-                                        <Button variant="ghost" size="icon" onClick={() => handleDeleteAsset(asset.id)}>
-                                            <Trash2 className="h-4 w-4 text-destructive"/>
-                                        </Button>
-                                    </TableCell>
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="min-w-[150px]">Description</TableHead>
+                                    <TableHead className="min-w-[120px]">Type</TableHead>
+                                    <TableHead className="min-w-[120px]">Owner</TableHead>
+                                    <TableHead className="min-w-[150px]">Document</TableHead>
+                                    <TableHead className="min-w-[150px]">Purchase Date</TableHead>
+                                    <TableHead>Months</TableHead>
+                                    <TableHead className="min-w-[150px]">Investment (₹)</TableHead>
+                                    <TableHead className="min-w-[150px]">Considered (₹)</TableHead>
+                                    <TableHead></TableHead>
                                 </TableRow>
-                            )})}
-                             <TableRow>
-                                <TableCell>
-                                    <Input
-                                        placeholder="e.g., Agriculture Land"
-                                        value={newAsset.description}
-                                        onChange={(e) => handleNewAssetChange('description', e.target.value)}
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    <Input
-                                        placeholder="e.g., Purchase of Land"
-                                        value={newAsset.type}
-                                        onChange={(e) => handleNewAssetChange('type', e.target.value)}
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    <Input
-                                        placeholder="e.g., John Doe"
-                                        value={newAsset.owner}
-                                        onChange={(e) => handleNewAssetChange('owner', e.target.value)}
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    <Input
-                                        placeholder="e.g., Sale Deed"
-                                        value={newAsset.document}
-                                        onChange={(e) => handleNewAssetChange('document', e.target.value)}
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    <Input
-                                        type="date"
-                                        value={newAsset.purchaseDate}
-                                        onChange={(e) => handleNewAssetChange('purchaseDate', e.target.value)}
-                                    />
-                                </TableCell>
-                                <TableCell></TableCell>
-                                <TableCell>
-                                    <Input
-                                        type="number"
-                                        placeholder="e.g., 1500000"
-                                        value={newAsset.investmentValue || ''}
-                                        onChange={(e) => handleNewAssetChange('investmentValue', parseFloat(e.target.value) || 0)}
-                                    />
-                                </TableCell>
-                                 <TableCell>
-                                    <Input
-                                        type="number"
-                                        placeholder="e.g., 1500000"
-                                        value={newAsset.consideredValue || ''}
-                                        onChange={(e) => handleNewAssetChange('consideredValue', parseFloat(e.target.value) || 0)}
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    <Button size="sm" onClick={handleAddAsset}><PlusCircle className="mr-2"/> Add</Button>
-                                </TableCell>
-                            </TableRow>
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {assets.map((asset) => {
+                                    const purchaseDate = isValid(parseISO(asset.purchaseDate)) ? parseISO(asset.purchaseDate) : null;
+                                    const months = purchaseDate ? differenceInMonths(new Date(), purchaseDate) : 0;
+                                    return (
+                                    <TableRow key={asset.id}>
+                                        <TableCell><Input value={asset.description} onChange={(e) => handleAssetChange(asset.id, 'description', e.target.value)} /></TableCell>
+                                        <TableCell><Input value={asset.type} onChange={(e) => handleAssetChange(asset.id, 'type', e.target.value)} /></TableCell>
+                                        <TableCell><Input value={asset.owner} onChange={(e) => handleAssetChange(asset.id, 'owner', e.target.value)} /></TableCell>
+                                        <TableCell><Input value={asset.document} onChange={(e) => handleAssetChange(asset.id, 'document', e.target.value)}/></TableCell>
+                                        <TableCell><Input type="date" value={asset.purchaseDate} onChange={(e) => handleAssetChange(asset.id, 'purchaseDate', e.target.value)}/></TableCell>
+                                        <TableCell className="text-center">{months}</TableCell>
+                                        <TableCell><Input type="number" value={asset.investmentValue || ''} onChange={(e) => handleAssetChange(asset.id, 'investmentValue', parseFloat(e.target.value) || 0)} /></TableCell>
+                                        <TableCell><Input type="number" value={asset.consideredValue || ''} onChange={(e) => handleAssetChange(asset.id, 'consideredValue', parseFloat(e.target.value) || 0)}/></TableCell>
+                                        <TableCell>
+                                            <Button variant="ghost" size="icon" onClick={() => handleDeleteAsset(asset.id)}>
+                                                <Trash2 className="h-4 w-4 text-destructive"/>
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                )})}
+                            </TableBody>
+                        </Table>
+                    </div>
+                     <div className="flex justify-end">
+                        <Button size="sm" onClick={handleAddAsset}><PlusCircle className="mr-2"/> Add New Asset</Button>
+                    </div>
+
                     {assets.length > 0 && (
                         <Card className="bg-muted/50">
                             <CardHeader>
                                 <CardTitle>Asset Summary</CardTitle>
                             </CardHeader>
-                            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <SummaryItem label="Total Asset Value" value={`₹${assetCalculations.totalAssetValue.toLocaleString('en-IN')}`} valueClassName="text-primary"/>
-                                <SummaryItem label="Estimated Surplus" value={`₹${assetCalculations.estimatedSurplus.toLocaleString('en-IN')}`} valueClassName="text-green-600"/>
-                                <SummaryItem label="Approx. Income" value={`₹${assetCalculations.approxIncome.toLocaleString('en-IN')}/month`} valueClassName="text-green-600"/>
+                            <CardContent>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <SummaryItem label="Total Asset Value" value={`₹${assetCalculations.totalAssetValue.toLocaleString('en-IN')}`} valueClassName="text-primary"/>
+                                    <SummaryItem label="Estimated Surplus" value={`₹${assetCalculations.estimatedSurplus.toLocaleString('en-IN')}`} valueClassName="text-green-600"/>
+                                    <SummaryItem label="Approx. Income / Month" value={`₹${assetCalculations.approxIncome.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} valueClassName="text-green-600"/>
+                                </div>
+                                <Accordion type="single" collapsible className="w-full mt-4">
+                                  <AccordionItem value="item-1">
+                                    <AccordionTrigger>
+                                        <div className="flex items-center text-sm gap-2">
+                                            <Info className="h-4 w-4"/> How are these calculated?
+                                        </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent>
+                                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                                            <ul>
+                                                <li><strong>Total Asset Value:</strong> This is the sum of the "Considered Value" for all assets you have entered.</li>
+                                                <li><strong>Estimated Surplus:</strong> A simple assumption that 10% of your total asset value could be considered as a financial surplus or buffer. (Formula: <code>Total Asset Value * 0.10</code>)</li>
+                                                <li><strong>Approx. Income / Month:</strong> This metric estimates a potential monthly income by distributing the "Total Asset Value" over a 4-year period (48 months). This is a common heuristic in some financial assessments to model asset liquidation over time. (Formula: <code>Total Asset Value / 48</code>)</li>
+                                            </ul>
+                                        </div>
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                </Accordion>
                             </CardContent>
                         </Card>
                     )}
                  </div>
               </TabsContent>
               <TabsContent value="salary">
-                <Alert className="mt-4">
+                <Alert>
                   <Wrench className="h-4 w-4" />
                   <AlertTitle>Coming Soon!</AlertTitle>
                   <AlertDescription>
@@ -1398,7 +1377,7 @@ export default function CreditWiseAIPage() {
                 </Alert>
               </TabsContent>
               <TabsContent value="business">
-                <Alert className="mt-4">
+                <Alert>
                   <Wrench className="h-4 w-4" />
                   <AlertTitle>Coming Soon!</AlertTitle>
                   <AlertDescription>
@@ -1524,34 +1503,34 @@ export default function CreditWiseAIPage() {
                 <h4 className="text-xl font-semibold border-b pb-2">Advanced Risk Metrics</h4>
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                    <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg">
-                     <p className="text-sm text-muted-foreground">Probability of Default (PD)</p>
-                     <p className="text-3xl font-bold text-destructive">{underwritingResult.probabilityOfDefault}%</p>
+                     <div className="text-sm text-muted-foreground">Probability of Default (PD)</div>
+                     <div className="text-3xl font-bold text-destructive">{underwritingResult.probabilityOfDefault}%</div>
                    </div>
                    <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg">
-                     <p className="text-sm text-muted-foreground">Loss Given Default (LGD)</p>
-                     <p className="text-3xl font-bold text-destructive">{underwritingResult.lossGivenDefault}%</p>
+                     <div className="text-sm text-muted-foreground">Loss Given Default (LGD)</div>
+                     <div className="text-3xl font-bold text-destructive">{underwritingResult.lossGivenDefault}%</div>
                    </div>
                    <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg">
-                     <p className="text-sm text-muted-foreground">Exposure at Default (EAD)</p>
-                     <p className="text-3xl font-bold text-destructive">₹{underwritingResult.exposureAtDefault.toLocaleString('en-IN')}</p>
+                     <div className="text-sm text-muted-foreground">Exposure at Default (EAD)</div>
+                     <div className="text-3xl font-bold text-destructive">₹{underwritingResult.exposureAtDefault.toLocaleString('en-IN')}</div>
                    </div>
                    <div className="flex flex-col items-center text-center p-4 bg-red-100 dark:bg-red-900/30 rounded-lg">
-                     <p className="text-sm text-red-700 dark:text-red-300">Expected Loss (EL)</p>
-                     <p className="text-3xl font-bold text-red-600 dark:text-red-400">₹{underwritingResult.expectedLoss.toLocaleString('en-IN')}</p>
+                     <div className="text-sm text-red-700 dark:text-red-300">Expected Loss (EL)</div>
+                     <div className="text-3xl font-bold text-red-600 dark:text-red-400">₹{underwritingResult.expectedLoss.toLocaleString('en-IN')}</div>
                    </div>
                  </div>
                  <div className="prose prose-sm dark:prose-invert max-w-none space-y-4">
                     <div>
                         <h5 className="font-bold">Probability of Default (PD) Explanation</h5>
-                        <p>{underwritingResult.riskMetricsExplanation.pd}</p>
+                        <div>{underwritingResult.riskMetricsExplanation.pd}</div>
                     </div>
                     <div>
                         <h5 className="font-bold">Loss Given Default (LGD) Explanation</h5>
-                        <p>{underwritingResult.riskMetricsExplanation.lgd}</p>
+                        <div>{underwritingResult.riskMetricsExplanation.lgd}</div>
                     </div>
                     <div>
                         <h5 className="font-bold">Exposure at Default (EAD) Explanation</h5>
-                        <p>{underwritingResult.riskMetricsExplanation.ead}</p>
+                        <div>{underwritingResult.riskMetricsExplanation.ead}</div>
                     </div>
                  </div>
                </div>
@@ -1603,7 +1582,7 @@ export default function CreditWiseAIPage() {
                 <Input id="total-emi" type="number" placeholder="AI is calculating..." value={totalEmi} onChange={(e) => setTotalEmi(e.target.value)} disabled />
                 {isCalculatingEmi && <Loader2 className="h-5 w-5 animate-spin" />}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">This is auto-calculated from your report and your selections below. You can override it.</p>
+              <div className="text-xs text-muted-foreground mt-1">This is auto-calculated from your report and your selections below. You can override it.</div>
             </div>
             
             {activeLoanDetails.length > 0 && (
@@ -1623,16 +1602,16 @@ export default function CreditWiseAIPage() {
                             {activeLoanDetails.map((loan) => (
                                 <TableRow key={loan.id}>
                                     <TableCell>
-                                        <p className="font-semibold">{loan.loanType}</p>
-                                        <p className="text-xs text-muted-foreground">{loan.ownership}</p>
+                                        <div className="font-semibold">{loan.loanType}</div>
+                                        <div className="text-xs text-muted-foreground">{loan.ownership}</div>
                                     </TableCell>
                                     <TableCell>
-                                        <p className="text-xs">Balance: ₹{loan.currentBalance.toLocaleString('en-IN')}</p>
-                                        <p className="text-xs">Sanctioned: ₹{loan.sanctionedAmount.toLocaleString('en-IN')}</p>
+                                        <div className="text-xs">Balance: ₹{loan.currentBalance.toLocaleString('en-IN')}</div>
+                                        <div className="text-xs">Sanctioned: ₹{loan.sanctionedAmount.toLocaleString('en-IN')}</div>
                                     </TableCell>
                                     <TableCell>
                                         {loan.emi > 0 ? (
-                                            <p className="px-3 py-2 text-sm">{loan.emi.toLocaleString('en-IN')}</p>
+                                            <div className="px-3 py-2 text-sm">{loan.emi.toLocaleString('en-IN')}</div>
                                         ) : (
                                             <Input
                                                 type="number"
@@ -1700,7 +1679,7 @@ export default function CreditWiseAIPage() {
                     </TooltipTrigger>
                     {!estimatedIncome && (
                       <TooltipContent>
-                        <p>Please enter your estimated income first.</p>
+                        <div>Please enter your estimated income first.</div>
                       </TooltipContent>
                     )}
                   </UiTooltip>
@@ -1750,7 +1729,7 @@ export default function CreditWiseAIPage() {
     <>
         <div className="text-center mb-12 print:hidden">
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">Advanced AI Credit Score Analyzer</h1>
-            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">Upload your CIBIL report PDF to unlock instant AI-powered insights, personalized scoring, and actionable advice.</p>
+            <div className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">Upload your CIBIL report PDF to unlock instant AI-powered insights, personalized scoring, and actionable advice.</div>
         </div>
 
         <Card className="mb-8 shadow-lg hover:shadow-xl transition-shadow print:hidden">
@@ -1802,7 +1781,7 @@ export default function CreditWiseAIPage() {
             <Card className="text-center p-8 my-8 print:hidden">
                 <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary mb-4" />
                 <h3 className="text-xl font-semibold">Processing your CIBIL report...</h3>
-                <p className="text-muted-foreground">This may take a moment.</p>
+                <div className="text-muted-foreground">This may take a moment.</div>
                 <Progress value={progress} className="w-full max-w-md mx-auto mt-4" />
             </Card>
         )}
@@ -1851,7 +1830,7 @@ export default function CreditWiseAIPage() {
                   </CardHeader>
                   <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
                       <div className="text-center">
-                          <p className="text-muted-foreground">Official CIBIL Score</p>
+                          <div className="text-muted-foreground">Official CIBIL Score</div>
                           <div className="text-7xl font-bold text-primary">{creditScore || 'N/A'}</div>
                           {creditScore && <Progress value={scoreProgress} className="mt-4" />}
                       </div>
@@ -1930,7 +1909,7 @@ export default function CreditWiseAIPage() {
     <>
       <div className="text-center mb-12 print:hidden">
         <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">AI Bank Statement Analyzer</h1>
-        <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">Upload your bank statement PDF to get an instant, AI-powered financial health check-up.</p>
+        <div className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">Upload your bank statement PDF to get an instant, AI-powered financial health check-up.</div>
       </div>
       <Card className="mb-8 shadow-lg hover:shadow-xl transition-shadow print:hidden">
         <CardHeader>
@@ -1981,7 +1960,7 @@ export default function CreditWiseAIPage() {
             <Card className="text-center p-8 my-8 print:hidden">
                 <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary mb-4" />
                 <h3 className="text-xl font-semibold">Processing your bank statement...</h3>
-                <p className="text-muted-foreground">This may take a moment.</p>
+                <div className="text-muted-foreground">This may take a moment.</div>
                 <Progress value={progress} className="w-full max-w-md mx-auto mt-4" />
             </Card>
         )}
@@ -2040,7 +2019,7 @@ export default function CreditWiseAIPage() {
                         <CardTitle className="flex items-center text-xl font-bold"><BrainCircuit className="mr-3 h-6 w-6 text-primary" />AI Financial Health Summary</CardTitle>
                     </CardHeader>
                     <CardContent className="prose prose-sm dark:prose-invert max-w-none">
-                        <p>{bankAnalysisResult.health.summary}</p>
+                        <div>{bankAnalysisResult.health.summary}</div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                             <div>
                                 <h4 className="font-semibold text-green-600">Strengths</h4>
@@ -2178,7 +2157,7 @@ export default function CreditWiseAIPage() {
         ) : !analysisMode ? (
             <div className="text-center">
                 <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">Choose an Analyzer</h1>
-                <p className="mt-3 text-lg text-muted-foreground max-w-xl mx-auto">Select the type of document you would like to analyze with our AI.</p>
+                <div className="mt-3 text-lg text-muted-foreground max-w-xl mx-auto">Select the type of document you would like to analyze with our AI.</div>
                 <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
                     <Card 
                         className="p-8 text-center cursor-pointer hover:shadow-lg hover:border-primary transition-all"
@@ -2186,7 +2165,7 @@ export default function CreditWiseAIPage() {
                     >
                         <FileText className="h-16 w-16 mx-auto text-primary mb-4" />
                         <h2 className="text-2xl font-bold">Credit Report Analysis</h2>
-                        <p className="text-muted-foreground mt-2">Upload a CIBIL report for in-depth credit health analysis, scoring, and loan underwriting.</p>
+                        <div className="text-muted-foreground mt-2">Upload a CIBIL report for in-depth credit health analysis, scoring, and loan underwriting.</div>
                     </Card>
                      <Card 
                         className="p-8 text-center cursor-pointer hover:shadow-lg hover:border-primary transition-all"
@@ -2194,7 +2173,7 @@ export default function CreditWiseAIPage() {
                     >
                         <Landmark className="h-16 w-16 mx-auto text-primary mb-4" />
                         <h2 className="text-2xl font-bold">Bank Statement Analysis</h2>
-                        <p className="text-muted-foreground mt-2">Upload a bank statement to analyze income, expenses, and overall financial health.</p>
+                        <div className="text-muted-foreground mt-2">Upload a bank statement to analyze income, expenses, and overall financial health.</div>
                     </Card>
                 </div>
             </div>
@@ -2265,7 +2244,7 @@ export default function CreditWiseAIPage() {
         )}
       </main>
       <footer className="text-center py-6 text-sm text-muted-foreground print:hidden">
-         <p>© {new Date().getFullYear()} CreditWise AI. Built with Firebase and Google AI.</p>
+         <div>© {new Date().getFullYear()} CreditWise AI. Built with Firebase and Google AI.</div>
       </footer>
 
       <style jsx global>{`
