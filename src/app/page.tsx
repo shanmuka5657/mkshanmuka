@@ -48,6 +48,7 @@ import {
   TrendingUp,
   Wrench,
   User as UserIcon,
+  PlusCircle,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -91,6 +92,7 @@ import Link from 'next/link';
 import { saveTrainingCandidate } from '@/lib/training-store';
 import { Textarea } from '@/components/ui/textarea';
 import type { FlowUsage } from 'genkit/flow';
+import { format, differenceInMonths, parseISO, isValid } from 'date-fns';
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -141,6 +143,17 @@ type ActiveLoanDetail = CalculateTotalEmiOutput['activeLoans'][0] & {
     id: string; // Add a unique ID for React keys
     considerForObligation: 'Yes' | 'No';
     comment: string;
+};
+
+type Asset = {
+  id: string;
+  description: string;
+  type: string;
+  owner: string;
+  document: string;
+  purchaseDate: string;
+  investmentValue: number;
+  consideredValue: number;
 };
 
 // Pricing for gemini-pro model per 1M tokens
@@ -208,6 +221,18 @@ export default function CreditWiseAIPage() {
   // New state for token tracking and cost
   const [tokenUsage, setTokenUsage] = useState({ inputTokens: 0, outputTokens: 0 });
   const [estimatedCost, setEstimatedCost] = useState(0);
+
+  // New state for Asset Creation
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [newAsset, setNewAsset] = useState<Omit<Asset, 'id' | 'purchaseDate'> & { purchaseDate: string }>({
+    description: '',
+    type: '',
+    owner: '',
+    document: '',
+    purchaseDate: '',
+    investmentValue: 0,
+    consideredValue: 0,
+  });
 
 
   const { toast } = useToast()
@@ -325,6 +350,7 @@ export default function CreditWiseAIPage() {
     setIsAssessingRisk(false);
     setTokenUsage({ inputTokens: 0, outputTokens: 0 });
     setEstimatedCost(0);
+    setAssets([]);
 
     if(fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -675,6 +701,54 @@ export default function CreditWiseAIPage() {
           )
       );
   };
+
+  const handleAddAsset = () => {
+    if (!newAsset.description || !newAsset.purchaseDate) {
+        toast({
+            variant: "destructive",
+            title: "Missing Fields",
+            description: "Please fill in at least the asset description and purchase date.",
+        });
+        return;
+    }
+    const assetToAdd: Asset = {
+        ...newAsset,
+        id: `asset-${Date.now()}`
+    };
+    setAssets([...assets, assetToAdd]);
+    // Reset newAsset form
+    setNewAsset({
+        description: '',
+        type: '',
+        owner: '',
+        document: '',
+        purchaseDate: '',
+        investmentValue: 0,
+        consideredValue: 0,
+    });
+  };
+
+  const handleDeleteAsset = (id: string) => {
+    setAssets(assets.filter(asset => asset.id !== id));
+  };
+
+  const handleNewAssetChange = (field: keyof typeof newAsset, value: string | number) => {
+    setNewAsset(prev => ({ ...prev, [field]: value }));
+  };
+
+  const assetCalculations = useMemo(() => {
+    const totalAssetValue = assets.reduce((sum, asset) => sum + asset.consideredValue, 0);
+    const monthsIn4Years = 4 * 12;
+    // A simple surplus/income estimation. This can be made more complex.
+    const estimatedSurplus = totalAssetValue > 0 ? totalAssetValue * 0.1 : 0; // Assuming 10% surplus
+    const approxIncome = totalAssetValue > 0 ? totalAssetValue / monthsIn4Years : 0;
+
+    return {
+      totalAssetValue,
+      estimatedSurplus,
+      approxIncome,
+    }
+  }, [assets]);
 
   // Perform calculations on the client-side for accuracy
   const calculatedSummary = useMemo(() => {
@@ -1204,14 +1278,115 @@ export default function CreditWiseAIPage() {
                 <TabsTrigger value="salary">Salary Slips</TabsTrigger>
                 <TabsTrigger value="business">Business Verification</TabsTrigger>
               </TabsList>
-              <TabsContent value="asset">
-                 <Alert className="mt-4">
-                  <Wrench className="h-4 w-4" />
-                  <AlertTitle>Coming Soon!</AlertTitle>
-                  <AlertDescription>
-                    The Asset Creation verification feature is currently under development.
-                  </AlertDescription>
-                </Alert>
+              <TabsContent value="asset" className="mt-4">
+                 <div className="space-y-4">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Description</TableHead>
+                                <TableHead>Type</TableHead>
+                                <TableHead>Owner</TableHead>
+                                <TableHead>Document</TableHead>
+                                <TableHead>Purchase Date</TableHead>
+                                <TableHead>Months</TableHead>
+                                <TableHead>Investment</TableHead>
+                                <TableHead>Considered</TableHead>
+                                <TableHead></TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {assets.map((asset, index) => {
+                                const purchaseDate = parseISO(asset.purchaseDate);
+                                const months = isValid(purchaseDate) ? differenceInMonths(new Date(), purchaseDate) : 0;
+                                return (
+                                <TableRow key={asset.id}>
+                                    <TableCell>{asset.description}</TableCell>
+                                    <TableCell>{asset.type}</TableCell>
+                                    <TableCell>{asset.owner}</TableCell>
+                                    <TableCell>{asset.document}</TableCell>
+                                    <TableCell>{format(purchaseDate, 'dd-MM-yyyy')}</TableCell>
+                                    <TableCell>{months}</TableCell>
+                                    <TableCell>₹{asset.investmentValue.toLocaleString('en-IN')}</TableCell>
+                                    <TableCell>₹{asset.consideredValue.toLocaleString('en-IN')}</TableCell>
+                                    <TableCell>
+                                        <Button variant="ghost" size="icon" onClick={() => handleDeleteAsset(asset.id)}>
+                                            <Trash2 className="h-4 w-4 text-destructive"/>
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            )})}
+                             <TableRow>
+                                <TableCell>
+                                    <Input
+                                        placeholder="e.g., Agriculture Land"
+                                        value={newAsset.description}
+                                        onChange={(e) => handleNewAssetChange('description', e.target.value)}
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <Input
+                                        placeholder="e.g., Purchase of Land"
+                                        value={newAsset.type}
+                                        onChange={(e) => handleNewAssetChange('type', e.target.value)}
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <Input
+                                        placeholder="e.g., John Doe"
+                                        value={newAsset.owner}
+                                        onChange={(e) => handleNewAssetChange('owner', e.target.value)}
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <Input
+                                        placeholder="e.g., Sale Deed"
+                                        value={newAsset.document}
+                                        onChange={(e) => handleNewAssetChange('document', e.target.value)}
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <Input
+                                        type="date"
+                                        value={newAsset.purchaseDate}
+                                        onChange={(e) => handleNewAssetChange('purchaseDate', e.target.value)}
+                                    />
+                                </TableCell>
+                                <TableCell></TableCell>
+                                <TableCell>
+                                    <Input
+                                        type="number"
+                                        placeholder="e.g., 1500000"
+                                        value={newAsset.investmentValue || ''}
+                                        onChange={(e) => handleNewAssetChange('investmentValue', parseFloat(e.target.value) || 0)}
+                                    />
+                                </TableCell>
+                                 <TableCell>
+                                    <Input
+                                        type="number"
+                                        placeholder="e.g., 1500000"
+                                        value={newAsset.consideredValue || ''}
+                                        onChange={(e) => handleNewAssetChange('consideredValue', parseFloat(e.target.value) || 0)}
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <Button size="sm" onClick={handleAddAsset}><PlusCircle className="mr-2"/> Add</Button>
+                                </TableCell>
+                            </TableRow>
+                        </TableBody>
+                    </Table>
+                    {assets.length > 0 && (
+                        <Card className="bg-muted/50">
+                            <CardHeader>
+                                <CardTitle>Asset Summary</CardTitle>
+                            </CardHeader>
+                            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <SummaryItem label="Total Asset Value" value={`₹${assetCalculations.totalAssetValue.toLocaleString('en-IN')}`} valueClassName="text-primary"/>
+                                <SummaryItem label="Estimated Surplus" value={`₹${assetCalculations.estimatedSurplus.toLocaleString('en-IN')}`} valueClassName="text-green-600"/>
+                                <SummaryItem label="Approx. Income" value={`₹${assetCalculations.approxIncome.toLocaleString('en-IN')}/month`} valueClassName="text-green-600"/>
+                            </CardContent>
+                        </Card>
+                    )}
+                 </div>
               </TabsContent>
               <TabsContent value="salary">
                 <Alert className="mt-4">
@@ -1303,7 +1478,7 @@ export default function CreditWiseAIPage() {
               </Alert>
             </CardContent>
             <CardFooter>
-               <Button type="submit" disabled={isUnderwriting || !aiRating || !estimatedIncome || !loanEligibility}>
+               <Button type="submit" disabled={isUnderwriting || !aiRating || !estimatedIncome || !loanEligibility || !riskAssessment}>
                 {isUnderwriting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Gavel className="mr-2 h-4 w-4" />}
                 Start Final Underwriting
               </Button>
@@ -2049,6 +2224,32 @@ export default function CreditWiseAIPage() {
                         <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans">{rawText}</pre>
                     </div>
                   </div>
+                   <Card className="print:hidden mt-8">
+                      <CardHeader>
+                          <CardTitle className="flex items-center"><FileSearch className="mr-3 h-6 w-6 text-primary" />Raw Report Text & Cost</CardTitle>
+                      </CardHeader>
+                      <CardContent className="flex flex-col gap-4">
+                          <div className="flex gap-4">
+                              <Button variant="outline" onClick={() => setShowRawText(!showRawText)}>
+                                  {showRawText ? 'Hide Raw Text' : 'Show Raw Text'}
+                              </Button>
+                              <Button variant="outline" onClick={handlePrint}>
+                                  <Printer className="mr-2"/>
+                                  Print Report
+                              </Button>
+                          </div>
+                          <Card className="bg-muted/50">
+                              <CardHeader>
+                                  <CardTitle className="text-lg flex items-center"><Coins className="mr-3 text-primary"/>Analysis Cost</CardTitle>
+                              </CardHeader>
+                              <CardContent className="grid grid-cols-3 gap-4">
+                                  <SummaryItem label="Input Tokens" value={tokenUsage.inputTokens.toLocaleString()} valueClassName="text-foreground" />
+                                  <SummaryItem label="Output Tokens" value={tokenUsage.outputTokens.toLocaleString()} valueClassName="text-foreground" />
+                                  <SummaryItem label="Estimated Cost (USD)" value={`$${estimatedCost.toFixed(5)}`} valueClassName="text-green-600" />
+                              </CardContent>
+                          </Card>
+                      </CardContent>
+                    </Card>
               </div>
             )}
             
@@ -2059,34 +2260,7 @@ export default function CreditWiseAIPage() {
               onTokensUsed={updateTokenUsage}
             />
             
-            {rawText &&
-              <Card className="print:hidden mt-8">
-                  <CardHeader>
-                      <CardTitle className="flex items-center"><FileSearch className="mr-3 h-6 w-6 text-primary" />Raw Report Text & Cost</CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex flex-col gap-4">
-                      <div className="flex gap-4">
-                          <Button variant="outline" onClick={() => setShowRawText(!showRawText)}>
-                              {showRawText ? 'Hide Raw Text' : 'Show Raw Text'}
-                          </Button>
-                          <Button variant="outline" onClick={handlePrint}>
-                              <Printer className="mr-2"/>
-                              Print Report
-                          </Button>
-                      </div>
-                      <Card className="bg-muted/50">
-                          <CardHeader>
-                              <CardTitle className="text-lg flex items-center"><Coins className="mr-3 text-primary"/>Analysis Cost</CardTitle>
-                          </CardHeader>
-                          <CardContent className="grid grid-cols-3 gap-4">
-                              <SummaryItem label="Input Tokens" value={tokenUsage.inputTokens.toLocaleString()} valueClassName="text-foreground" />
-                              <SummaryItem label="Output Tokens" value={tokenUsage.outputTokens.toLocaleString()} valueClassName="text-foreground" />
-                              <SummaryItem label="Estimated Cost (USD)" value={`$${estimatedCost.toFixed(5)}`} valueClassName="text-green-600" />
-                          </CardContent>
-                      </Card>
-                  </CardContent>
-                </Card>
-            }
+            
           </>
         )}
       </main>
