@@ -20,7 +20,7 @@ const RiskAssessmentInputSchema = z.object({
 });
 export type RiskAssessmentInput = z.infer<typeof RiskAssessmentInputSchema>;
 
-export const RiskAssessmentOutputSchema = z.object({
+const RiskAssessmentOutputSchema = z.object({
   score: z.number().describe('A risk score from 0 to 100, where 100 is lowest risk.'),
   level: z
     .enum(['Low', 'Medium', 'High'])

@@ -62,6 +62,7 @@ import { getCreditUnderwriting, CreditUnderwritingOutput, CreditUnderwritingInpu
 import { calculateTotalEmi, CalculateTotalEmiOutput } from '@/ai/flows/calculate-total-emi';
 import { analyzeBankStatement, BankStatementAnalysisOutput } from '@/ai/flows/bank-statement-analysis';
 import { getIncomeAnalysis, IncomeAnalysisOutput } from '@/ai/flows/income-analysis';
+import { getRiskAssessment, RiskAssessmentOutput } from '@/ai/flows/risk-assessment';
 import { AiAgentChat } from '@/components/CreditChat';
 import { cn } from '@/lib/utils';
 import {
@@ -196,6 +197,11 @@ export default function CreditWiseAIPage() {
   // New state for Financial Risk
   const [financialRisk, setFinancialRisk] = useState<FinancialRiskOutput | null>(null);
   const [isAssessingFinancialRisk, setIsAssessingFinancialRisk] = useState(false);
+
+  // New state for dedicated risk assessment
+  const [riskAssessment, setRiskAssessment] = useState<RiskAssessmentOutput | null>(null);
+  const [isAssessingRisk, setIsAssessingRisk] = useState(false);
+
   
   // New state for Income Analysis
   const [incomeAnalysis, setIncomeAnalysis] = useState<IncomeAnalysisOutput | null>(null);
@@ -320,6 +326,8 @@ export default function CreditWiseAIPage() {
     setIsAssessingFinancialRisk(false);
     setIncomeAnalysis(null);
     setIsAnalyzingIncome(false);
+    setRiskAssessment(null);
+    setIsAssessingRisk(false);
     setTokenUsage({ inputTokens: 0, outputTokens: 0 });
     setEstimatedCost(0);
 
@@ -379,6 +387,7 @@ export default function CreditWiseAIPage() {
   const handleStartFullAnalysis = () => {
     handleAnalyze(rawText);
     handleCalculateTotalEmi(rawText);
+    handleGetRiskAssessment(rawText);
   };
   
   const handleStartBankAnalysis = () => {
@@ -465,7 +474,7 @@ export default function CreditWiseAIPage() {
   };
   
   const handleGetAiRating = async () => {
-    if (!rawText || !analysisResult) {
+    if (!rawText || !riskAssessment) {
       toast({
         variant: "destructive",
         title: "Missing Information",
@@ -476,25 +485,10 @@ export default function CreditWiseAIPage() {
     setIsRating(true);
     setAiRating(null);
     
-    // We create a temporary risk assessment object here for the ai-rating flow.
-    // In a future step, we might want a dedicated risk model.
-    const riskAssessmentForRating = {
-        score: 75, // Placeholder, as this should come from a dedicated risk model
-        level: "Medium",
-        factors: [],
-        mitigations: [],
-        probabilityOfDefault: 0,
-        defaultProbabilityExplanation: '',
-        exposureAtDefault: 0,
-        lossGivenDefault: 0,
-        expectedLoss: 0,
-    };
-
-
     try {
       const { output, usage } = await getAiRating({
         creditReportText: rawText,
-        riskAssessment: riskAssessmentForRating,
+        riskAssessment: riskAssessment,
       });
       setAiRating(output);
       updateTokenUsage(usage);
@@ -617,6 +611,33 @@ export default function CreditWiseAIPage() {
       });
     } finally {
       setIsAnalyzingIncome(false);
+    }
+  };
+
+  const handleGetRiskAssessment = async (text: string) => {
+    if (!text) return;
+    setIsAssessingRisk(true);
+    setRiskAssessment(null);
+    try {
+      const { output, usage } = await getRiskAssessment({ creditReportText: text });
+      setRiskAssessment(output);
+      updateTokenUsage(usage);
+      toast({
+        title: 'AI Risk Assessment Complete',
+        description: 'The AI has performed a detailed risk analysis.',
+      });
+    } catch (error: any) {
+      console.error('Error during risk assessment:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Risk Assessment Failed',
+        description:
+          error.message?.includes('429')
+            ? "You've exceeded the daily limit for the AI. Please try again tomorrow."
+            : error.message || 'Could not perform risk assessment.',
+      });
+    } finally {
+      setIsAssessingRisk(false);
     }
   };
 
@@ -1013,7 +1034,7 @@ export default function CreditWiseAIPage() {
             <CardDescription>This AI acts as a holistic credit advisor. It provides a comprehensive score of your overall credit health by balancing both the positive and negative factors in your report.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={handleGetAiRating} disabled={isRating || !analysisResult}>
+            <Button onClick={handleGetAiRating} disabled={isRating || !riskAssessment}>
               {isRating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
               Get AI Rating
             </Button>
@@ -1139,11 +1160,64 @@ export default function CreditWiseAIPage() {
       aiAnalysis: (
         <Card>
             <CardHeader>
-                <CardTitle className="flex items-center"><BrainCircuit className="mr-3 h-6 w-6 text-primary" />AI Credit Report Analysis</CardTitle>
-                <CardDescription>An AI-generated breakdown of your credit strengths and weaknesses.</CardDescription>
+                <CardTitle className="flex items-center"><BrainCircuit className="mr-3 h-6 w-6 text-primary" />AI Risk Assessment</CardTitle>
+                <CardDescription>A detailed risk analysis performed by the AI based on your credit report.</CardDescription>
             </CardHeader>
              <CardContent>
-                <p>This feature is currently under development. The full analysis will be re-integrated in a future step.</p>
+                {isAssessingRisk ? (
+                   <div className="flex items-center justify-center py-10">
+                        <Loader2 className="mr-3 h-8 w-8 animate-spin text-primary" />
+                        <span className="text-muted-foreground">AI is assessing your risk profile...</span>
+                    </div>
+                ): riskAssessment ? (
+                  <div className="space-y-6">
+                    <div className={cn('p-4 rounded-lg border-l-4 font-semibold text-lg', getRiskColorClass(riskAssessment.level.toLowerCase()))}>
+                        Overall Risk Level: {riskAssessment.level} (Score: {riskAssessment.score}/100)
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <SummaryItem label="Prob. of Default (PD)" value={`${riskAssessment.probabilityOfDefault}%`} valueClassName="text-destructive" />
+                      <SummaryItem label="Loss Given Default (LGD)" value={`${riskAssessment.lossGivenDefault}%`} valueClassName="text-destructive" />
+                      <SummaryItem label="Exposure at Default (EAD)" value={`₹${riskAssessment.exposureAtDefault.toLocaleString('en-IN')}`} valueClassName="text-destructive" />
+                      <SummaryItem label="Expected Loss (EL)" value={`₹${riskAssessment.expectedLoss.toLocaleString('en-IN')}`} valueClassName="text-destructive font-bold" />
+                    </div>
+
+                     <div className="prose prose-sm dark:prose-invert max-w-none space-y-4">
+                        <div>
+                            <h5>Probability of Default Explanation</h5>
+                            <p>{riskAssessment.defaultProbabilityExplanation}</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <h4 className="font-semibold text-lg mb-2">Key Risk Factors</h4>
+                        <div className="space-y-2">
+                           {riskAssessment.factors.map((factor, i) => (
+                            <Alert key={i} variant="destructive" className="bg-red-50 dark:bg-red-900/10">
+                              <AlertCircle className="h-4 w-4" />
+                              <AlertTitle>{factor.factor} <span className="font-normal text-muted-foreground">({factor.severity})</span></AlertTitle>
+                              <AlertDescription>{factor.details}</AlertDescription>
+                            </Alert>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                         <h4 className="font-semibold text-lg mb-2">Suggested Mitigations</h4>
+                         <div className="space-y-2">
+                          {riskAssessment.mitigations.map((mit, i) => (
+                              <div key={i} className="p-3 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-800">
+                                <p className="font-semibold text-sm text-green-800 dark:text-green-300">{mit.factor}</p>
+                                <p className="text-sm text-muted-foreground">{mit.action}</p>
+                              </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p>Click "Start Full AI Analysis" to generate the risk assessment.</p>
+                )}
             </CardContent>
         </Card>
       ),
@@ -1579,8 +1653,8 @@ export default function CreditWiseAIPage() {
                         Your report has been processed. Click the button below to run the full AI analysis. This may use a significant portion of your free daily quota.
                        </AlertDescription>
                     </Alert>
-                    <Button onClick={handleStartFullAnalysis} disabled={isAnalyzing || isCalculatingEmi} className="mt-4">
-                      {(isAnalyzing || isCalculatingEmi) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />}
+                    <Button onClick={handleStartFullAnalysis} disabled={isAnalyzing || isCalculatingEmi || isAssessingRisk} className="mt-4">
+                      {(isAnalyzing || isCalculatingEmi || isAssessingRisk) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />}
                       Start Full AI Analysis
                     </Button>
                   </div>
@@ -1620,7 +1694,7 @@ export default function CreditWiseAIPage() {
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                       <SummaryItem label="CIBIL Score" value={creditScore || 'N/A'} valueClassName="text-primary" />
                       <SummaryItem label="AI Credit Score" value={aiRating?.aiScore || 'N/A'} valueClassName={getRatingColorClass(aiRating?.rating || '')} />
-                      <SummaryItem label="Risk Score" value={'N/A'} valueClassName={'text-foreground'} />
+                      <SummaryItem label="Risk Score" value={riskAssessment?.score || 'N/A'} valueClassName={riskAssessment ? getRiskColorClass(riskAssessment.level.toLowerCase(), 'text') : ''} isLoading={isAssessingRisk} />
                       <SummaryItem label="Approved Amount" value={`₹${underwritingResult.approvedLoanAmount.toLocaleString('en-IN')}`} />
                       <SummaryItem label="Interest Rate" value={`${underwritingResult.recommendedInterestRate}`} />
                       <SummaryItem label="Tenure" value={`${underwritingResult.recommendedTenure} months`} />
@@ -1717,8 +1791,8 @@ export default function CreditWiseAIPage() {
                 </CardHeader>
                 <CardContent className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                   <NavButton view="creditSummary" label="Credit Summary" icon={<LayoutGrid size={24} />} disabled={!analysisResult} />
-                  <NavButton view="aiAnalysis" label="AI Report Analysis" icon={<BrainCircuit size={24} />} disabled={!analysisResult} />
-                  <NavButton view="aiMeter" label="AI Credit Meter" icon={<Bot size={24} />} disabled={!analysisResult}/>
+                  <NavButton view="aiAnalysis" label="AI Risk Assessment" icon={<BrainCircuit size={24} />} disabled={!analysisResult} />
+                  <NavButton view="aiMeter" label="AI Credit Meter" icon={<Bot size={24} />} disabled={!riskAssessment}/>
                   <NavButton view="obligations" label="Financials & Obligations" icon={<Calculator size={24} />} disabled={!rawText} />
                   <NavButton view="aiIncomeAnalysis" label="AI Income Analysis" icon={<TrendingUp size={24} />} disabled={!analysisResult} />
                   <NavButton view="loanEligibility" label="AI Loan Eligibility" icon={<Banknote size={24} />} disabled={!aiRating || !estimatedIncome} />
