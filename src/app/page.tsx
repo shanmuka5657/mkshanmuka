@@ -44,6 +44,7 @@ import {
   Landmark,
   ArrowLeft,
   ChevronsUpDown,
+  TrendingUp,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -60,6 +61,7 @@ import { getFinancialRiskAssessment, FinancialRiskOutput } from '@/ai/flows/fina
 import { getCreditUnderwriting, CreditUnderwritingOutput, CreditUnderwritingInput } from '@/ai/flows/credit-underwriting';
 import { calculateTotalEmi, CalculateTotalEmiOutput } from '@/ai/flows/calculate-total-emi';
 import { analyzeBankStatement, BankStatementAnalysisOutput } from '@/ai/flows/bank-statement-analysis';
+import { getIncomeAnalysis, IncomeAnalysisOutput } from '@/ai/flows/income-analysis';
 import { AiAgentChat } from '@/components/CreditChat';
 import { cn } from '@/lib/utils';
 import {
@@ -122,7 +124,8 @@ type ActiveView =
   | 'aiMeter' 
   | 'aiAnalysis' 
   | 'loanEligibility' 
-  | 'incomeEstimator'
+  | 'obligations'
+  | 'incomeAnalysis'
   | 'creditUnderwriting'
   | 'financialRisk'
   | 'creditSummary'
@@ -193,6 +196,11 @@ export default function CreditWiseAIPage() {
   // New state for Financial Risk
   const [financialRisk, setFinancialRisk] = useState<FinancialRiskOutput | null>(null);
   const [isAssessingFinancialRisk, setIsAssessingFinancialRisk] = useState(false);
+  
+  // New state for Income Analysis
+  const [incomeAnalysis, setIncomeAnalysis] = useState<IncomeAnalysisOutput | null>(null);
+  const [isAnalyzingIncome, setIsAnalyzingIncome] = useState(false);
+
 
   // New state for token tracking and cost
   const [tokenUsage, setTokenUsage] = useState({ inputTokens: 0, outputTokens: 0 });
@@ -310,6 +318,8 @@ export default function CreditWiseAIPage() {
     setDesiredTenure('');
     setFinancialRisk(null);
     setIsAssessingFinancialRisk(false);
+    setIncomeAnalysis(null);
+    setIsAnalyzingIncome(false);
     setTokenUsage({ inputTokens: 0, outputTokens: 0 });
     setEstimatedCost(0);
 
@@ -578,6 +588,37 @@ export default function CreditWiseAIPage() {
     }
   };
   
+    const handleGetIncomeAnalysis = async () => {
+    if (!rawText) {
+      toast({ variant: "destructive", title: "No Report", description: "Please upload and parse a credit report first." });
+      return;
+    }
+    setIsAnalyzingIncome(true);
+    setIncomeAnalysis(null);
+    try {
+      const { output, usage } = await getIncomeAnalysis({
+        creditReportText: rawText,
+      });
+      setIncomeAnalysis(output);
+      updateTokenUsage(usage);
+      toast({
+        title: 'AI Income Analysis Complete',
+        description: 'The AI has estimated your income based on your report.',
+      });
+    } catch (error: any) {
+      console.error('Error analyzing income:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Income Analysis Failed',
+        description:
+          error.message?.includes('429')
+            ? "You've exceeded the daily limit for the AI. Please try again tomorrow."
+            : error.message || 'Could not analyze income. Please try again.',
+      });
+    } finally {
+      setIsAnalyzingIncome(false);
+    }
+  };
 
   const handleGetUnderwriting = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1106,6 +1147,60 @@ export default function CreditWiseAIPage() {
             </CardContent>
         </Card>
       ),
+       incomeAnalysis: (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <TrendingUp className="mr-3 h-6 w-6 text-primary" />
+              AI Income Analysis
+            </CardTitle>
+            <CardDescription>
+              Let the AI analyze your credit report to estimate your income and assess its stability.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+             <Button
+                onClick={handleGetIncomeAnalysis}
+                disabled={isAnalyzingIncome || !rawText}
+              >
+                {isAnalyzingIncome ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                Analyze Income from Report
+              </Button>
+
+            {incomeAnalysis && (
+              <div className="mt-6 space-y-6">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="p-4 bg-muted rounded-lg">
+                        <h4 className="font-semibold flex items-center gap-2"><Wallet className="h-5 w-5 text-primary"/>AI-Estimated Income</h4>
+                        <p className="text-sm text-muted-foreground">AI's estimate of your monthly income based on your credit profile.</p>
+                        <p className="text-3xl font-bold text-primary mt-2">
+                            ₹{incomeAnalysis.estimatedIncome.toLocaleString('en-IN')}
+                        </p>
+                    </div>
+                     <div className="p-4 bg-muted rounded-lg">
+                        <h4 className="font-semibold flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-primary"/>Income Stability Score</h4>
+                        <p className="text-sm text-muted-foreground">How consistent the AI believes your income to be (0-100).</p>
+                        <p className="text-3xl font-bold text-primary mt-2">
+                            {incomeAnalysis.stabilityScore}
+                        </p>
+                    </div>
+                </div>
+                <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Analysis Explanation</AlertTitle>
+                    <AlertDescription className="whitespace-pre-line">
+                    {incomeAnalysis.explanation}
+                    </AlertDescription>
+                </Alert>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ),
       creditUnderwriting: (
         <Card>
           <CardHeader>
@@ -1328,10 +1423,10 @@ export default function CreditWiseAIPage() {
           </CardContent>
         </Card>
       ),
-      incomeEstimator: (
+      obligations: (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center"><Calculator className="mr-3 h-6 w-6 text-primary" />Income &amp; Obligations</CardTitle>
+            <CardTitle className="flex items-center"><Calculator className="mr-3 h-6 w-6 text-primary" />Financials &amp; Obligations</CardTitle>
             <CardDescription>Provide your financial details to enable more accurate analysis and loan eligibility checks.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -1620,11 +1715,12 @@ export default function CreditWiseAIPage() {
                   <CardTitle>Analysis Dashboard</CardTitle>
                   <CardDescription>Select a section to view its detailed analysis. Some sections require previous steps to be completed.</CardDescription>
                 </CardHeader>
-                <CardContent className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                <CardContent className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                   <NavButton view="creditSummary" label="Credit Summary" icon={<LayoutGrid size={24} />} disabled={!analysisResult} />
                   <NavButton view="aiAnalysis" label="AI Report Analysis" icon={<BrainCircuit size={24} />} disabled={!analysisResult} />
                   <NavButton view="aiMeter" label="AI Credit Meter" icon={<Bot size={24} />} disabled={!analysisResult}/>
-                  <NavButton view="incomeEstimator" label="Income Analysis" icon={<Calculator size={24} />} disabled={!analysisResult}/>
+                  <NavButton view="obligations" label="Financials & Obligations" icon={<Calculator size={24} />} disabled={!analysisResult} />
+                  <NavButton view="incomeAnalysis" label="AI Income Analysis" icon={<TrendingUp size={24} />} disabled={!analysisResult} />
                   <NavButton view="loanEligibility" label="AI Loan Eligibility" icon={<Banknote size={24} />} disabled={!aiRating || !estimatedIncome} />
                   <NavButton view="financialRisk" label="AI Financial Risk" icon={<BadgeCent size={24} />} disabled={!estimatedIncome}/>
                   <NavButton view="creditUnderwriting" label="AI Credit Underwriting" icon={<Gavel size={24} />} disabled={!loanEligibility} />
