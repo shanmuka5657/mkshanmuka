@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -609,7 +610,7 @@ export default function CreditWiseAIPage() {
       toast({
         variant: 'destructive',
         title: 'Missing Prerequisites',
-        description: 'Please complete AI Rating, Income Estimation, Loan Eligibility, and fill all loan fields before underwriting.',
+        description: 'Please complete AI Rating, Income Estimation, Loan Eligibility, Risk Assessment and fill all loan fields before underwriting.',
       });
       return;
     }
@@ -876,7 +877,7 @@ export default function CreditWiseAIPage() {
   
   const InfoItem = ({ label, value, isLoading = false }: { label: string | React.ReactNode; value: string | number; isLoading?: boolean }) => (
      <div className="grid grid-cols-2 gap-2">
-        <p className="font-semibold text-sm text-muted-foreground flex items-center">{label}:</p>
+        <div className="font-semibold text-sm text-muted-foreground flex items-center">{label}:</div>
         {isLoading ? <Loader2 className="h-4 w-4 mt-1 animate-spin" /> : <p className="font-semibold truncate">{value}</p>}
     </div>
   );
