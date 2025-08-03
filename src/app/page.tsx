@@ -125,7 +125,7 @@ type ActiveView =
   | 'aiAnalysis' 
   | 'loanEligibility' 
   | 'obligations'
-  | 'incomeAnalysis'
+  | 'aiIncomeAnalysis'
   | 'creditUnderwriting'
   | 'financialRisk'
   | 'creditSummary'
@@ -1147,7 +1147,7 @@ export default function CreditWiseAIPage() {
             </CardContent>
         </Card>
       ),
-       incomeAnalysis: (
+       aiIncomeAnalysis: (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -1720,7 +1720,7 @@ export default function CreditWiseAIPage() {
                   <NavButton view="aiAnalysis" label="AI Report Analysis" icon={<BrainCircuit size={24} />} disabled={!analysisResult} />
                   <NavButton view="aiMeter" label="AI Credit Meter" icon={<Bot size={24} />} disabled={!analysisResult}/>
                   <NavButton view="obligations" label="Financials & Obligations" icon={<Calculator size={24} />} disabled={!rawText} />
-                  <NavButton view="incomeAnalysis" label="AI Income Analysis" icon={<TrendingUp size={24} />} disabled={!analysisResult} />
+                  <NavButton view="aiIncomeAnalysis" label="AI Income Analysis" icon={<TrendingUp size={24} />} disabled={!analysisResult} />
                   <NavButton view="loanEligibility" label="AI Loan Eligibility" icon={<Banknote size={24} />} disabled={!aiRating || !estimatedIncome} />
                   <NavButton view="financialRisk" label="AI Financial Risk" icon={<BadgeCent size={24} />} disabled={!estimatedIncome}/>
                   <NavButton view="creditUnderwriting" label="AI Credit Underwriting" icon={<Gavel size={24} />} disabled={!loanEligibility} />
