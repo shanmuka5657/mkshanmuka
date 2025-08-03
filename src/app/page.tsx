@@ -50,6 +50,7 @@ import {
   User as UserIcon,
   PlusCircle,
   Info,
+  Save,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -235,6 +236,7 @@ export default function CreditWiseAIPage() {
     investmentValue: 0,
     consideredValue: 0,
   });
+  const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
 
 
   const { toast } = useToast()
@@ -353,6 +355,7 @@ export default function CreditWiseAIPage() {
     setTokenUsage({ inputTokens: 0, outputTokens: 0 });
     setEstimatedCost(0);
     setAssets([]);
+    setEditingAssetId(null);
 
     if(fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -742,7 +745,7 @@ export default function CreditWiseAIPage() {
     );
   };
 
-  const handleNewAssetChange = (field: keyof typeof newAsset, value: string | number) => {
+  const handleNewAssetChange = (field: keyof Omit<Asset, 'id'>, value: string | number) => {
     setNewAsset(prev => ({ ...prev, [field]: value }));
   };
 
@@ -1290,47 +1293,92 @@ export default function CreditWiseAIPage() {
               </TabsList>
               <TabsContent value="asset" className="mt-4">
                  <div className="space-y-4">
+                    {/* New Asset Input Row */}
+                    <div className="p-4 border rounded-lg bg-muted/50">
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 items-end">
+                            <div className="lg:col-span-2 grid gap-1.5">
+                                <Label htmlFor="new-asset-desc">Asset Description</Label>
+                                <Input id="new-asset-desc" placeholder="e.g., Gold Chain, 24k" value={newAsset.description} onChange={(e) => handleNewAssetChange('description', e.target.value)} />
+                            </div>
+                             <div className="grid gap-1.5">
+                                <Label htmlFor="new-asset-type">Type</Label>
+                                <Input id="new-asset-type" placeholder="e.g., Jewellery" value={newAsset.type} onChange={(e) => handleNewAssetChange('type', e.target.value)} />
+                            </div>
+                             <div className="grid gap-1.5">
+                                <Label htmlFor="new-asset-value">Investment (₹)</Label>
+                                <Input id="new-asset-value" type="number" placeholder="100000" value={newAsset.investmentValue || ''} onChange={(e) => handleNewAssetChange('investmentValue', parseFloat(e.target.value) || 0)} />
+                            </div>
+                            <div className="flex items-end">
+                                <Button onClick={handleAddAsset} className="w-full"><PlusCircle className="mr-2"/> Add Asset</Button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="overflow-x-auto">
                         <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="min-w-[150px]">Description</TableHead>
-                                    <TableHead className="min-w-[120px]">Type</TableHead>
-                                    <TableHead className="min-w-[120px]">Owner</TableHead>
-                                    <TableHead className="min-w-[150px]">Document</TableHead>
-                                    <TableHead className="min-w-[150px]">Purchase Date</TableHead>
-                                    <TableHead>Months</TableHead>
-                                    <TableHead className="min-w-[150px]">Investment (₹)</TableHead>
-                                    <TableHead className="min-w-[150px]">Considered (₹)</TableHead>
-                                    <TableHead></TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {assets.map((asset) => {
-                                    const purchaseDate = isValid(parseISO(asset.purchaseDate)) ? parseISO(asset.purchaseDate) : null;
-                                    const months = purchaseDate ? differenceInMonths(new Date(), purchaseDate) : 0;
-                                    return (
-                                    <TableRow key={asset.id}>
-                                        <TableCell><Input value={asset.description} onChange={(e) => handleAssetChange(asset.id, 'description', e.target.value)} /></TableCell>
-                                        <TableCell><Input value={asset.type} onChange={(e) => handleAssetChange(asset.id, 'type', e.target.value)} /></TableCell>
-                                        <TableCell><Input value={asset.owner} onChange={(e) => handleAssetChange(asset.id, 'owner', e.target.value)} /></TableCell>
-                                        <TableCell><Input value={asset.document} onChange={(e) => handleAssetChange(asset.id, 'document', e.target.value)}/></TableCell>
-                                        <TableCell><Input type="date" value={asset.purchaseDate} onChange={(e) => handleAssetChange(asset.id, 'purchaseDate', e.target.value)}/></TableCell>
-                                        <TableCell className="text-center">{months}</TableCell>
-                                        <TableCell><Input type="number" value={asset.investmentValue || ''} onChange={(e) => handleAssetChange(asset.id, 'investmentValue', parseFloat(e.target.value) || 0)} /></TableCell>
-                                        <TableCell><Input type="number" value={asset.consideredValue || ''} onChange={(e) => handleAssetChange(asset.id, 'consideredValue', parseFloat(e.target.value) || 0)}/></TableCell>
-                                        <TableCell>
-                                            <Button variant="ghost" size="icon" onClick={() => handleDeleteAsset(asset.id)}>
-                                                <Trash2 className="h-4 w-4 text-destructive"/>
+                          <TableCaption>A list of your manually added assets.</TableCaption>
+                          <TableHeader>
+                            <TableRow>
+                                <TableHead className="min-w-[150px]">Description</TableHead>
+                                <TableHead className="min-w-[120px]">Type</TableHead>
+                                <TableHead className="min-w-[120px]">Owner</TableHead>
+                                <TableHead className="min-w-[150px]">Document</TableHead>
+                                <TableHead className="min-w-[150px]">Purchase Date</TableHead>
+                                <TableHead>Months</TableHead>
+                                <TableHead className="min-w-[150px]">Investment (₹)</TableHead>
+                                <TableHead className="min-w-[150px]">Considered (₹)</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {assets.map((asset) => {
+                                const isEditing = editingAssetId === asset.id;
+                                const purchaseDate = isValid(parseISO(asset.purchaseDate)) ? parseISO(asset.purchaseDate) : null;
+                                const months = purchaseDate ? differenceInMonths(new Date(), purchaseDate) : 0;
+                                return (
+                                <TableRow key={asset.id}>
+                                    <TableCell>
+                                      {isEditing ? <Input value={asset.description} onChange={(e) => handleAssetChange(asset.id, 'description', e.target.value)} /> : asset.description}
+                                    </TableCell>
+                                    <TableCell>
+                                      {isEditing ? <Input value={asset.type} onChange={(e) => handleAssetChange(asset.id, 'type', e.target.value)} /> : asset.type}
+                                    </TableCell>
+                                    <TableCell>
+                                      {isEditing ? <Input value={asset.owner} onChange={(e) => handleAssetChange(asset.id, 'owner', e.target.value)} /> : asset.owner}
+                                    </TableCell>
+                                    <TableCell>
+                                      {isEditing ? <Input value={asset.document} onChange={(e) => handleAssetChange(asset.id, 'document', e.target.value)}/> : asset.document}
+                                    </TableCell>
+                                    <TableCell>
+                                      {isEditing ? <Input type="date" value={asset.purchaseDate} onChange={(e) => handleAssetChange(asset.id, 'purchaseDate', e.target.value)}/> : asset.purchaseDate}
+                                    </TableCell>
+                                    <TableCell className="text-center">{months}</TableCell>
+                                    <TableCell>
+                                      {isEditing ? <Input type="number" value={asset.investmentValue || ''} onChange={(e) => handleAssetChange(asset.id, 'investmentValue', parseFloat(e.target.value) || 0)} /> : asset.investmentValue.toLocaleString('en-IN')}
+                                    </TableCell>
+                                    <TableCell>
+                                      {isEditing ? <Input type="number" value={asset.consideredValue || ''} onChange={(e) => handleAssetChange(asset.id, 'consideredValue', parseFloat(e.target.value) || 0)}/> : asset.consideredValue.toLocaleString('en-IN')}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        {isEditing ? (
+                                             <Button variant="ghost" size="icon" onClick={() => setEditingAssetId(null)}>
+                                                <Save className="h-4 w-4 text-primary"/>
                                             </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                )})}
-                            </TableBody>
+                                        ) : (
+                                            <div className="flex gap-2 justify-end">
+                                              <Button variant="ghost" size="icon" onClick={() => setEditingAssetId(asset.id)}>
+                                                  <Pencil className="h-4 w-4"/>
+                                              </Button>
+                                              <Button variant="ghost" size="icon" onClick={() => handleDeleteAsset(asset.id)}>
+                                                  <Trash2 className="h-4 w-4 text-destructive"/>
+                                              </Button>
+                                            </div>
+                                        )}
+                                    </TableCell>
+                                </TableRow>
+                            )})}
+                          </TableBody>
                         </Table>
-                    </div>
-                     <div className="flex justify-end">
-                        <Button size="sm" onClick={handleAddAsset}><PlusCircle className="mr-2"/> Add New Asset</Button>
                     </div>
 
                     {assets.length > 0 && (
@@ -2283,3 +2331,4 @@ export default function CreditWiseAIPage() {
     </div>
   );
 }
+
