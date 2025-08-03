@@ -762,6 +762,15 @@ export default function CreditWiseAIPage() {
     }
   }, [assets]);
 
+  const dateConstraints = useMemo(() => {
+    const today = new Date();
+    const todayString = today.toISOString().split('T')[0];
+    const fourYearsAgo = new Date();
+    fourYearsAgo.setFullYear(today.getFullYear() - 4);
+    const fourYearsAgoString = fourYearsAgo.toISOString().split('T')[0];
+    return { min: fourYearsAgoString, max: todayString };
+  }, []);
+
   // Perform calculations on the client-side for accuracy
   const calculatedSummary = useMemo(() => {
     const allAccounts = analysisResult?.allAccounts || [];
@@ -1326,7 +1335,7 @@ export default function CreditWiseAIPage() {
                             </div>
                              <div className="grid gap-1.5">
                                 <Label htmlFor="new-asset-date">Purchase Date</Label>
-                                <Input id="new-asset-date" type="date" value={newAsset.purchaseDate} onChange={(e) => handleNewAssetChange('purchaseDate', e.target.value)} />
+                                <Input id="new-asset-date" type="date" value={newAsset.purchaseDate} onChange={(e) => handleNewAssetChange('purchaseDate', e.target.value)} min={dateConstraints.min} max={dateConstraints.max} />
                             </div>
                              <div className="grid gap-1.5">
                                 <Label htmlFor="new-asset-invest-value">Investment (₹)</Label>
@@ -1378,7 +1387,7 @@ export default function CreditWiseAIPage() {
                                       {isEditing ? <Input value={asset.document} onChange={(e) => handleAssetChange(asset.id, 'document', e.target.value)}/> : asset.document}
                                     </TableCell>
                                     <TableCell>
-                                      {isEditing ? <Input type="date" value={asset.purchaseDate} onChange={(e) => handleAssetChange(asset.id, 'purchaseDate', e.target.value)}/> : asset.purchaseDate}
+                                      {isEditing ? <Input type="date" value={asset.purchaseDate} onChange={(e) => handleAssetChange(asset.id, 'purchaseDate', e.target.value)} min={dateConstraints.min} max={dateConstraints.max} />: asset.purchaseDate}
                                     </TableCell>
                                     <TableCell className="text-center">{months}</TableCell>
                                     <TableCell>
