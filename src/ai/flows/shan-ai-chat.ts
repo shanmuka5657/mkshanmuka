@@ -2,11 +2,11 @@
 'use server';
 
 /**
- * @fileOverview A general-purpose, multi-modal AI assistant named Shan AI that supports conversation history and can access CIBIL report context.
+ * @fileOverview A general-purpose, multi-modal AI assistant that supports conversation history and can access CIBIL report context.
  *
- * - shanAiChat - A function that handles the chat interaction.
- * - ShanAiChatHistory - the history type for the chat function.
- * - ShanAiChatOutput - The return type for the chat function.
+ * - aiAgentChat - A function that handles the chat interaction.
+ * - AiAgentChatHistory - the history type for the chat function.
+ * - AiAgentChatOutput - The return type for the chat function.
  */
 
 import { ai } from '@/ai/genkit';
@@ -14,7 +14,7 @@ import { z } from 'genkit';
 import type { FlowUsage } from 'genkit/flow';
 
 // Define the structure for a single message in the history
-const ShanAiChatMessageSchema = z.object({
+const AiAgentChatMessageSchema = z.object({
   role: z.enum(['user', 'model']),
   content: z.array(z.object({
     text: z.string().optional(),
@@ -26,34 +26,34 @@ const ShanAiChatMessageSchema = z.object({
 });
 
 // The input now includes the history of the conversation and the CIBIL report
-const ShanAiChatInputSchema = z.object({
-  history: z.array(ShanAiChatMessageSchema).describe('The conversation history.'),
+const AiAgentChatInputSchema = z.object({
+  history: z.array(AiAgentChatMessageSchema).describe('The conversation history.'),
   cibilReportText: z.string().optional().describe('The full text of the user\'s CIBIL report.'),
   bankStatementText: z.string().optional().describe('The full text of the user\'s bank statement.'),
 });
-export type ShanAiChatHistory = z.infer<typeof ShanAiChatMessageSchema>;
-export type ShanAiChatInput = z.infer<typeof ShanAiChatInputSchema>;
+export type AiAgentChatHistory = z.infer<typeof AiAgentChatMessageSchema>;
+export type AiAgentChatInput = z.infer<typeof AiAgentChatInputSchema>;
 
 
-const ShanAiChatOutputSchema = z.object({
+const AiAgentChatOutputSchema = z.object({
   answer: z
     .string()
     .describe('The AI-generated answer to the user message.'),
 });
-export type ShanAiChatOutput = z.infer<typeof ShanAiChatOutputSchema>;
+export type AiAgentChatOutput = z.infer<typeof AiAgentChatOutputSchema>;
 
-export async function shanAiChat(
-  input: ShanAiChatInput
-): Promise<{ output: ShanAiChatOutput, usage: FlowUsage }> {
-  return shanAiChatFlow(input);
+export async function aiAgentChat(
+  input: AiAgentChatInput
+): Promise<{ output: AiAgentChatOutput, usage: FlowUsage }> {
+  return aiAgentChatFlow(input);
 }
 
-const shanAiChatFlow = ai.defineFlow(
+const aiAgentChatFlow = ai.defineFlow(
   {
-    name: 'shanAiChatFlow',
-    inputSchema: ShanAiChatInputSchema,
+    name: 'aiAgentChatFlow',
+    inputSchema: AiAgentChatInputSchema,
     outputSchema: z.object({
-        output: ShanAiChatOutputSchema,
+        output: AiAgentChatOutputSchema,
         usage: z.any(),
     }),
   },
@@ -76,7 +76,7 @@ const shanAiChatFlow = ai.defineFlow(
         contextPrompt = `The user has not uploaded any document. If they ask questions about their credit or finances, inform them that you need them to upload a document first.`
     }
 
-    const systemPrompt = `You are Shan AI, a powerful, general-purpose AI assistant. Your goal is to be helpful and answer the user's questions accurately and concisely. Maintain a friendly and conversational tone.
+    const systemPrompt = `You are a powerful, general-purpose AI Agent. Your goal is to be helpful and answer the user's questions accurately and concisely. Maintain a friendly and conversational tone.
     
     ${contextPrompt}
     

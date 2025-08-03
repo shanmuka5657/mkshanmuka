@@ -6,7 +6,7 @@ import { Bot, Loader2, Send, User, Paperclip, X, Minus, MessageSquare } from 'lu
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
-import { shanAiChat, ShanAiChatHistory, ShanAiChatInput } from '@/ai/flows/shan-ai-chat';
+import { aiAgentChat, AiAgentChatHistory, AiAgentChatInput } from '@/ai/flows/shan-ai-chat';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from './ui/scroll-area';
@@ -20,7 +20,7 @@ interface DisplayMessage {
   mediaDataUri?: string; // Keep original data for history
 }
 
-export function ShanAIChat({ 
+export function AiAgentChat({ 
   cibilReportText, 
   bankStatementText,
   onNewChat,
@@ -88,7 +88,7 @@ export function ShanAIChat({
     setMessages((prev) => [...prev, userMessageForDisplay]);
     
     // Construct conversation history for the AI
-    const conversationHistory: ShanAiChatHistory[] = [...messages, userMessageForDisplay].map(msg => {
+    const conversationHistory: AiAgentChatHistory[] = [...messages, userMessageForDisplay].map(msg => {
       const content = [];
       if (msg.content) content.push({ text: msg.content });
       if (msg.mediaDataUri) content.push({ media: { url: msg.mediaDataUri }});
@@ -108,12 +108,12 @@ export function ShanAIChat({
     }
 
     try {
-      const flowInput: ShanAiChatInput = {
+      const flowInput: AiAgentChatInput = {
         history: conversationHistory,
         cibilReportText: cibilReportText,
         bankStatementText: bankStatementText,
       };
-      const { output, usage } = await shanAiChat(flowInput);
+      const { output, usage } = await aiAgentChat(flowInput);
       onTokensUsed?.(usage);
       const aiMessage: DisplayMessage = { role: 'assistant', content: output.answer };
       setMessages((prev) => [...prev, aiMessage]);
@@ -157,7 +157,7 @@ export function ShanAIChat({
       <CardHeader className="flex flex-row items-center justify-between p-4">
         <CardTitle className="flex items-center gap-2 text-lg">
           <Bot className="text-primary" />
-          Shan AI
+          AI Agent
         </CardTitle>
         <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsMinimized(!isMinimized)}>
@@ -274,7 +274,7 @@ export function ShanAIChat({
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask Shan AI anything..."
+                placeholder="Ask the AI Agent anything..."
                 disabled={isLoading}
               />
               <Button type="submit" disabled={isLoading} size="icon">

@@ -60,7 +60,7 @@ import { getFinancialRiskAssessment, FinancialRiskOutput } from '@/ai/flows/fina
 import { getCreditUnderwriting, CreditUnderwritingOutput, CreditUnderwritingInput } from '@/ai/flows/credit-underwriting';
 import { calculateTotalEmi, CalculateTotalEmiOutput } from '@/ai/flows/calculate-total-emi';
 import { analyzeBankStatement, BankStatementAnalysisOutput } from '@/ai/flows/bank-statement-analysis';
-import { ShanAIChat } from '@/components/CreditChat';
+import { AiAgentChat } from '@/components/CreditChat';
 import { cn } from '@/lib/utils';
 import {
   Alert,
@@ -1969,7 +1969,7 @@ export default function CreditWiseAIPage() {
               </div>
             )}
             
-            <ShanAIChat 
+            <AiAgentChat 
               cibilReportText={analysisMode === 'credit' ? rawText : undefined} 
               bankStatementText={analysisMode === 'bank' ? rawText : undefined}
               onNewChat={() => setTokenUsage({ inputTokens: 0, outputTokens: 0 })}
