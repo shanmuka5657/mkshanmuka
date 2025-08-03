@@ -45,6 +45,7 @@ import {
   ArrowLeft,
   ChevronsUpDown,
   TrendingUp,
+  Wrench,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -52,6 +53,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useToast } from "@/hooks/use-toast"
 import { analyzeCreditReport, AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
@@ -61,7 +63,6 @@ import { getFinancialRiskAssessment, FinancialRiskOutput } from '@/ai/flows/fina
 import { getCreditUnderwriting, CreditUnderwritingOutput, CreditUnderwritingInput } from '@/ai/flows/credit-underwriting';
 import { calculateTotalEmi, CalculateTotalEmiOutput } from '@/ai/flows/calculate-total-emi';
 import { analyzeBankStatement, BankStatementAnalysisOutput } from '@/ai/flows/bank-statement-analysis';
-import { getIncomeAnalysis, IncomeAnalysisOutput } from '@/ai/flows/income-analysis';
 import { getRiskAssessment, RiskAssessmentOutput } from '@/ai/flows/risk-assessment';
 import { AiAgentChat } from '@/components/CreditChat';
 import { cn } from '@/lib/utils';
@@ -126,7 +127,7 @@ type ActiveView =
   | 'aiAnalysis' 
   | 'loanEligibility' 
   | 'obligations'
-  | 'aiIncomeAnalysis'
+  | 'incomeGuess'
   | 'creditUnderwriting'
   | 'financialRisk'
   | 'creditSummary'
@@ -201,13 +202,7 @@ export default function CreditWiseAIPage() {
   // New state for dedicated risk assessment
   const [riskAssessment, setRiskAssessment] = useState<RiskAssessmentOutput | null>(null);
   const [isAssessingRisk, setIsAssessingRisk] = useState(false);
-
   
-  // New state for Income Analysis
-  const [incomeAnalysis, setIncomeAnalysis] = useState<IncomeAnalysisOutput | null>(null);
-  const [isAnalyzingIncome, setIsAnalyzingIncome] = useState(false);
-
-
   // New state for token tracking and cost
   const [tokenUsage, setTokenUsage] = useState({ inputTokens: 0, outputTokens: 0 });
   const [estimatedCost, setEstimatedCost] = useState(0);
@@ -324,8 +319,6 @@ export default function CreditWiseAIPage() {
     setDesiredTenure('');
     setFinancialRisk(null);
     setIsAssessingFinancialRisk(false);
-    setIncomeAnalysis(null);
-    setIsAnalyzingIncome(false);
     setRiskAssessment(null);
     setIsAssessingRisk(false);
     setTokenUsage({ inputTokens: 0, outputTokens: 0 });
@@ -579,38 +572,6 @@ export default function CreditWiseAIPage() {
       });
     } finally {
       setIsAssessingFinancialRisk(false);
-    }
-  };
-  
-    const handleGetIncomeAnalysis = async () => {
-    if (!rawText) {
-      toast({ variant: "destructive", title: "No Report", description: "Please upload and parse a credit report first." });
-      return;
-    }
-    setIsAnalyzingIncome(true);
-    setIncomeAnalysis(null);
-    try {
-      const { output, usage } = await getIncomeAnalysis({
-        creditReportText: rawText,
-      });
-      setIncomeAnalysis(output);
-      updateTokenUsage(usage);
-      toast({
-        title: 'AI Income Analysis Complete',
-        description: 'The AI has estimated your income based on your report.',
-      });
-    } catch (error: any) {
-      console.error('Error analyzing income:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Income Analysis Failed',
-        description:
-          error.message?.includes('429')
-            ? "You've exceeded the daily limit for the AI. Please try again tomorrow."
-            : error.message || 'Could not analyze income. Please try again.',
-      });
-    } finally {
-      setIsAnalyzingIncome(false);
     }
   };
 
@@ -1221,57 +1182,52 @@ export default function CreditWiseAIPage() {
             </CardContent>
         </Card>
       ),
-       aiIncomeAnalysis: (
+       incomeGuess: (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
-              <TrendingUp className="mr-3 h-6 w-6 text-primary" />
-              AI Income Analysis
+              <Wallet className="mr-3 h-6 w-6 text-primary" />
+              Income Guess
             </CardTitle>
             <CardDescription>
-              Let the AI analyze your credit report to estimate your income and assess its stability.
+              Manually provide income details through various verification methods.
             </CardDescription>
           </CardHeader>
           <CardContent>
-             <Button
-                onClick={handleGetIncomeAnalysis}
-                disabled={isAnalyzingIncome || !rawText}
-              >
-                {isAnalyzingIncome ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Sparkles className="mr-2 h-4 w-4" />
-                )}
-                Analyze Income from Report
-              </Button>
-
-            {incomeAnalysis && (
-              <div className="mt-6 space-y-6">
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="p-4 bg-muted rounded-lg">
-                        <h4 className="font-semibold flex items-center gap-2"><Wallet className="h-5 w-5 text-primary"/>AI-Estimated Income</h4>
-                        <p className="text-sm text-muted-foreground">AI's estimate of your monthly income based on your credit profile.</p>
-                        <p className="text-3xl font-bold text-primary mt-2">
-                            ₹{incomeAnalysis.estimatedIncome.toLocaleString('en-IN')}
-                        </p>
-                    </div>
-                     <div className="p-4 bg-muted rounded-lg">
-                        <h4 className="font-semibold flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-primary"/>Income Stability Score</h4>
-                        <p className="text-sm text-muted-foreground">How consistent the AI believes your income to be (0-100).</p>
-                        <p className="text-3xl font-bold text-primary mt-2">
-                            {incomeAnalysis.stabilityScore}
-                        </p>
-                    </div>
-                </div>
-                <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Analysis Explanation</AlertTitle>
-                    <AlertDescription className="whitespace-pre-line">
-                    {incomeAnalysis.explanation}
-                    </AlertDescription>
+            <Tabs defaultValue="asset">
+              <TabsList>
+                <TabsTrigger value="asset">Asset Creation</TabsTrigger>
+                <TabsTrigger value="salary">Salary Slips</TabsTrigger>
+                <TabsTrigger value="business">Business Verification</TabsTrigger>
+              </TabsList>
+              <TabsContent value="asset">
+                 <Alert className="mt-4">
+                  <Wrench className="h-4 w-4" />
+                  <AlertTitle>Coming Soon!</AlertTitle>
+                  <AlertDescription>
+                    The Asset Creation verification feature is currently under development.
+                  </AlertDescription>
                 </Alert>
-              </div>
-            )}
+              </TabsContent>
+              <TabsContent value="salary">
+                <Alert className="mt-4">
+                  <Wrench className="h-4 w-4" />
+                  <AlertTitle>Coming Soon!</AlertTitle>
+                  <AlertDescription>
+                    The Salary Slips verification feature is currently under development.
+                  </AlertDescription>
+                </Alert>
+              </TabsContent>
+              <TabsContent value="business">
+                <Alert className="mt-4">
+                  <Wrench className="h-4 w-4" />
+                  <AlertTitle>Coming Soon!</AlertTitle>
+                  <AlertDescription>
+                    The Business Verification feature is currently under development.
+                  </AlertDescription>
+                </Alert>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       ),
@@ -1794,7 +1750,7 @@ export default function CreditWiseAIPage() {
                   <NavButton view="aiAnalysis" label="AI Risk Assessment" icon={<BrainCircuit size={24} />} disabled={!analysisResult} />
                   <NavButton view="aiMeter" label="AI Credit Meter" icon={<Bot size={24} />} disabled={!riskAssessment}/>
                   <NavButton view="obligations" label="Financials & Obligations" icon={<Calculator size={24} />} disabled={!rawText} />
-                  <NavButton view="aiIncomeAnalysis" label="AI Income Analysis" icon={<TrendingUp size={24} />} disabled={!analysisResult} />
+                  <NavButton view="incomeGuess" label="Income Guess" icon={<Wallet size={24} />} disabled={!rawText} />
                   <NavButton view="loanEligibility" label="AI Loan Eligibility" icon={<Banknote size={24} />} disabled={!aiRating || !estimatedIncome} />
                   <NavButton view="financialRisk" label="AI Financial Risk" icon={<BadgeCent size={24} />} disabled={!estimatedIncome}/>
                   <NavButton view="creditUnderwriting" label="AI Credit Underwriting" icon={<Gavel size={24} />} disabled={!loanEligibility} />

@@ -11,7 +11,7 @@ import '@/ai/flows/ai-agent-chat.ts';
 import '@/ai/flows/calculate-total-emi.ts';
 import '@/ai/flows/risk-assessment.ts';
 import '@/ai/flows/bank-statement-analysis.ts';
-import '@/ai/flows/income-analysis.ts';
+
 
 
 
