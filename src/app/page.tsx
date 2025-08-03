@@ -1498,6 +1498,72 @@ export default function CreditWiseAIPage() {
           </CardContent>
         </Card>
       ),
+      financialRisk: (
+         <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center text-xl font-bold"><BadgeCent className="mr-3 h-6 w-6 text-primary" />AI Financial Risk Assessment</CardTitle>
+                <CardDescription>Get the AI's perspective on your overall financial stability and health.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                 <TooltipProvider>
+                  <UiTooltip>
+                    <TooltipTrigger asChild>
+                      <div className="inline-block">
+                          <Button
+                            onClick={handleGetFinancialRisk}
+                            disabled={isAssessingFinancialRisk || !estimatedIncome}
+                          >
+                            {isAssessingFinancialRisk ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Sparkles className="mr-2 h-4 w-4" />
+                            )}
+                            Assess Financial Risk
+                          </Button>
+                      </div>
+                    </TooltipTrigger>
+                    {!estimatedIncome && (
+                      <TooltipContent>
+                        <p>Please enter your estimated income first.</p>
+                      </TooltipContent>
+                    )}
+                  </UiTooltip>
+                </TooltipProvider>
+
+                {financialRisk && (
+                  <div className="mt-6 space-y-6">
+                    <div className={cn('p-4 rounded-lg border-l-4 font-semibold text-lg', getRiskColorClass(financialRisk.financialRiskRating.toLowerCase(), 'bg'), getRiskColorClass(financialRisk.financialRiskRating.toLowerCase(), 'text'), getRiskColorClass(financialRisk.financialRiskRating.toLowerCase(), 'border'))}>
+                       Overall Financial Risk: {financialRisk.financialRiskRating}
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                            <h4 className="font-bold">Debt-to-Income (DTI) Analysis ({financialRisk.dtiAnalysis.dtiPercentage}%)</h4>
+                            <div dangerouslySetInnerHTML={{ __html: financialRisk.dtiAnalysis.explanation.replace(/\n/g, '<br/>') }}></div>
+                        </div>
+                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                            <h4 className="font-bold">Debt Composition ({financialRisk.debtComposition.unsecuredDebtPercentage}% Unsecured)</h4>
+                            <div dangerouslySetInnerHTML={{ __html: financialRisk.debtComposition.explanation.replace(/\n/g, '<br/>') }}></div>
+                        </div>
+                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                             <h4 className="font-bold">Credit Utilization ({financialRisk.creditUtilizationAnalysis.overallUtilization}%)</h4>
+                            <div dangerouslySetInnerHTML={{ __html: financialRisk.creditUtilizationAnalysis.explanation.replace(/\n/g, '<br/>') }}></div>
+                        </div>
+                    </div>
+
+                    <Alert>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Overall Financial Outlook</AlertTitle>
+                        <AlertDescription>
+                          <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: financialRisk.overallOutlook.replace(/\n/g, '<br/>') }}></div>
+                        </AlertDescription>
+                    </Alert>
+                  </div>
+                )}
+
+            </CardContent>
+         </Card>
+      ),
     };
     return views[activeView!];
   };
