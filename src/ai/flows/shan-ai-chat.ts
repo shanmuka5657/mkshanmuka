@@ -85,7 +85,7 @@ const aiAgentChatFlow = ai.defineFlow(
     const llmResponse = await ai.generate({
       messages: history,
       system: systemPrompt,
-      model: 'googleai/gemini-1.5-flash',
+      model: 'googleai/gemini-pro',
     });
 
     const responseText = llmResponse.text;

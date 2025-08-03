@@ -81,7 +81,7 @@ const prompt = ai.definePrompt({
   name: 'analyzeCreditReportPrompt',
   input: {schema: AnalyzeCreditReportInputSchema},
   output: {schema: AnalyzeCreditReportOutputSchema},
-  model: 'googleai/gemini-1.5-flash',
+  model: 'googleai/gemini-pro',
   prompt: `You are an expert CIBIL report data extractor. Your ONLY job is to read the provided credit report text and extract all the specified information in a single pass. Do NOT perform any analysis, calculations, or summarizations beyond what is explicitly asked for in the schemas.
 
 **Extraction Tasks:**

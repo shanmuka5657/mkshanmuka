@@ -57,7 +57,7 @@ const prompt = ai.definePrompt({
   name: 'analyzeSalarySlipsPrompt',
   input: {schema: SalarySlipAnalysisInputSchema},
   output: {schema: SalarySlipAnalysisOutputSchema},
-  model: 'googleai/gemini-1.5-flash',
+  model: 'googleai/gemini-pro',
   prompt: `You are a forensic document analyst specializing in verifying Indian salary slips for loan applications. Your task is to meticulously analyze a batch of salary slips, extract key information, and perform a comprehensive fraud detection analysis.
 
 **Input Documents:**

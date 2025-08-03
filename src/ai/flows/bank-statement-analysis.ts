@@ -78,7 +78,7 @@ const prompt = ai.definePrompt({
   name: 'analyzeBankStatementPrompt',
   input: {schema: BankStatementAnalysisInputSchema},
   output: {schema: BankStatementAnalysisOutputSchema},
-  model: 'googleai/gemini-1.5-flash',
+  model: 'googleai/gemini-pro',
   prompt: `You are an expert financial analyst specializing in Indian bank statements. Your task is to meticulously read the provided bank statement text and extract key financial insights.
 
 **Extraction & Analysis Tasks:**
