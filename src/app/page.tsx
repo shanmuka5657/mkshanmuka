@@ -1292,11 +1292,11 @@ export default function CreditWiseAIPage() {
               </TabsList>
               <TabsContent value="asset" className="mt-4">
                  <div className="space-y-4">
-                    {/* New Asset Input Row */}
+                    {/* New Asset Input Form */}
                     <div className="p-4 border rounded-lg bg-muted/50">
                         <h4 className="font-semibold mb-2">Add New Asset</h4>
-                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 items-end">
-                            <div className="lg:col-span-2 grid gap-1.5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                            <div className="grid gap-1.5">
                                 <Label htmlFor="new-asset-desc">Asset Description</Label>
                                 <Input id="new-asset-desc" placeholder="e.g., Gold Chain, 24k" value={newAsset.description} onChange={(e) => handleNewAssetChange('description', e.target.value)} />
                             </div>
@@ -1304,9 +1304,25 @@ export default function CreditWiseAIPage() {
                                 <Label htmlFor="new-asset-type">Type</Label>
                                 <Input id="new-asset-type" placeholder="e.g., Jewellery" value={newAsset.type} onChange={(e) => handleNewAssetChange('type', e.target.value)} />
                             </div>
+                            <div className="grid gap-1.5">
+                                <Label htmlFor="new-asset-owner">Owner</Label>
+                                <Input id="new-asset-owner" placeholder="e.g., Self, Joint" value={newAsset.owner} onChange={(e) => handleNewAssetChange('owner', e.target.value)} />
+                            </div>
                              <div className="grid gap-1.5">
-                                <Label htmlFor="new-asset-value">Investment (₹)</Label>
-                                <Input id="new-asset-value" type="number" placeholder="100000" value={newAsset.investmentValue || ''} onChange={(e) => handleNewAssetChange('investmentValue', parseFloat(e.target.value) || 0)} />
+                                <Label htmlFor="new-asset-doc">Document</Label>
+                                <Input id="new-asset-doc" placeholder="e.g., Purchase Bill" value={newAsset.document} onChange={(e) => handleNewAssetChange('document', e.target.value)} />
+                            </div>
+                             <div className="grid gap-1.5">
+                                <Label htmlFor="new-asset-date">Purchase Date</Label>
+                                <Input id="new-asset-date" type="date" value={newAsset.purchaseDate} onChange={(e) => handleNewAssetChange('purchaseDate', e.target.value)} />
+                            </div>
+                             <div className="grid gap-1.5">
+                                <Label htmlFor="new-asset-invest-value">Investment (₹)</Label>
+                                <Input id="new-asset-invest-value" type="number" placeholder="100000" value={newAsset.investmentValue || ''} onChange={(e) => handleNewAssetChange('investmentValue', parseFloat(e.target.value) || 0)} />
+                            </div>
+                             <div className="grid gap-1.5">
+                                <Label htmlFor="new-asset-cons-value">Considered Value (₹)</Label>
+                                <Input id="new-asset-cons-value" type="number" placeholder="90000" value={newAsset.consideredValue || ''} onChange={(e) => handleNewAssetChange('consideredValue', parseFloat(e.target.value) || 0)} />
                             </div>
                             <div className="flex items-end">
                                 <Button onClick={handleAddAsset} className="w-full"><PlusCircle className="mr-2"/> Add Asset</Button>
@@ -2331,4 +2347,3 @@ export default function CreditWiseAIPage() {
     </div>
   );
 }
-
