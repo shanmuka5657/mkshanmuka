@@ -6,7 +6,7 @@ import { Bot, Loader2, Send, User, Paperclip, X, Minus, MessageSquare } from 'lu
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
-import { aiAgentChat, AiAgentChatHistory, AiAgentChatInput } from '@/ai/flows/shan-ai-chat';
+import { aiAgentChat, AiAgentChatHistory, AiAgentChatInput } from '@/ai/flows/ai-agent-chat';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from './ui/scroll-area';
