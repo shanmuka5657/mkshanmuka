@@ -10,7 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { FlowUsage } from 'genkit/flow';
+import type { FlowUsage } from 'genkit/flow';
 import type { AiRatingOutput } from './ai-rating';
 import type { LoanEligibilityOutput } from './loan-eligibility';
 import type { RiskAssessmentOutput } from './risk-assessment';
@@ -174,23 +174,14 @@ const creditUnderwritingFlow = ai.defineFlow(
     }),
   },
   async (input) => {
-    // The pre-calculated risk assessment from the input.
-    const riskAssessment = input.riskAssessment as RiskAssessmentOutput;
-
-    // We pass the risk assessment to the prompt.
-    // The prompt is instructed to use these values directly.
-    const result = await prompt({
-        ...input,
-        riskAssessment: {
-          ...riskAssessment
-        },
-    });
-    
+    const result = await prompt(input);
     const output = result.output;
 
     if (!output) {
       throw new Error("AI failed to provide an underwriting analysis.");
     }
+    
+    const riskAssessment = input.riskAssessment as RiskAssessmentOutput;
 
     // Ensure the final output uses the exact pre-calculated values for consistency.
     output.probabilityOfDefault = riskAssessment.probabilityOfDefault;
