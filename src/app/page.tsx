@@ -803,6 +803,7 @@ export default function CreditWiseAIPage() {
         'moderate risk': { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-800 dark:text-yellow-300', border: 'border-yellow-500' },
         'medium': { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-800 dark:text-yellow-300', border: 'border-yellow-500' },
         'high': { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-800 dark:text-orange-300', border: 'border-orange-500' },
+        'high risk': { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-800 dark:text-orange-300', border: 'border-orange-500' },
         'very high risk': { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-800 dark:text-red-300', border: 'border-red-500' },
     };
     return mapping[level.toLowerCase()]?.[type] || 'bg-muted border-border';
@@ -871,9 +872,9 @@ export default function CreditWiseAIPage() {
     </div>
   );
   
-  const InfoItem = ({ label, value, isLoading = false }: { label: string; value: string | number; isLoading?: boolean }) => (
-     <div>
-        <p className="font-semibold text-sm text-muted-foreground">{label}:</p>
+  const InfoItem = ({ label, value, isLoading = false }: { label: string | React.ReactNode; value: string | number; isLoading?: boolean }) => (
+     <div className="grid grid-cols-2 gap-2">
+        <p className="font-semibold text-sm text-muted-foreground flex items-center">{label}:</p>
         {isLoading ? <Loader2 className="h-4 w-4 mt-1 animate-spin" /> : <p className="font-semibold truncate">{value}</p>}
     </div>
   );
@@ -892,7 +893,7 @@ export default function CreditWiseAIPage() {
        creditSummary: (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
+            <CardTitle className="flex items-center text-xl font-bold">
               <LayoutGrid className="mr-3 h-6 w-6 text-primary" />
               AI-Powered Credit Summary
             </CardTitle>
@@ -991,7 +992,7 @@ export default function CreditWiseAIPage() {
       aiMeter: (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center"><Bot className="mr-3 h-6 w-6 text-primary" />AI Credit Analysis Meter</CardTitle>
+            <CardTitle className="flex items-center text-xl font-bold"><Bot className="mr-3 h-6 w-6 text-primary" />AI Credit Analysis Meter</CardTitle>
             <CardDescription>This AI acts as a holistic credit advisor. It provides a comprehensive score of your overall credit health by balancing both the positive and negative factors in your report.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -1038,7 +1039,7 @@ export default function CreditWiseAIPage() {
       loanEligibility: (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
+            <CardTitle className="flex items-center text-xl font-bold">
               <Banknote className="mr-3 h-6 w-6 text-primary" />
               AI Loan Eligibility
             </CardTitle>
@@ -1121,7 +1122,7 @@ export default function CreditWiseAIPage() {
       aiAnalysis: (
         <Card>
             <CardHeader>
-                <CardTitle className="flex items-center"><BrainCircuit className="mr-3 h-6 w-6 text-primary" />AI Risk Assessment</CardTitle>
+                <CardTitle className="flex items-center text-xl font-bold"><BrainCircuit className="mr-3 h-6 w-6 text-primary" />AI Risk Assessment</CardTitle>
                 <CardDescription>A detailed risk analysis performed by the AI based on your credit report.</CardDescription>
             </CardHeader>
              <CardContent>
@@ -1132,7 +1133,7 @@ export default function CreditWiseAIPage() {
                     </div>
                 ): riskAssessment ? (
                   <div className="space-y-6">
-                    <div className={cn('p-4 rounded-lg border-l-4 font-semibold text-lg', getRiskColorClass(riskAssessment.level.toLowerCase()))}>
+                    <div className={cn('p-4 rounded-lg border-l-4 font-semibold text-lg', getRiskColorClass(riskAssessment.level.toLowerCase(), 'bg'), getRiskColorClass(riskAssessment.level.toLowerCase(), 'text'), getRiskColorClass(riskAssessment.level.toLowerCase(), 'border'))}>
                         Overall Risk Level: {riskAssessment.level} (Score: {riskAssessment.score}/100)
                     </div>
 
@@ -1145,7 +1146,7 @@ export default function CreditWiseAIPage() {
 
                      <div className="prose prose-sm dark:prose-invert max-w-none space-y-4">
                         <div>
-                            <h5>Probability of Default Explanation</h5>
+                            <h5 className="font-bold">Probability of Default Explanation</h5>
                             <p>{riskAssessment.defaultProbabilityExplanation}</p>
                         </div>
                     </div>
@@ -1185,7 +1186,7 @@ export default function CreditWiseAIPage() {
        incomeGuess: (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
+            <CardTitle className="flex items-center text-xl font-bold">
               <Wallet className="mr-3 h-6 w-6 text-primary" />
               Income Guess
             </CardTitle>
@@ -1234,7 +1235,7 @@ export default function CreditWiseAIPage() {
       creditUnderwriting: (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center"><Gavel className="mr-3 h-6 w-6 text-primary" />AI Credit Underwriting</CardTitle>
+            <CardTitle className="flex items-center text-xl font-bold"><Gavel className="mr-3 h-6 w-6 text-primary" />AI Credit Underwriting</CardTitle>
             <CardDescription>Get a simulated underwriting decision from our AI. This is the final step.</CardDescription>
           </CardHeader>
           <form onSubmit={handleGetUnderwriting}>
@@ -1321,22 +1322,22 @@ export default function CreditWiseAIPage() {
               <div className="space-y-4">
                 <div>
                   <h5 className="font-semibold text-lg mb-2">Underwriting Summary</h5>
-                  <p className="text-sm text-foreground/80 whitespace-pre-line">{underwritingResult.underwritingSummary}</p>
+                  <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-line">{underwritingResult.underwritingSummary}</div>
                 </div>
                 
                 {underwritingResult.conditions.length > 0 && (
                   <div>
                     <h5 className="font-semibold text-lg mb-2">Conditions for Approval</h5>
-                    <ul className="list-disc list-inside space-y-1 text-sm">
-                      {underwritingResult.conditions.map((condition, i) => <li key={i}>{condition}</li>)}
+                    <ul className="list-none space-y-1 text-sm">
+                      {underwritingResult.conditions.map((condition, i) => <li key={i}>☐ {condition}</li>)}
                     </ul>
                   </div>
                 )}
 
                 <div>
                   <h5 className="font-semibold text-lg mb-2">Required Documents</h5>
-                   <ul className="list-disc list-inside space-y-1 text-sm">
-                      {underwritingResult.requiredDocuments.map((doc, i) => <li key={i}>{doc}</li>)}
+                   <ul className="list-none space-y-1 text-sm">
+                      {underwritingResult.requiredDocuments.map((doc, i) => <li key={i}>☐ {doc}</li>)}
                     </ul>
                 </div>
               </div>
@@ -1363,22 +1364,22 @@ export default function CreditWiseAIPage() {
                  </div>
                  <div className="prose prose-sm dark:prose-invert max-w-none space-y-4">
                     <div>
-                        <h5>Probability of Default (PD) Explanation</h5>
+                        <h5 className="font-bold">Probability of Default (PD) Explanation</h5>
                         <p>{underwritingResult.riskMetricsExplanation.pd}</p>
                     </div>
                     <div>
-                        <h5>Loss Given Default (LGD) Explanation</h5>
+                        <h5 className="font-bold">Loss Given Default (LGD) Explanation</h5>
                         <p>{underwritingResult.riskMetricsExplanation.lgd}</p>
                     </div>
                     <div>
-                        <h5>Exposure at Default (EAD) Explanation</h5>
+                        <h5 className="font-bold">Exposure at Default (EAD) Explanation</h5>
                         <p>{underwritingResult.riskMetricsExplanation.ead}</p>
                     </div>
                  </div>
                </div>
 
                 <div className="mt-8">
-                    <div className={cn('p-4 rounded-lg border-l-4 font-semibold text-lg', getRiskColorClass(underwritingResult.finalProfileRating))}>
+                    <div className={cn('p-4 rounded-lg border-l-4 font-semibold text-lg', getRiskColorClass(underwritingResult.finalProfileRating.toLowerCase(), 'bg'), getRiskColorClass(underwritingResult.finalProfileRating.toLowerCase(), 'text'), getRiskColorClass(underwritingResult.finalProfileRating.toLowerCase(), 'border'))}>
                         Final Profile Rating: {underwritingResult.finalProfileRating}
                     </div>
                 </div>
@@ -1391,7 +1392,7 @@ export default function CreditWiseAIPage() {
       financialRisk: (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
+            <CardTitle className="flex items-center text-xl font-bold">
               <BadgeCent className="mr-3 h-6 w-6 text-primary" />
               AI Financial Risk Assessment
             </CardTitle>
@@ -1427,7 +1428,7 @@ export default function CreditWiseAIPage() {
 
             {financialRisk && (
               <div className="mt-6 space-y-6">
-                <div className={cn('p-4 rounded-lg border-l-4', getRiskColorClass(financialRisk.financialRiskRating))}>
+                <div className={cn('p-4 rounded-lg border-l-4', getRiskColorClass(financialRisk.financialRiskRating, 'bg'), getRiskColorClass(financialRisk.financialRiskRating, 'text'), getRiskColorClass(financialRisk.financialRiskRating, 'border'))}>
                   <h4 className="font-bold text-lg">Financial Risk Rating: {financialRisk.financialRiskRating}</h4>
                 </div>
                 <div className="prose prose-sm dark:prose-invert max-w-none">
@@ -1456,7 +1457,7 @@ export default function CreditWiseAIPage() {
       obligations: (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center"><Calculator className="mr-3 h-6 w-6 text-primary" />Financials &amp; Obligations</CardTitle>
+            <CardTitle className="flex items-center text-xl font-bold"><Calculator className="mr-3 h-6 w-6 text-primary" />Financials &amp; Obligations</CardTitle>
             <CardDescription>Provide your financial details to enable more accurate analysis and loan eligibility checks.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -1632,18 +1633,18 @@ export default function CreditWiseAIPage() {
               <CardHeader>
                   <CardTitle className="text-2xl flex items-center justify-between">
                       <span>Final Profile Summary</span>
-                       <div className={cn('px-4 py-1.5 rounded-full text-base font-semibold flex items-center gap-2 border', getRiskColorClass(underwritingResult.finalProfileRating, 'bg'), getRiskColorClass(underwritingResult.finalProfileRating, 'text'), getRiskColorClass(underwritingResult.finalProfileRating, 'border'))}>
+                       <div className={cn('px-4 py-1.5 rounded-full text-base font-semibold flex items-center gap-2 border', getRiskColorClass(underwritingResult.finalProfileRating.toLowerCase(), 'bg'), getRiskColorClass(underwritingResult.finalProfileRating.toLowerCase(), 'text'), getRiskColorClass(underwritingResult.finalProfileRating.toLowerCase(), 'border'))}>
                             {underwritingResult.finalProfileRating === 'Very Low Risk' || underwritingResult.finalProfileRating === 'Low Risk' ? <CheckCircle /> : <ShieldAlert />}
                             {underwritingResult.finalProfileRating}
                        </div>
                   </CardTitle>
                   <CardDescription>This card provides a consolidated view of the entire analysis.</CardDescription>
               </CardHeader>
-              <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-b pb-4 mb-4">
-                      <InfoItem label="Name" value={customerDetails.name} isLoading={isAnalyzing}/>
-                      <InfoItem label="PAN" value={customerDetails.pan} isLoading={isAnalyzing}/>
-                       <div className={cn("font-semibold text-lg p-2 rounded-md text-center", getUnderwritingDecisionColor(underwritingResult.underwritingDecision))}>
+              <CardContent className="space-y-6">
+                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-4">
+                      <InfoItem label={<div className="flex items-center gap-1"><User size={14}/> Name</div>} value={customerDetails.name} isLoading={isAnalyzing}/>
+                      <InfoItem label={<div className="flex items-center gap-1"><FileText size={14}/> PAN</div>} value={customerDetails.pan} isLoading={isAnalyzing}/>
+                       <div className={cn("col-span-2 font-semibold text-lg p-2 rounded-md text-center", getUnderwritingDecisionColor(underwritingResult.underwritingDecision))}>
                             Decision: {underwritingResult.underwritingDecision}
                        </div>
                   </div>
@@ -1660,13 +1661,6 @@ export default function CreditWiseAIPage() {
                        <SummaryItem label="Expected Loss" value={`₹${underwritingResult.expectedLoss.toLocaleString('en-IN')}`} valueClassName="text-destructive" />
                   </div>
               </CardContent>
-              <CardFooter>
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>AI Underwriting Summary</AlertTitle>
-                    <AlertDescription>{underwritingResult.underwritingSummary}</AlertDescription>
-                  </Alert>
-              </CardFooter>
           </Card>
         )}
         
@@ -1674,7 +1668,7 @@ export default function CreditWiseAIPage() {
             <div className="space-y-8">
               <Card>
                   <CardHeader>
-                      <CardTitle className="flex items-center"><FileText className="mr-3 h-6 w-6 text-primary" />Credit Score &amp; Consumer Information</CardTitle>
+                      <CardTitle className="flex items-center text-xl font-bold"><FileText className="mr-3 h-6 w-6 text-primary" />Credit Score &amp; Consumer Information</CardTitle>
                   </CardHeader>
                   <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
                       <div className="text-center">
@@ -1682,35 +1676,21 @@ export default function CreditWiseAIPage() {
                           <div className="text-7xl font-bold text-primary">{creditScore || 'N/A'}</div>
                           {creditScore && <Progress value={scoreProgress} className="mt-4" />}
                       </div>
-                      <div>
-                          <h4 className="font-semibold mb-4">AI-Extracted Consumer Information</h4>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                            <div>
-                                <InfoItem label="Name" value={customerDetails.name} isLoading={isAnalyzing}/>
-                                <div className="mt-2">
-                                    <InfoItem label="Date of Birth" value={customerDetails.dateOfBirth} isLoading={isAnalyzing}/>
-                                </div>
-                                <div className="mt-2">
-                                    <InfoItem label="Gender" value={customerDetails.gender} isLoading={isAnalyzing}/>
-                                </div>
-                            </div>
-                            <div>
-                                <InfoItem label="PAN" value={customerDetails.pan} isLoading={isAnalyzing}/>
-                                <div className="mt-2">
-                                    <InfoItem label="Mobile Number" value={customerDetails.mobileNumber} isLoading={isAnalyzing}/>
-                                </div>
-                                <div className="mt-2">
-                                    <InfoItem label="Address" value={customerDetails.address} isLoading={isAnalyzing}/>
-                                </div>
-                            </div>
-                          </div>
+                      <div className="space-y-2">
+                          <h4 className="font-semibold mb-4 border-b pb-2">AI-Extracted Consumer Information</h4>
+                          <InfoItem label="Name" value={customerDetails.name} isLoading={isAnalyzing}/>
+                          <InfoItem label="Date of Birth" value={customerDetails.dateOfBirth} isLoading={isAnalyzing}/>
+                          <InfoItem label="Gender" value={customerDetails.gender} isLoading={isAnalyzing}/>
+                          <InfoItem label="PAN" value={customerDetails.pan} isLoading={isAnalyzing}/>
+                          <InfoItem label="Mobile Number" value={customerDetails.mobileNumber} isLoading={isAnalyzing}/>
+                          <InfoItem label="Address" value={customerDetails.address} isLoading={isAnalyzing}/>
                       </div>
                   </CardContent>
               </Card>
 
                <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center"><BarChartBig className="mr-3 h-6 w-6 text-primary" />Report Summary</CardTitle>
+                    <CardTitle className="flex items-center text-xl font-bold"><BarChartBig className="mr-3 h-6 w-6 text-primary" />Report Summary</CardTitle>
                     <CardDescription>This summary is generated by an AI analyzing your CIBIL report.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -1836,10 +1816,10 @@ export default function CreditWiseAIPage() {
             <div className="space-y-8">
                 <Card>
                     <CardHeader>
-                        <CardTitle className="flex items-center"><FileText className="mr-3 h-6 w-6 text-primary" />Account Summary</CardTitle>
+                        <CardTitle className="flex items-center text-xl font-bold"><FileText className="mr-3 h-6 w-6 text-primary" />Account Summary</CardTitle>
                         <CardDescription>Key details extracted from the statement.</CardDescription>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                        <InfoItem label="Account Holder" value={bankAnalysisResult.summary.accountHolder} />
                        <InfoItem label="Bank Name" value={bankAnalysisResult.summary.bankName} />
                        <InfoItem label="Account Number" value={bankAnalysisResult.summary.accountNumber} />
@@ -1853,7 +1833,7 @@ export default function CreditWiseAIPage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle className="flex items-center"><BarChartBig className="mr-3 h-6 w-6 text-primary" />Financial Overview</CardTitle>
+                        <CardTitle className="flex items-center text-xl font-bold"><BarChartBig className="mr-3 h-6 w-6 text-primary" />Financial Overview</CardTitle>
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         <SummaryItem label="Total Deposits" value={bankAnalysisResult.overview.totalDeposits} valueClassName="text-green-600" />
@@ -1865,7 +1845,7 @@ export default function CreditWiseAIPage() {
                 
                 <Card>
                     <CardHeader>
-                        <CardTitle className="flex items-center"><ChevronsUpDown className="mr-3 h-6 w-6 text-primary" />Detailed Financial Overview</CardTitle>
+                        <CardTitle className="flex items-center text-xl font-bold"><ChevronsUpDown className="mr-3 h-6 w-6 text-primary" />Detailed Financial Overview</CardTitle>
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                         <SummaryItem label="Salary Credits" value={bankAnalysisResult.detailedOverview.salaryCredits} valueClassName="text-green-600" />
@@ -1878,7 +1858,7 @@ export default function CreditWiseAIPage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle className="flex items-center"><BrainCircuit className="mr-3 h-6 w-6 text-primary" />AI Financial Health Summary</CardTitle>
+                        <CardTitle className="flex items-center text-xl font-bold"><BrainCircuit className="mr-3 h-6 w-6 text-primary" />AI Financial Health Summary</CardTitle>
                     </CardHeader>
                     <CardContent className="prose prose-sm dark:prose-invert max-w-none">
                         <p>{bankAnalysisResult.health.summary}</p>
@@ -1901,7 +1881,7 @@ export default function CreditWiseAIPage() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center">
+                    <CardTitle className="flex items-center text-xl font-bold">
                       <Pencil className="mr-3 h-5 w-5" /> Recent Transactions
                     </CardTitle>
                     <CardDescription>A list of notable recent transactions identified by the AI.</CardDescription>
@@ -2046,34 +2026,7 @@ export default function CreditWiseAIPage() {
 
             {(rawText || (analysisMode === 'bank' && bankAnalysisResult)) && (
               <div className="space-y-8 mt-8">
-                 <Card className="print:hidden">
-                    <CardHeader>
-                        <CardTitle className="flex items-center"><FileSearch className="mr-3 h-6 w-6 text-primary" />Raw Report Text & Cost</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex flex-col gap-4">
-                        <div className="flex gap-4">
-                            <Button variant="outline" onClick={() => setShowRawText(!showRawText)}>
-                                {showRawText ? 'Hide Raw Text' : 'Show Raw Text'}
-                            </Button>
-                            <Button variant="outline" onClick={handlePrint}>
-                                <Printer className="mr-2"/>
-                                Print Report
-                            </Button>
-                        </div>
-                        {tokenUsage.inputTokens > 0 && (
-                            <Card className="bg-muted/50">
-                                <CardHeader>
-                                    <CardTitle className="text-lg flex items-center"><Coins className="mr-3 text-primary"/>Analysis Cost</CardTitle>
-                                </CardHeader>
-                                <CardContent className="grid grid-cols-3 gap-4">
-                                    <SummaryItem label="Input Tokens" value={tokenUsage.inputTokens.toLocaleString()} valueClassName="text-foreground" />
-                                    <SummaryItem label="Output Tokens" value={tokenUsage.outputTokens.toLocaleString()} valueClassName="text-foreground" />
-                                    <SummaryItem label="Estimated Cost (USD)" value={`$${estimatedCost.toFixed(5)}`} valueClassName="text-green-600" />
-                                </CardContent>
-                            </Card>
-                        )}
-                    </CardContent>
-                  </Card>
+                 
 
                   {showRawText && (
                     <Card className="print:hidden">
@@ -2101,6 +2054,37 @@ export default function CreditWiseAIPage() {
               onNewChat={() => setTokenUsage({ inputTokens: 0, outputTokens: 0 })}
               onTokensUsed={updateTokenUsage}
             />
+            
+            {rawText &&
+              <Card className="print:hidden mt-8">
+                  <CardHeader>
+                      <CardTitle className="flex items-center"><FileSearch className="mr-3 h-6 w-6 text-primary" />Raw Report Text & Cost</CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex flex-col gap-4">
+                      <div className="flex gap-4">
+                          <Button variant="outline" onClick={() => setShowRawText(!showRawText)}>
+                              {showRawText ? 'Hide Raw Text' : 'Show Raw Text'}
+                          </Button>
+                          <Button variant="outline" onClick={handlePrint}>
+                              <Printer className="mr-2"/>
+                              Print Report
+                          </Button>
+                      </div>
+                      {tokenUsage.inputTokens > 0 && (
+                          <Card className="bg-muted/50">
+                              <CardHeader>
+                                  <CardTitle className="text-lg flex items-center"><Coins className="mr-3 text-primary"/>Analysis Cost</CardTitle>
+                              </CardHeader>
+                              <CardContent className="grid grid-cols-3 gap-4">
+                                  <SummaryItem label="Input Tokens" value={tokenUsage.inputTokens.toLocaleString()} valueClassName="text-foreground" />
+                                  <SummaryItem label="Output Tokens" value={tokenUsage.outputTokens.toLocaleString()} valueClassName="text-foreground" />
+                                  <SummaryItem label="Estimated Cost (USD)" value={`$${estimatedCost.toFixed(5)}`} valueClassName="text-green-600" />
+                              </CardContent>
+                          </Card>
+                      )}
+                  </CardContent>
+                </Card>
+            }
           </>
         )}
       </main>

@@ -11,29 +11,23 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { FlowUsage } from 'genkit/flow';
+import type { AiRatingOutput } from './ai-rating';
+import type { LoanEligibilityOutput } from './loan-eligibility';
+import type { RiskAssessmentOutput } from './risk-assessment';
 
 const CreditUnderwritingInputSchema = z.object({
   creditReportText: z
     .string()
     .describe('The full text extracted from the credit report.'),
   aiRating: z
-    .object({
-      aiScore: z.number(),
-      rating: z.string(),
-      summary: z.string(),
-      positiveFactors: z.array(z.string()),
-      negativeFactors: z.array(z.string()),
-    })
+    .any()
     .describe('The previously generated AI Credit Rating.'),
   loanEligibility: z
-    .object({
-        eligibleLoanAmount: z.number(),
-        estimatedInterestRate: z.string(),
-        repaymentCapacity: z.number(),
-        eligibilitySummary: z.string(),
-        suggestionsToIncreaseEligibility: z.array(z.string()),
-    })
+    .any()
     .describe('The previously calculated loan eligibility.'),
+  riskAssessment: z
+    .any()
+    .describe('The previously calculated financial risk assessment.'),
   estimatedIncome: z
     .number()
     .describe("The user's estimated monthly income in INR."),
@@ -54,9 +48,13 @@ const CreditUnderwritingInputSchema = z.object({
     .optional()
     .describe('A string containing any comments or notes the user has added about their specific loans.'),
 });
-export type CreditUnderwritingInput = z.infer<
-  typeof CreditUnderwritingInputSchema
->;
+
+export type CreditUnderwritingInput = Omit<z.infer<typeof CreditUnderwritingInputSchema>, 'aiRating' | 'loanEligibility' | 'riskAssessment'> & {
+    aiRating: AiRatingOutput;
+    loanEligibility: LoanEligibilityOutput;
+    riskAssessment: RiskAssessmentOutput;
+};
+
 
 const CreditUnderwritingOutputSchema = z.object({
   underwritingDecision: z
@@ -89,10 +87,10 @@ const CreditUnderwritingOutputSchema = z.object({
     .describe(
       'A list of conditions that must be met for the loan to be disbursed (e.g., "Income verification via bank statements"). Empty if no conditions.'
     ),
-  probabilityOfDefault: z.number().describe('The estimated probability of the user defaulting on a new loan in the next 24 months, as a percentage (0-100).'),
-  lossGivenDefault: z.number().describe('The estimated percentage of the Exposure at Default that would be lost if the user defaults (0-100).'),
-  exposureAtDefault: z.number().describe('The estimated total outstanding balance across all accounts if the user were to default, in INR.'),
-  expectedLoss: z.number().describe('The final calculated Expected Loss (PD * LGD * EAD) in INR.'),
+  probabilityOfDefault: z.number().describe('The estimated probability of the user defaulting on a new loan in the next 24 months, as a percentage (0-100). This should be taken directly from the risk assessment input.'),
+  lossGivenDefault: z.number().describe('The estimated percentage of the Exposure at Default that would be lost if the user defaults (0-100). This should be taken directly from the risk assessment input.'),
+  exposureAtDefault: z.number().describe('The estimated total outstanding balance across all accounts if the user were to default, in INR. This should be taken directly from the risk assessment input.'),
+  expectedLoss: z.number().describe('The final calculated Expected Loss (PD * LGD * EAD). This should be taken directly from the risk assessment input.'),
   riskMetricsExplanation: z.object({
     pd: z.string().describe("A detailed, multi-sentence explanation for the 'probabilityOfDefault' score, referencing specific report factors."),
     lgd: z.string().describe("A detailed, multi-sentence explanation for the 'lossGivenDefault' percentage, referencing the mix of secured vs. unsecured debt."),
@@ -120,6 +118,7 @@ const prompt = ai.definePrompt({
 **CRITICAL RULES:**
 1.  **NEVER APPROVE MORE THAN REQUESTED:** The 'approvedLoanAmount' CANNOT be higher than the 'desiredLoanAmount'. You can approve a lower amount if risk factors warrant it, but never more.
 2.  **RESPECT ELIGIBILITY LIMITS:** The 'approvedLoanAmount' must ALSO NOT exceed the 'Pre-Calculated Max Eligible Loan Amount'. If the 'repaymentCapacity' is 0, you MUST decline the loan. Your final approved amount must be the lower of the desired amount and the eligible amount.
+3.  **USE PRE-CALCULATED RISK METRICS**: You have been provided with pre-calculated risk metrics (PD, LGD, EAD, EL). You MUST use these exact values in your output. Do NOT recalculate them.
 
 **Applicant's Profile & Pre-Calculated Data:**
 - **Loan Type Requested:** {{{loanType}}}
@@ -130,6 +129,10 @@ const prompt = ai.definePrompt({
 - **AI Credit Score:** {{{aiRating.aiScore}}}/100 (Rating: {{{aiRating.rating}}})
 - **Pre-Calculated Max Repayment Capacity:** ₹{{{loanEligibility.repaymentCapacity}}}/month
 - **Pre-Calculated Max Eligible Loan Amount:** ₹{{{loanEligibility.eligibleLoanAmount}}}
+- **Pre-Calculated Probability of Default (PD):** {{{riskAssessment.probabilityOfDefault}}}%
+- **Pre-Calculated Loss Given Default (LGD):** {{{riskAssessment.lossGivenDefault}}}%
+- **Pre-Calculated Exposure At Default (EAD):** ₹{{{riskAssessment.exposureAtDefault}}}
+- **Pre-Calculated Expected Loss (EL):** ₹{{{riskAssessment.expectedLoss}}}
 
 {{#if userComments}}
 **IMPORTANT USER COMMENTS ON LOANS:**
@@ -155,7 +158,7 @@ The user has provided the following notes about their loans. You MUST consider t
 4.  **List Documents and Conditions:**
     *   Provide a standard list of 'requiredDocuments'.
     *   **Add Conditions Based on Risk:** If you see a potential inconsistency (e.g., a 'Daily Wage Earner' with an unusually high estimated income of > ₹50,000/month), add a condition like "Income verification via bank statements and ITR for the last 2 years is mandatory." to the 'conditions' array.
-5.  **Calculate and Explain Risk Metrics:** Determine 'probabilityOfDefault' (PD), 'lossGivenDefault' (LGD), and 'exposureAtDefault' (EAD). For each, provide a detailed 'riskMetricsExplanation' justifying your calculation based on report specifics. EAD should be the sum of all current balances on active accounts.
+5.  **Use Pre-Calculated Risk Metrics:** Populate the 'probabilityOfDefault', 'lossGivenDefault', 'exposureAtDefault', and 'expectedLoss' fields with the exact values provided in the input. Write detailed explanations for each metric in 'riskMetricsExplanation' based on the report.
 6.  **Assign a Final, Overall Profile Rating:** Synthesize every piece of information into a single, definitive 'finalProfileRating': 'Very Low Risk', 'Low Risk', 'Moderate Risk', 'High Risk', 'Very High Risk'. This rating is the ultimate summary of the applicant's profile.
 
 Generate the final, structured output.`,
@@ -171,20 +174,29 @@ const creditUnderwritingFlow = ai.defineFlow(
     }),
   },
   async (input) => {
-    const result = await prompt(input);
+    // The pre-calculated risk assessment from the input.
+    const riskAssessment = input.riskAssessment as RiskAssessmentOutput;
+
+    // We pass the risk assessment to the prompt.
+    // The prompt is instructed to use these values directly.
+    const result = await prompt({
+        ...input,
+        riskAssessment: {
+          ...riskAssessment
+        },
+    });
+    
     const output = result.output;
 
     if (!output) {
       throw new Error("AI failed to provide an underwriting analysis.");
     }
 
-    // Perform the Expected Loss calculation in code for accuracy.
-    const pd = output.probabilityOfDefault / 100;
-    const lgd = output.lossGivenDefault / 100;
-    const ead = output.exposureAtDefault;
-    
-    // Ensure the final EL is a number and round it for cleanliness.
-    output.expectedLoss = Math.round(pd * lgd * ead);
+    // Ensure the final output uses the exact pre-calculated values for consistency.
+    output.probabilityOfDefault = riskAssessment.probabilityOfDefault;
+    output.lossGivenDefault = riskAssessment.lossGivenDefault;
+    output.exposureAtDefault = riskAssessment.exposureAtDefault;
+    output.expectedLoss = riskAssessment.expectedLoss;
 
     return { output, usage: result.usage };
   }
