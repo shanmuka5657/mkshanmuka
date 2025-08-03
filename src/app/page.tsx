@@ -1331,7 +1331,7 @@ export default function CreditWiseAIPage() {
       incomeEstimator: (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center"><Calculator className="mr-3 h-6 w-6 text-primary" />Financials &amp; Obligations</CardTitle>
+            <CardTitle className="flex items-center"><Calculator className="mr-3 h-6 w-6 text-primary" />Income &amp; Obligations</CardTitle>
             <CardDescription>Provide your financial details to enable more accurate analysis and loan eligibility checks.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -1624,7 +1624,7 @@ export default function CreditWiseAIPage() {
                   <NavButton view="creditSummary" label="Credit Summary" icon={<LayoutGrid size={24} />} disabled={!analysisResult} />
                   <NavButton view="aiAnalysis" label="AI Report Analysis" icon={<BrainCircuit size={24} />} disabled={!analysisResult} />
                   <NavButton view="aiMeter" label="AI Credit Meter" icon={<Bot size={24} />} disabled={!analysisResult}/>
-                  <NavButton view="incomeEstimator" label="Financials & Obligations" icon={<Calculator size={24} />} disabled={!analysisResult}/>
+                  <NavButton view="incomeEstimator" label="Income Analysis" icon={<Calculator size={24} />} disabled={!analysisResult}/>
                   <NavButton view="loanEligibility" label="AI Loan Eligibility" icon={<Banknote size={24} />} disabled={!aiRating || !estimatedIncome} />
                   <NavButton view="financialRisk" label="AI Financial Risk" icon={<BadgeCent size={24} />} disabled={!estimatedIncome}/>
                   <NavButton view="creditUnderwriting" label="AI Credit Underwriting" icon={<Gavel size={24} />} disabled={!loanEligibility} />
