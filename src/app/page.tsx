@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -1295,6 +1294,7 @@ export default function CreditWiseAIPage() {
                  <div className="space-y-4">
                     {/* New Asset Input Row */}
                     <div className="p-4 border rounded-lg bg-muted/50">
+                        <h4 className="font-semibold mb-2">Add New Asset</h4>
                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 items-end">
                             <div className="lg:col-span-2 grid gap-1.5">
                                 <Label htmlFor="new-asset-desc">Asset Description</Label>
@@ -1354,10 +1354,10 @@ export default function CreditWiseAIPage() {
                                     </TableCell>
                                     <TableCell className="text-center">{months}</TableCell>
                                     <TableCell>
-                                      {isEditing ? <Input type="number" value={asset.investmentValue || ''} onChange={(e) => handleAssetChange(asset.id, 'investmentValue', parseFloat(e.target.value) || 0)} /> : asset.investmentValue.toLocaleString('en-IN')}
+                                      {isEditing ? <Input type="number" value={asset.investmentValue || ''} onChange={(e) => handleAssetChange(asset.id, 'investmentValue', parseFloat(e.target.value) || 0)} /> : `₹${asset.investmentValue.toLocaleString('en-IN')}`}
                                     </TableCell>
                                     <TableCell>
-                                      {isEditing ? <Input type="number" value={asset.consideredValue || ''} onChange={(e) => handleAssetChange(asset.id, 'consideredValue', parseFloat(e.target.value) || 0)}/> : asset.consideredValue.toLocaleString('en-IN')}
+                                      {isEditing ? <Input type="number" value={asset.consideredValue || ''} onChange={(e) => handleAssetChange(asset.id, 'consideredValue', parseFloat(e.target.value) || 0)}/> : `₹${asset.consideredValue.toLocaleString('en-IN')}`}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         {isEditing ? (
@@ -1733,7 +1733,7 @@ export default function CreditWiseAIPage() {
                   </UiTooltip>
                 </TooltipProvider>
 
-                {financialRisk && (
+                {financialRisk && financialRisk.dtiAnalysis && (
                   <div className="mt-6 space-y-6">
                     <div className={cn('p-4 rounded-lg border-l-4 font-semibold text-lg', getRiskColorClass(financialRisk.financialRiskRating.toLowerCase(), 'bg'), getRiskColorClass(financialRisk.financialRiskRating.toLowerCase(), 'text'), getRiskColorClass(financialRisk.financialRiskRating.toLowerCase(), 'border'))}>
                        Overall Financial Risk: {financialRisk.financialRiskRating}
