@@ -50,6 +50,7 @@ import {
   PlusCircle,
   Info,
   Save,
+  File,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -67,6 +68,7 @@ import { getFinancialRiskAssessment, FinancialRiskOutput } from '@/ai/flows/fina
 import { getCreditUnderwriting, CreditUnderwritingOutput, CreditUnderwritingInput } from '@/ai/flows/credit-underwriting';
 import { calculateTotalEmi, CalculateTotalEmiOutput } from '@/ai/flows/calculate-total-emi';
 import { analyzeBankStatement, BankStatementAnalysisOutput } from '@/ai/flows/bank-statement-analysis';
+import { analyzeSalarySlips, SalarySlipAnalysisOutput } from '@/ai/flows/salary-slip-analysis';
 import { getRiskAssessment, RiskAssessmentOutput } from '@/ai/flows/risk-assessment';
 import { AiAgentChat } from '@/components/CreditChat';
 import { cn } from '@/lib/utils';
@@ -158,6 +160,11 @@ type Asset = {
   consideredValue: number;
 };
 
+type SalarySlipFile = {
+  file: File;
+  dataUri: string;
+};
+
 // Pricing for gemini-pro model per 1M tokens
 const INPUT_PRICE_PER_MILLION_TOKENS = 0.5; 
 const OUTPUT_PRICE_PER_MILLION_TOKENS = 1.5; 
@@ -189,6 +196,11 @@ export default function CreditWiseAIPage() {
   // New state for Bank Analysis
   const [bankAnalysisResult, setBankAnalysisResult] = useState<BankStatementAnalysisOutput | null>(null);
   const [isAnalyzingBank, setIsAnalyzingBank] = useState(false);
+
+  // New state for Salary Slip Analysis
+  const [salarySlipFiles, setSalarySlipFiles] = useState<SalarySlipFile[]>([]);
+  const [salaryAnalysisResult, setSalaryAnalysisResult] = useState<SalarySlipAnalysisOutput | null>(null);
+  const [isAnalyzingSalary, setIsAnalyzingSalary] = useState(false);
 
   const [totalEmi, setTotalEmi] = useState('');
   const [activeLoanDetails, setActiveLoanDetails] = useState<ActiveLoanDetail[]>([]);
@@ -240,6 +252,7 @@ export default function CreditWiseAIPage() {
 
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const salarySlipInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(setUser);
@@ -328,6 +341,10 @@ export default function CreditWiseAIPage() {
     
     setBankAnalysisResult(null);
     setIsAnalyzingBank(false);
+
+    setSalarySlipFiles([]);
+    setSalaryAnalysisResult(null);
+    setIsAnalyzingSalary(false);
 
     setTotalEmi('');
     setActiveLoanDetails([]);
@@ -465,6 +482,56 @@ export default function CreditWiseAIPage() {
       })
     } finally {
       setIsAnalyzingBank(false);
+    }
+  };
+  
+  const handleSalarySlipFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      const filePromises = Array.from(files).map(file => {
+        return new Promise<SalarySlipFile>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            resolve({ file, dataUri: e.target?.result as string });
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      });
+
+      Promise.all(filePromises).then(newFiles => {
+        setSalarySlipFiles(prev => [...prev, ...newFiles].slice(0, 6)); // Limit to 6 files
+      }).catch(err => {
+        console.error("Error reading salary slip files:", err);
+        toast({ variant: 'destructive', title: 'Error reading files' });
+      });
+    }
+  };
+  
+  const handleAnalyzeSalarySlips = async () => {
+    if (salarySlipFiles.length === 0) {
+      toast({ variant: 'destructive', title: 'No files selected' });
+      return;
+    }
+    setIsAnalyzingSalary(true);
+    setSalaryAnalysisResult(null);
+    try {
+      const input = {
+        salarySlips: salarySlipFiles.map(f => ({ fileName: f.file.name, dataUri: f.dataUri })),
+      };
+      const { output, usage } = await analyzeSalarySlips(input);
+      setSalaryAnalysisResult(output);
+      updateTokenUsage(usage);
+      toast({ title: 'Salary Slip Analysis Complete' });
+    } catch (error: any) {
+      console.error('Error analyzing salary slips:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Analysis Failed',
+        description: error.message?.includes('429') ? "You've exceeded the daily limit for the AI. Please try again tomorrow." : (error.message || "Could not analyze salary slips."),
+      });
+    } finally {
+      setIsAnalyzingSalary(false);
     }
   };
 
@@ -707,11 +774,11 @@ export default function CreditWiseAIPage() {
   };
 
   const handleAddAsset = () => {
-    if (!newAsset.description) {
+    if (!newAsset.description || !newAsset.type || !newAsset.owner || !newAsset.document || !newAsset.purchaseDate || newAsset.investmentValue <= 0 || newAsset.consideredValue <= 0) {
         toast({
             variant: "destructive",
-            title: "Missing Fields",
-            description: "Please fill in at least the asset description.",
+            title: "All Fields Required",
+            description: "Please fill in all the asset details before adding.",
         });
         return;
     }
@@ -1005,7 +1072,7 @@ export default function CreditWiseAIPage() {
                 <Loader2 className="mr-3 h-8 w-8 animate-spin text-primary" />
                 <span className="text-muted-foreground">AI is extracting report data...</span>
               </div>
-            ) : analysisResult && analysisResult.allAccounts.length > 0 && (
+            ) : analysisResult && analysisResult.allAccounts.length > 0 ? (
                 <div className="space-y-8">
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                     <SummaryItem label="Total Accounts" value={calculatedSummary.totalAccounts} valueClassName="text-foreground" />
@@ -1082,6 +1149,10 @@ export default function CreditWiseAIPage() {
                     </Card>
                   )}
 
+                </div>
+            ) : (
+                <div className="text-center py-10 text-muted-foreground">
+                    No account data found in the report.
                 </div>
             )}
           </CardContent>
@@ -1453,13 +1524,108 @@ export default function CreditWiseAIPage() {
                  </div>
               </TabsContent>
               <TabsContent value="salary">
-                <Alert>
-                  <Wrench className="h-4 w-4" />
-                  <AlertTitle>Coming Soon!</AlertTitle>
-                  <AlertDescription>
-                    The Salary Slips verification feature is currently under development.
-                  </AlertDescription>
-                </Alert>
+                <div className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Salary Slip Upload & Analysis</CardTitle>
+                      <CardDescription>Upload up to 6 salary slips (PDF) for AI analysis and fraud detection.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                       <div className="flex flex-wrap items-center gap-4">
+                          <Button onClick={() => salarySlipInputRef.current?.click()}>
+                              <UploadCloud className="mr-2" />
+                              Choose Salary Slips
+                          </Button>
+                          <Input ref={salarySlipInputRef} type="file" accept=".pdf" onChange={handleSalarySlipFileChange} className="hidden" multiple />
+                          <span className="text-muted-foreground">{salarySlipFiles.length} file(s) selected</span>
+                      </div>
+                      {salarySlipFiles.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                          {salarySlipFiles.map((slip, index) => (
+                            <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md text-sm">
+                              <FileText className="h-4 w-4 shrink-0"/>
+                              <span className="truncate">{slip.file.name}</span>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto shrink-0" onClick={() => setSalarySlipFiles(salarySlipFiles.filter((_, i) => i !== index))}>
+                                <XCircle className="h-4 w-4"/>
+                              </Button>
+                            </div>
+                          ))}
+                          </div>
+                          <Button onClick={handleAnalyzeSalarySlips} disabled={isAnalyzingSalary}>
+                            {isAnalyzingSalary ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                            Analyze {salarySlipFiles.length} Salary Slips
+                          </Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                  {isAnalyzingSalary ? (
+                     <div className="flex items-center justify-center py-10">
+                        <Loader2 className="mr-3 h-8 w-8 animate-spin text-primary" />
+                        <span className="text-muted-foreground">AI is analyzing salary slips... This may take a minute.</span>
+                    </div>
+                  ) : salaryAnalysisResult && (
+                    <div className="space-y-6">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Extracted Salary Details</CardTitle>
+                        </CardHeader>
+                        <CardContent className="overflow-x-auto">
+                           <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>File Name</TableHead>
+                                  <TableHead>Pay Month</TableHead>
+                                  <TableHead>Name</TableHead>
+                                  <TableHead>DOB</TableHead>
+                                  <TableHead>DOJ</TableHead>
+                                  <TableHead>Gross Salary</TableHead>
+                                  <TableHead>Incentives</TableHead>
+                                  <TableHead>Net Salary</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {salaryAnalysisResult.extractedSlips.map((slip, index) => (
+                                  <TableRow key={index}>
+                                    <TableCell className="font-medium">{slip.fileName}</TableCell>
+                                    <TableCell>{slip.payMonth}</TableCell>
+                                    <TableCell>{slip.name}</TableCell>
+                                    <TableCell>{slip.dateOfBirth}</TableCell>
+                                    <TableCell>{slip.dateOfJoining}</TableCell>
+                                    <TableCell>{slip.grossSalary}</TableCell>
+                                    <TableCell>{slip.incentives}</TableCell>
+                                    <TableCell className="font-semibold">{slip.netSalary}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                        </CardContent>
+                      </Card>
+                       <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-destructive"><ShieldAlert/>AI Fraud Detection Report</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                           <div className="prose prose-sm dark:prose-invert max-w-none">
+                              <h4>Overall Assessment</h4>
+                              <p><strong>{salaryAnalysisResult.fraudReport.overallAssessment}</strong></p>
+                              
+                              <h4>Consistency Check</h4>
+                              <p>{salaryAnalysisResult.fraudReport.consistencyCheck}</p>
+
+                              <h4>Pattern Analysis</h4>
+                              <p>{salaryAnalysisResult.fraudReport.patternAnalysis}</p>
+
+                              <h4>Formatting & Tampering Anomalies</h4>
+                              <p>{salaryAnalysisResult.fraudReport.formattingAnomalies}</p>
+                              <p>{salaryAnalysisResult.fraudReport.tamperingIndicators}</p>
+                           </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+                </div>
               </TabsContent>
               <TabsContent value="business">
                 <Alert>
