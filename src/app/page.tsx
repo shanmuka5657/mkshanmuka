@@ -636,7 +636,7 @@ export default function CreditWiseAIPage() {
 
   const handleGetUnderwriting = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!aiRating || !estimatedIncome || !loanEligibility || !desiredLoanAmount || !desiredTenure || !riskAssessment) {
+    if (!aiRating || !estimatedIncome || !loanEligibility || !riskAssessment) {
       toast({
         variant: 'destructive',
         title: 'Missing Prerequisites',
@@ -1292,6 +1292,18 @@ export default function CreditWiseAIPage() {
               </TabsList>
               <TabsContent value="asset" className="mt-4">
                  <div className="space-y-4">
+                    <Alert className="mb-4">
+                      <Info className="h-4 w-4" />
+                      <AlertTitle>What assets can I add?</AlertTitle>
+                      <AlertDescription>
+                          You can add any item of value that contributes to your financial standing. Examples include:
+                          <ul className="list-disc list-inside mt-2">
+                              <li><b>Financial Assets:</b> Stocks, Bonds, Mutual Funds, Fixed Deposits.</li>
+                              <li><b>Physical Assets:</b> Real Estate, Gold, Vehicles.</li>
+                              <li><b>Other Valuables:</b> Art, Antiques, or other items with significant market value.</li>
+                          </ul>
+                      </AlertDescription>
+                    </Alert>
                     {/* New Asset Input Form */}
                     <div className="p-4 border rounded-lg bg-muted/50">
                         <h4 className="font-semibold mb-2">Add New Asset</h4>
@@ -2249,25 +2261,7 @@ export default function CreditWiseAIPage() {
             {(rawText || (analysisMode === 'bank' && bankAnalysisResult)) && (
               <div className="space-y-8 mt-8">
                  
-
-                  {showRawText && (
-                    <Card className="print:hidden">
-                        <CardHeader>
-                            <CardTitle>Raw Text</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <pre className="whitespace-pre-wrap text-xs bg-muted p-4 rounded-lg max-h-96 overflow-auto">{rawText}</pre>
-                        </CardContent>
-                    </Card>
-                  )}
-
-                  <div className="print-this">
-                    <div className="p-8 bg-white shadow-lg a4-paper">
-                        <h2 className="text-2xl font-bold mb-4 border-b pb-2 text-black">Raw Document Text</h2>
-                        <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans">{rawText}</pre>
-                    </div>
-                  </div>
-                   <Card className="print:hidden mt-8">
+                  <Card className="print:hidden mt-8">
                       <CardHeader>
                           <CardTitle className="flex items-center"><FileSearch className="mr-3 h-6 w-6 text-primary" />Raw Report Text & Cost</CardTitle>
                       </CardHeader>
@@ -2281,6 +2275,16 @@ export default function CreditWiseAIPage() {
                                   Print Report
                               </Button>
                           </div>
+                          {showRawText && (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Raw Text</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <pre className="whitespace-pre-wrap text-xs bg-muted p-4 rounded-lg max-h-96 overflow-auto">{rawText}</pre>
+                                </CardContent>
+                            </Card>
+                          )}
                           <Card className="bg-muted/50">
                               <CardHeader>
                                   <CardTitle className="text-lg flex items-center"><Coins className="mr-3 text-primary"/>Analysis Cost</CardTitle>
@@ -2293,6 +2297,13 @@ export default function CreditWiseAIPage() {
                           </Card>
                       </CardContent>
                     </Card>
+
+                  <div className="print-this">
+                    <div className="p-8 bg-white shadow-lg a4-paper">
+                        <h2 className="text-2xl font-bold mb-4 border-b pb-2 text-black">Raw Document Text</h2>
+                        <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans">{rawText}</pre>
+                    </div>
+                  </div>
               </div>
             )}
             
