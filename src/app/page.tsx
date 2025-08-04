@@ -1136,26 +1136,45 @@ export default function CreditWiseAIPage() {
     icon,
     disabled = false,
     onClick,
+    tooltipContent,
   }: {
     view: ActiveView;
     label: string;
     icon: React.ReactNode;
     disabled?: boolean;
     onClick?: () => void;
-  }) => (
-    <Button
-      variant={activeView === view ? 'default' : 'outline'}
-      onClick={() => {
-        if (onClick) onClick();
-        setActiveView(activeView === view ? null : view);
-      }}
-      className="flex flex-col h-24 text-center justify-center items-center gap-2"
-      disabled={disabled}
-    >
-      {icon}
-      <span className="text-xs font-normal">{label}</span>
-    </Button>
-  );
+    tooltipContent?: React.ReactNode;
+  }) => {
+      const button = (
+         <Button
+            variant={activeView === view ? 'default' : 'outline'}
+            onClick={() => {
+              if (onClick) onClick();
+              setActiveView(activeView === view ? null : view);
+            }}
+            className="flex flex-col h-24 text-center justify-center items-center gap-2 w-full"
+            disabled={disabled}
+          >
+            {icon}
+            <span className="text-xs font-normal">{label}</span>
+          </Button>
+      );
+  
+      if (disabled && tooltipContent) {
+          return (
+              <UiTooltip>
+                  <TooltipTrigger asChild>
+                      <div className="w-full">{button}</div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                      <p>{tooltipContent}</p>
+                  </TooltipContent>
+              </UiTooltip>
+          );
+      }
+  
+      return button;
+  };
 
   const SummaryItem = ({ label, value, valueClassName, isLoading = false }: { label: string; value: string | number; valueClassName?: string, isLoading?: boolean }) => (
     <div className="flex flex-col items-center justify-center text-center p-2 rounded-lg bg-muted/50">
@@ -1344,30 +1363,17 @@ export default function CreditWiseAIPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <TooltipProvider>
-              <UiTooltip>
-                <TooltipTrigger asChild>
-                  <div className="inline-block">
-                      <Button
-                        onClick={handleGetLoanEligibility}
-                        disabled={isCalculatingEligibility || !aiRating || !estimatedIncome}
-                      >
-                        {isCalculatingEligibility ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Sparkles className="mr-2 h-4 w-4" />
-                        )}
-                        Calculate Loan Eligibility
-                      </Button>
-                  </div>
-                </TooltipTrigger>
-                {(!aiRating || !estimatedIncome) && (
-                  <TooltipContent>
-                    <div>Please get your AI Rating and enter your income first.</div>
-                  </TooltipContent>
+              <Button
+                onClick={handleGetLoanEligibility}
+                disabled={isCalculatingEligibility || !aiRating || !estimatedIncome}
+              >
+                {isCalculatingEligibility ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
                 )}
-              </UiTooltip>
-            </TooltipProvider>
+                Calculate Loan Eligibility
+              </Button>
 
             {loanEligibility && (
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2278,30 +2284,17 @@ export default function CreditWiseAIPage() {
                 <CardDescription>Get the AI's perspective on your overall financial stability and health.</CardDescription>
             </CardHeader>
             <CardContent>
-                 <TooltipProvider>
-                  <UiTooltip>
-                    <TooltipTrigger asChild>
-                      <div className="inline-block">
-                          <Button
-                            onClick={handleGetFinancialRisk}
-                            disabled={isAssessingFinancialRisk || !estimatedIncome}
-                          >
-                            {isAssessingFinancialRisk ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                              <Sparkles className="mr-2 h-4 w-4" />
-                            )}
-                            Assess Financial Risk
-                          </Button>
-                      </div>
-                    </TooltipTrigger>
-                    {!estimatedIncome && (
-                      <TooltipContent>
-                        <div>Please enter your estimated income first.</div>
-                      </TooltipContent>
-                    )}
-                  </UiTooltip>
-                </TooltipProvider>
+                <Button
+                  onClick={handleGetFinancialRisk}
+                  disabled={isAssessingFinancialRisk || !estimatedIncome}
+                >
+                  {isAssessingFinancialRisk ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="mr-2 h-4 w-4" />
+                  )}
+                  Assess Financial Risk
+                </Button>
 
                 {financialRisk && financialRisk.dtiAnalysis && (
                   <div className="mt-6 space-y-6">
@@ -2424,7 +2417,7 @@ export default function CreditWiseAIPage() {
             </CardContent>
           </Card>
         ) : (
-          <>
+          <TooltipProvider>
             <div className="text-center mb-12 print:hidden">
               <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">Advanced AI Credit Score Analyzer</h1>
               <div className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">Upload your CIBIL report PDF to unlock instant AI-powered insights, personalized scoring, and actionable advice.</div>
@@ -2576,14 +2569,14 @@ export default function CreditWiseAIPage() {
                       <CardDescription>Select a section to view its detailed analysis. Some sections require previous steps to be completed.</CardDescription>
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                      <NavButton view="creditSummary" label="Credit Summary" icon={<LayoutGrid size={24} />} disabled={!analysisResult} />
-                      <NavButton view="aiAnalysis" label="AI Risk Assessment" icon={<BrainCircuit size={24} />} disabled={!analysisResult} />
-                      <NavButton view="aiMeter" label="AI Credit Meter" icon={<Bot size={24} />} disabled={!riskAssessment}/>
-                      <NavButton view="obligations" label="Financials & Obligations" icon={<Calculator size={24} />} disabled={!rawText} />
-                      <NavButton view="incomeGuess" label="Income Guess" icon={<Wallet size={24} />} disabled={!rawText} />
-                      <NavButton view="loanEligibility" label="AI Loan Eligibility" icon={<Banknote size={24} />} disabled={!aiRating || !estimatedIncome} />
-                      <NavButton view="financialRisk" label="AI Financial Risk" icon={<BadgeCent size={24} />} disabled={!estimatedIncome}/>
-                      <NavButton view="creditUnderwriting" label="AI Credit Underwriting" icon={<Gavel size={24} />} disabled={!loanEligibility} />
+                      <NavButton view="creditSummary" label="Credit Summary" icon={<LayoutGrid size={24} />} disabled={!analysisResult} tooltipContent="Please run the main analysis first." />
+                      <NavButton view="aiAnalysis" label="AI Risk Assessment" icon={<BrainCircuit size={24} />} disabled={!analysisResult} tooltipContent="Please run the main analysis first." />
+                      <NavButton view="aiMeter" label="AI Credit Meter" icon={<Bot size={24} />} disabled={!riskAssessment} tooltipContent="Please complete the AI Risk Assessment first."/>
+                      <NavButton view="obligations" label="Financials & Obligations" icon={<Calculator size={24} />} disabled={!rawText} tooltipContent="Please upload and parse a CIBIL report first." />
+                      <NavButton view="incomeGuess" label="Income Guess" icon={<Wallet size={24} />} disabled={!rawText} tooltipContent="Please upload and parse a CIBIL report first." />
+                      <NavButton view="loanEligibility" label="AI Loan Eligibility" icon={<Banknote size={24} />} disabled={!aiRating || !estimatedIncome} tooltipContent="Please complete AI Credit Meter and enter income first."/>
+                      <NavButton view="financialRisk" label="AI Financial Risk" icon={<BadgeCent size={24} />} disabled={!estimatedIncome} tooltipContent="Please enter your estimated income first."/>
+                      <NavButton view="creditUnderwriting" label="AI Credit Underwriting" icon={<Gavel size={24} />} disabled={!loanEligibility} tooltipContent="Please complete AI Loan Eligibility analysis first." />
                     </CardContent>
                   </Card>
                   
@@ -2655,7 +2648,7 @@ export default function CreditWiseAIPage() {
               onNewChat={() => setTokenUsage({ inputTokens: 0, outputTokens: 0 })}
               onTokensUsed={updateTokenUsage}
             />
-          </>
+          </TooltipProvider>
         )}
       </main>
       <footer className="text-center py-6 text-sm text-muted-foreground print:hidden">
