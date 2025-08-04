@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -55,6 +56,7 @@ import {
   AlertTriangle,
   Download,
   Share2,
+  BadgeCheck,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -74,6 +76,7 @@ import { calculateTotalEmi, CalculateTotalEmiOutput } from '@/ai/flows/calculate
 import { analyzeBankStatement, BankStatementAnalysisOutput } from '@/ai/flows/bank-statement-analysis';
 import { analyzeSalarySlips, SalarySlipAnalysisOutput } from '@/ai/flows/salary-slip-analysis';
 import { getRiskAssessment, RiskAssessmentOutput } from '@/ai/flows/risk-assessment';
+import { crossVerifyDocuments, CrossVerificationOutput } from '@/ai/flows/cross-verification';
 import { AiAgentChat } from '@/components/CreditChat';
 import { cn } from '@/lib/utils';
 import {
@@ -208,6 +211,9 @@ export default function CreditWiseAIPage() {
   const [isAnalyzingSalary, setIsAnalyzingSalary] = useState(false);
   const [analystNotes, setAnalystNotes] = useState('');
 
+  // New state for Cross-Verification
+  const [crossVerificationResult, setCrossVerificationResult] = useState<CrossVerificationOutput | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const [totalEmi, setTotalEmi] = useState('');
   const [activeLoanDetails, setActiveLoanDetails] = useState<ActiveLoanDetail[]>([]);
@@ -353,6 +359,9 @@ export default function CreditWiseAIPage() {
     setSalaryAnalysisResult(null);
     setIsAnalyzingSalary(false);
     setAnalystNotes('');
+
+    setCrossVerificationResult(null);
+    setIsVerifying(false);
 
 
     setTotalEmi('');
@@ -774,6 +783,33 @@ export default function CreditWiseAIPage() {
     }
   };
 
+  const handleCrossVerify = async () => {
+    if (!rawText || !salaryAnalysisResult) {
+      toast({ variant: 'destructive', title: 'Missing Data', description: 'Please analyze a CIBIL report and salary slips first.' });
+      return;
+    }
+    setIsVerifying(true);
+    setCrossVerificationResult(null);
+    try {
+      const { output, usage } = await crossVerifyDocuments({
+        cibilReportText: rawText,
+        salarySlipAnalysis: salaryAnalysisResult,
+      });
+      setCrossVerificationResult(output);
+      updateTokenUsage(usage);
+      toast({ title: 'Cross-Verification Complete' });
+    } catch (error: any) {
+      console.error('Error during cross-verification:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Verification Failed',
+        description: error.message?.includes('429') ? "API limit reached." : (error.message || "Could not verify documents."),
+      });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
   const handleLoanDetailChange = (id: string, field: 'considerForObligation' | 'comment' | 'emi', value: string | number) => {
       setActiveLoanDetails(prevDetails =>
           prevDetails.map(loan =>
@@ -1032,6 +1068,17 @@ export default function CreditWiseAIPage() {
       );
     }
     return <Badge variant="outline">{assessment}</Badge>;
+  };
+
+  const getMatchStatusIcon = (status: string) => {
+    const lowerStatus = status.toLowerCase();
+    if (lowerStatus.includes('match')) {
+      return <BadgeCheck className="h-5 w-5 text-green-500" />;
+    }
+    if (lowerStatus.includes('mismatch')) {
+      return <XCircle className="h-5 w-5 text-destructive" />;
+    }
+    return <AlertCircle className="h-5 w-5 text-yellow-500" />;
   };
 
 
@@ -1396,15 +1443,16 @@ export default function CreditWiseAIPage() {
               Income Guess
             </CardTitle>
             <CardDescription>
-              Manually provide income details through various verification methods.
+              Provide your financial details through various verification methods.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="asset">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="asset"><Landmark className="mr-2" />Asset Creation</TabsTrigger>
                 <TabsTrigger value="salary"><FileText className="mr-2" />Salary Slips</TabsTrigger>
                 <TabsTrigger value="business"><Wrench className="mr-2" />Business Verification</TabsTrigger>
+                <TabsTrigger value="verification"><ShieldCheck className="mr-2" />Cross-Verification</TabsTrigger>
               </TabsList>
               <TabsContent value="asset" className="mt-4">
                  <div className="space-y-4">
@@ -1699,6 +1747,71 @@ export default function CreditWiseAIPage() {
                     The Business Verification feature is currently under development.
                   </AlertDescription>
                 </Alert>
+              </TabsContent>
+              <TabsContent value="verification" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Cross-Verification Analysis</CardTitle>
+                    <CardDescription>
+                      Compare key details between the CIBIL report and salary slips to check for consistency.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button onClick={handleCrossVerify} disabled={isVerifying || !rawText || !salaryAnalysisResult}>
+                      {isVerifying ? <Loader2 className="mr-2 animate-spin" /> : <ShieldCheck className="mr-2" />}
+                      Verify Documents
+                    </Button>
+                    {isVerifying && (
+                      <div className="flex items-center justify-center py-10">
+                        <Loader2 className="mr-3 h-8 w-8 animate-spin text-primary" />
+                        <span className="text-muted-foreground">AI is comparing documents...</span>
+                      </div>
+                    )}
+                    {crossVerificationResult && (
+                      <div className="mt-6 space-y-4">
+                        <Alert>
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertTitle>Overall Assessment</AlertTitle>
+                          <AlertDescription>{crossVerificationResult.overallAssessment}</AlertDescription>
+                        </Alert>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Field</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>CIBIL Report Value</TableHead>
+                              <TableHead>Salary Slip Value</TableHead>
+                              <TableHead>AI Remarks</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow>
+                              <TableCell className="font-semibold">Name</TableCell>
+                              <TableCell>{getMatchStatusIcon(crossVerificationResult.nameMatch.status)}</TableCell>
+                              <TableCell>{crossVerificationResult.nameMatch.cibilValue}</TableCell>
+                              <TableCell>{crossVerificationResult.nameMatch.salarySlipValue}</TableCell>
+                              <TableCell>{crossVerificationResult.nameMatch.details}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="font-semibold">Date of Birth</TableCell>
+                              <TableCell>{getMatchStatusIcon(crossVerificationResult.dobMatch.status)}</TableCell>
+                              <TableCell>{crossVerificationResult.dobMatch.cibilValue}</TableCell>
+                              <TableCell>{crossVerificationResult.dobMatch.salarySlipValue}</TableCell>
+                              <TableCell>{crossVerificationResult.dobMatch.details}</TableCell>
+                            </TableRow>
+                             <TableRow>
+                              <TableCell className="font-semibold">PAN</TableCell>
+                              <TableCell>{getMatchStatusIcon(crossVerificationResult.panMatch.status)}</TableCell>
+                              <TableCell>{crossVerificationResult.panMatch.cibilValue}</TableCell>
+                              <TableCell>{crossVerificationResult.panMatch.salarySlipValue}</TableCell>
+                              <TableCell>{crossVerificationResult.panMatch.details}</TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </TabsContent>
             </Tabs>
           </CardContent>
