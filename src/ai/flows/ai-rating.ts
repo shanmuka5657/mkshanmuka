@@ -61,7 +61,7 @@ const prompt = ai.definePrompt({
   name: 'aiRatingPrompt',
   input: {schema: AiRatingInputSchema},
   output: {schema: AiRatingOutputSchema},
-  model: 'googleai/gemini-pro',
+  model: 'googleai/gemini-1.5-flash',
   prompt: `You are an expert credit analyst. Your task is to provide a holistic AI-powered credit rating based on the provided credit report text and a pre-calculated risk assessment.
 
 Analyze the user's full credit report and the pre-calculated risk factors. Then, generate a comprehensive score, a final rating, a summary, and lists of the most important positive and negative factors.
