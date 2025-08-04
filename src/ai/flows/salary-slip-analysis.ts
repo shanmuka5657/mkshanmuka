@@ -39,6 +39,7 @@ const FraudDetectionSchema = z.object({
     formattingAnomalies: z.string().describe("A summary of any formatting anomalies detected, such as extra spaces, misaligned text, different fonts, or pixelation which could indicate editing."),
     tamperingIndicators: z.string().describe("A summary of any direct signs of tampering, like edited figures, overwritten text, or inconsistent logos/headers."),
     overallAssessment: z.string().describe("A final, comprehensive assessment of the documents' authenticity, summarizing all findings into a conclusion (e.g., 'High risk of fraud', 'Moderate risk, manual verification recommended', 'Appears authentic')."),
+    authenticityConfidence: z.number().min(0).max(100).describe("A numerical confidence score from 0 to 100 on the authenticity of the documents, where 100 is completely authentic."),
 });
 
 const SalarySlipAnalysisOutputSchema = z.object({
@@ -87,6 +88,7 @@ const prompt = ai.definePrompt({
     *   **Formatting Anomalies:** Scrutinize the layout of each document. Look for inconsistencies in fonts, alignments, spacing between text, or logos that differ slightly between slips. These are classic signs of a forged document. Mention things like "extra spaces" or "misaligned columns".
     *   **Tampering Indicators:** Look for direct evidence of image manipulation. Are there blurry areas, pixelation around numbers, text that looks 'pasted on', or headers that don't match perfectly?
     *   **Overall Assessment:** Based on all the above points, provide a final, conclusive summary of your findings. Give a clear recommendation on the document's authenticity.
+    *   **Authenticity Confidence:** Provide a numerical confidence score from 0 to 100. A score of 95+ suggests high confidence in authenticity. A score below 70 suggests a high probability of fraud and requires manual review.
 
 Generate the final, consolidated output in the required structured format.
 `,

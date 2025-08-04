@@ -50,7 +50,11 @@ import {
   PlusCircle,
   Info,
   Save,
-  File,
+  File as FileIcon,
+  Building2,
+  AlertTriangle,
+  Download,
+  Share2,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -97,6 +101,7 @@ import { Textarea } from '@/components/ui/textarea';
 import type { FlowUsage } from 'genkit/flow';
 import { format, differenceInMonths, parseISO, isValid } from 'date-fns';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Badge } from '@/components/ui/badge';
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -201,6 +206,8 @@ export default function CreditWiseAIPage() {
   const [salarySlipFiles, setSalarySlipFiles] = useState<SalarySlipFile[]>([]);
   const [salaryAnalysisResult, setSalaryAnalysisResult] = useState<SalarySlipAnalysisOutput | null>(null);
   const [isAnalyzingSalary, setIsAnalyzingSalary] = useState(false);
+  const [analystNotes, setAnalystNotes] = useState('');
+
 
   const [totalEmi, setTotalEmi] = useState('');
   const [activeLoanDetails, setActiveLoanDetails] = useState<ActiveLoanDetail[]>([]);
@@ -345,6 +352,8 @@ export default function CreditWiseAIPage() {
     setSalarySlipFiles([]);
     setSalaryAnalysisResult(null);
     setIsAnalyzingSalary(false);
+    setAnalystNotes('');
+
 
     setTotalEmi('');
     setActiveLoanDetails([]);
@@ -999,6 +1008,33 @@ export default function CreditWiseAIPage() {
     }
   };
 
+  const getFraudAssessmentBadge = (assessment: string) => {
+    const lowerCaseAssessment = assessment.toLowerCase();
+    if (lowerCaseAssessment.includes('appears authentic')) {
+      return (
+        <Badge variant="default" className="bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700">
+          <CheckCircle className="mr-1.5" /> Appears Authentic
+        </Badge>
+      );
+    }
+    if (lowerCaseAssessment.includes('moderate risk')) {
+      return (
+        <Badge variant="default" className="bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700">
+          <AlertTriangle className="mr-1.5" /> Moderate Risk
+        </Badge>
+      );
+    }
+    if (lowerCaseAssessment.includes('high risk')) {
+      return (
+        <Badge variant="destructive">
+          <ShieldAlert className="mr-1.5" /> High Risk of Fraud
+        </Badge>
+      );
+    }
+    return <Badge variant="outline">{assessment}</Badge>;
+  };
+
+
   const handlePrint = () => {
     window.print();
   }
@@ -1365,10 +1401,10 @@ export default function CreditWiseAIPage() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="asset">
-              <TabsList>
-                <TabsTrigger value="asset">Asset Creation</TabsTrigger>
-                <TabsTrigger value="salary">Salary Slips</TabsTrigger>
-                <TabsTrigger value="business">Business Verification</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="asset"><Landmark className="mr-2" />Asset Creation</TabsTrigger>
+                <TabsTrigger value="salary"><FileText className="mr-2" />Salary Slips</TabsTrigger>
+                <TabsTrigger value="business"><Wrench className="mr-2" />Business Verification</TabsTrigger>
               </TabsList>
               <TabsContent value="asset" className="mt-4">
                  <div className="space-y-4">
@@ -1523,28 +1559,32 @@ export default function CreditWiseAIPage() {
                     )}
                  </div>
               </TabsContent>
-              <TabsContent value="salary">
+              <TabsContent value="salary" className="mt-4">
                 <div className="space-y-4">
                   <Card>
                     <CardHeader>
                       <CardTitle>Salary Slip Upload & Analysis</CardTitle>
-                      <CardDescription>Upload up to 6 salary slips (PDF) for AI analysis and fraud detection.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                       <div className="flex flex-wrap items-center gap-4">
-                          <Button onClick={() => salarySlipInputRef.current?.click()}>
+                      <CardDescription>Upload up to 6 salary slips (PDF) for AI analysis and fraud detection. Analysis will start automatically.</CardDescription>
+                      <div className="flex gap-2 pt-2">
+                           <Button onClick={() => salarySlipInputRef.current?.click()}>
                               <UploadCloud className="mr-2" />
                               Choose Salary Slips
                           </Button>
+                           <Button onClick={handleAnalyzeSalarySlips} disabled={isAnalyzingSalary || salarySlipFiles.length === 0}>
+                            {isAnalyzingSalary ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                            Analyze {salarySlipFiles.length} Salary Slips
+                          </Button>
                           <Input ref={salarySlipInputRef} type="file" accept=".pdf" onChange={handleSalarySlipFileChange} className="hidden" multiple />
-                          <span className="text-muted-foreground">{salarySlipFiles.length} file(s) selected</span>
                       </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
                       {salarySlipFiles.length > 0 && (
                         <div className="space-y-2">
+                          <p className="text-sm font-medium">Selected Files:</p>
                           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                           {salarySlipFiles.map((slip, index) => (
                             <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md text-sm">
-                              <FileText className="h-4 w-4 shrink-0"/>
+                              <FileIcon className="h-4 w-4 shrink-0"/>
                               <span className="truncate">{slip.file.name}</span>
                               <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto shrink-0" onClick={() => setSalarySlipFiles(salarySlipFiles.filter((_, i) => i !== index))}>
                                 <XCircle className="h-4 w-4"/>
@@ -1552,10 +1592,6 @@ export default function CreditWiseAIPage() {
                             </div>
                           ))}
                           </div>
-                          <Button onClick={handleAnalyzeSalarySlips} disabled={isAnalyzingSalary}>
-                            {isAnalyzingSalary ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                            Analyze {salarySlipFiles.length} Salary Slips
-                          </Button>
                         </div>
                       )}
                     </CardContent>
@@ -1570,6 +1606,7 @@ export default function CreditWiseAIPage() {
                       <Card>
                         <CardHeader>
                           <CardTitle>Extracted Salary Details</CardTitle>
+                          <CardDescription>Last analysis: {new Date().toLocaleString()}</CardDescription>
                         </CardHeader>
                         <CardContent className="overflow-x-auto">
                            <Table>
@@ -1588,14 +1625,14 @@ export default function CreditWiseAIPage() {
                               <TableBody>
                                 {salaryAnalysisResult.extractedSlips.map((slip, index) => (
                                   <TableRow key={index}>
-                                    <TableCell className="font-medium">{slip.fileName}</TableCell>
+                                    <TableCell className="font-medium text-muted-foreground">{slip.fileName}</TableCell>
                                     <TableCell>{slip.payMonth}</TableCell>
                                     <TableCell>{slip.name}</TableCell>
                                     <TableCell>{slip.dateOfBirth}</TableCell>
                                     <TableCell>{slip.dateOfJoining}</TableCell>
                                     <TableCell>{slip.grossSalary}</TableCell>
                                     <TableCell>{slip.incentives}</TableCell>
-                                    <TableCell className="font-semibold">{slip.netSalary}</TableCell>
+                                    <TableCell className="font-semibold text-primary">{slip.netSalary}</TableCell>
                                   </TableRow>
                                 ))}
                               </TableBody>
@@ -1604,30 +1641,57 @@ export default function CreditWiseAIPage() {
                       </Card>
                        <Card>
                         <CardHeader>
-                          <CardTitle className="flex items-center gap-2 text-destructive"><ShieldAlert/>AI Fraud Detection Report</CardTitle>
+                          <CardTitle className="flex items-center justify-between">
+                            <span className="flex items-center gap-2"><ShieldCheck/>AI Fraud Detection Report</span>
+                            <div className="flex items-center gap-4">
+                              {getFraudAssessmentBadge(salaryAnalysisResult.fraudReport.overallAssessment)}
+                              <div className="text-sm">
+                                  Authenticity Confidence: <strong className="text-lg">{salaryAnalysisResult.fraudReport.authenticityConfidence}%</strong>
+                              </div>
+                            </div>
+                          </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                           <div className="prose prose-sm dark:prose-invert max-w-none">
-                              <h4>Overall Assessment</h4>
-                              <p><strong>{salaryAnalysisResult.fraudReport.overallAssessment}</strong></p>
-                              
-                              <h4>Consistency Check</h4>
+                           <div className="prose prose-sm dark:prose-invert max-w-none grid md:grid-cols-2 gap-x-8">
+                            <div>
+                              <h4 className="font-bold">Consistency Check</h4>
                               <p>{salaryAnalysisResult.fraudReport.consistencyCheck}</p>
-
-                              <h4>Pattern Analysis</h4>
+                            </div>
+                            <div>
+                              <h4 className="font-bold">Pattern Analysis</h4>
                               <p>{salaryAnalysisResult.fraudReport.patternAnalysis}</p>
-
-                              <h4>Formatting & Tampering Anomalies</h4>
+                            </div>
+                            <div>
+                              <h4 className="font-bold">Formatting & Tampering Anomalies</h4>
                               <p>{salaryAnalysisResult.fraudReport.formattingAnomalies}</p>
                               <p>{salaryAnalysisResult.fraudReport.tamperingIndicators}</p>
+                            </div>
                            </div>
                         </CardContent>
+                      </Card>
+                      <Card>
+                          <CardHeader>
+                              <CardTitle>Analyst Notes</CardTitle>
+                              <CardDescription>Internal notes for this report. Not shared with the applicant.</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                              <Textarea
+                                  value={analystNotes}
+                                  onChange={(e) => setAnalystNotes(e.target.value)}
+                                  placeholder="Enter any internal notes about this analysis..."
+                                  rows={4}
+                              />
+                          </CardContent>
+                          <CardFooter className="gap-2">
+                               <Button><Download className="mr-2" /> Download PDF</Button>
+                               <Button variant="outline"><Share2 className="mr-2" /> Share Report</Button>
+                           </CardFooter>
                       </Card>
                     </div>
                   )}
                 </div>
               </TabsContent>
-              <TabsContent value="business">
+              <TabsContent value="business" className="mt-4">
                 <Alert>
                   <Wrench className="h-4 w-4" />
                   <AlertTitle>Coming Soon!</AlertTitle>
@@ -2437,40 +2501,46 @@ export default function CreditWiseAIPage() {
               <div className="space-y-8 mt-8">
                  
                   <Card className="print:hidden mt-8">
-                      <CardHeader>
-                          <CardTitle className="flex items-center"><FileSearch className="mr-3 h-6 w-6 text-primary" />Raw Report Text & Cost</CardTitle>
-                      </CardHeader>
-                      <CardContent className="flex flex-col gap-4">
-                          <div className="flex gap-4">
-                              <Button variant="outline" onClick={() => setShowRawText(!showRawText)}>
-                                  {showRawText ? 'Hide Raw Text' : 'Show Raw Text'}
-                              </Button>
-                              <Button variant="outline" onClick={handlePrint}>
-                                  <Printer className="mr-2"/>
-                                  Print Report
-                              </Button>
-                          </div>
-                          {showRawText && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Raw Text</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <pre className="whitespace-pre-wrap text-xs bg-muted p-4 rounded-lg max-h-96 overflow-auto">{rawText}</pre>
-                                </CardContent>
-                            </Card>
-                          )}
-                          <Card className="bg-muted/50">
-                              <CardHeader>
-                                  <CardTitle className="text-lg flex items-center"><Coins className="mr-3 text-primary"/>Analysis Cost</CardTitle>
-                              </CardHeader>
-                              <CardContent className="grid grid-cols-3 gap-4">
-                                  <SummaryItem label="Input Tokens" value={tokenUsage.inputTokens.toLocaleString()} valueClassName="text-foreground" />
-                                  <SummaryItem label="Output Tokens" value={tokenUsage.outputTokens.toLocaleString()} valueClassName="text-foreground" />
-                                  <SummaryItem label="Estimated Cost (USD)" value={`$${estimatedCost.toFixed(5)}`} valueClassName="text-green-600" />
-                              </CardContent>
-                          </Card>
-                      </CardContent>
+                      <Accordion type="single" collapsible className="w-full">
+                          <AccordionItem value="item-1">
+                              <AccordionTrigger className="p-6">
+                                <CardTitle className="flex items-center"><FileSearch className="mr-3 h-6 w-6 text-primary" />Raw Report Text & Cost</CardTitle>
+                              </AccordionTrigger>
+                              <AccordionContent>
+                                  <CardContent className="flex flex-col gap-4">
+                                      <div className="flex gap-4">
+                                          <Button variant="outline" onClick={() => setShowRawText(!showRawText)}>
+                                              {showRawText ? 'Hide Raw Text' : 'Show Raw Text'}
+                                          </Button>
+                                          <Button variant="outline" onClick={handlePrint}>
+                                              <Printer className="mr-2"/>
+                                              Print Report
+                                          </Button>
+                                      </div>
+                                      {showRawText && (
+                                        <Card>
+                                            <CardHeader>
+                                                <CardTitle>Raw Text</CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <pre className="whitespace-pre-wrap text-xs bg-muted p-4 rounded-lg max-h-96 overflow-auto">{rawText}</pre>
+                                            </CardContent>
+                                        </Card>
+                                      )}
+                                      <Card className="bg-muted/50">
+                                          <CardHeader>
+                                              <CardTitle className="text-lg flex items-center"><Coins className="mr-3 text-primary"/>Analysis Cost</CardTitle>
+                                          </CardHeader>
+                                          <CardContent className="grid grid-cols-3 gap-4">
+                                              <SummaryItem label="Input Tokens" value={tokenUsage.inputTokens.toLocaleString()} valueClassName="text-foreground" />
+                                              <SummaryItem label="Output Tokens" value={tokenUsage.outputTokens.toLocaleString()} valueClassName="text-foreground" />
+                                              <SummaryItem label="Estimated Cost (USD)" value={`$${estimatedCost.toFixed(5)}`} valueClassName="text-green-600" />
+                                          </CardContent>
+                                      </Card>
+                                  </CardContent>
+                              </AccordionContent>
+                          </AccordionItem>
+                      </Accordion>
                     </Card>
 
                   <div className="print-this">
