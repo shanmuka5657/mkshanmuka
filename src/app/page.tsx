@@ -149,7 +149,7 @@ type ActiveView =
   | 'creditSummary'
   | null;
 
-type AnalysisMode = null | 'credit' | 'bank';
+type AnalysisType = 'credit' | 'bank' | 'salary';
 
 type ActiveLoanDetail = CalculateTotalEmiOutput['activeLoans'][0] & {
     id: string; // Add a unique ID for React keys
@@ -190,8 +190,8 @@ export default function CreditWiseAIPage() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
 
-  const [file, setFile] = useState<File | null>(null);
-  const [fileName, setFileName] = useState('No file chosen');
+  const [creditFile, setCreditFile] = useState<File | null>(null);
+  const [creditFileName, setCreditFileName] = useState('No CIBIL report chosen');
   const [rawText, setRawText] = useState('');
   const [showRawText, setShowRawText] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -201,17 +201,20 @@ export default function CreditWiseAIPage() {
   const [analysisResult, setAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   
-  // New state for Bank Analysis
+  // State for Bank Analysis
+  const [bankFile, setBankFile] = useState<File | null>(null);
+  const [bankFileName, setBankFileName] = useState('No bank statement chosen');
+  const [bankRawText, setBankRawText] = useState('');
   const [bankAnalysisResult, setBankAnalysisResult] = useState<BankStatementAnalysisOutput | null>(null);
   const [isAnalyzingBank, setIsAnalyzingBank] = useState(false);
 
-  // New state for Salary Slip Analysis
+  // State for Salary Slip Analysis
   const [salarySlipFiles, setSalarySlipFiles] = useState<SalarySlipFile[]>([]);
   const [salaryAnalysisResult, setSalaryAnalysisResult] = useState<SalarySlipAnalysisOutput | null>(null);
   const [isAnalyzingSalary, setIsAnalyzingSalary] = useState(false);
   const [analystNotes, setAnalystNotes] = useState('');
 
-  // New state for Cross-Verification
+  // State for Cross-Verification
   const [crossVerificationResult, setCrossVerificationResult] = useState<CrossVerificationOutput | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
 
@@ -227,7 +230,6 @@ export default function CreditWiseAIPage() {
   const [loanEligibility, setLoanEligibility] = useState<LoanEligibilityOutput | null>(null);
   const [isCalculatingEligibility, setIsCalculatingEligibility] = useState(false);
   const [activeView, setActiveView] = useState<ActiveView>(null);
-  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>(null);
 
   // New state for Underwriting
   const [underwritingResult, setUnderwritingResult] = useState<CreditUnderwritingOutput | null>(null);
@@ -264,7 +266,8 @@ export default function CreditWiseAIPage() {
 
 
   const { toast } = useToast()
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const creditFileInputRef = useRef<HTMLInputElement>(null);
+  const bankFileInputRef = useRef<HTMLInputElement>(null);
   const salarySlipInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -320,7 +323,6 @@ export default function CreditWiseAIPage() {
 
   const handleSignOut = async () => {
     await signOut(auth);
-    setAnalysisMode(null);
     resetState();
   };
 
@@ -330,28 +332,39 @@ export default function CreditWiseAIPage() {
     localStorage.setItem('theme', newTheme);
     document.documentElement.classList.toggle('dark', newTheme === 'dark');
   };
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>, type: AnalysisType) => {
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
-      resetState();
-      setFile(selectedFile);
-      setFileName(selectedFile.name);
-      processFile(selectedFile);
+      if (type === 'credit') {
+        resetState();
+        setCreditFile(selectedFile);
+        setCreditFileName(selectedFile.name);
+        processFile(selectedFile, 'credit');
+      } else if (type === 'bank') {
+        // Don't reset everything, just bank-related state
+        setBankFile(selectedFile);
+        setBankFileName(selectedFile.name);
+        setBankAnalysisResult(null);
+        setBankRawText('');
+        processFile(selectedFile, 'bank');
+      }
     }
   };
   
   const resetState = () => {
-    setFile(null);
-    setFileName('No file chosen');
+    setCreditFile(null);
+    setCreditFileName('No CIBIL report chosen');
     setRawText('');
     setIsLoading(false);
     setProgress(0);
     setCreditScore(null);
-    
     setAnalysisResult(null);
     setIsAnalyzing(false);
     
+    setBankFile(null);
+    setBankFileName('No bank statement chosen');
+    setBankRawText('');
     setBankAnalysisResult(null);
     setIsAnalyzingBank(false);
 
@@ -362,7 +375,6 @@ export default function CreditWiseAIPage() {
 
     setCrossVerificationResult(null);
     setIsVerifying(false);
-
 
     setTotalEmi('');
     setActiveLoanDetails([]);
@@ -391,8 +403,11 @@ export default function CreditWiseAIPage() {
     setAssets([]);
     setEditingAssetId(null);
 
-    if(fileInputRef.current) {
-        fileInputRef.current.value = '';
+    if (creditFileInputRef.current) {
+      creditFileInputRef.current.value = '';
+    }
+    if (bankFileInputRef.current) {
+      bankFileInputRef.current.value = '';
     }
   };
 
@@ -405,7 +420,7 @@ export default function CreditWiseAIPage() {
   }, []);
 
 
-  const processFile = async (selectedFile: File) => {
+  const processFile = async (selectedFile: File, type: AnalysisType) => {
     setIsLoading(true);
     setProgress(10);
     try {
@@ -422,12 +437,14 @@ export default function CreditWiseAIPage() {
             textContent += text.items.map(item => 'str' in item ? item.str : '').join(' ');
             setProgress(30 + Math.round((70 * i) / pdf.numPages));
           }
-          setRawText(textContent);
           
-          if (analysisMode === 'credit') {
+          if (type === 'credit') {
+            setRawText(textContent);
             const normalizedText = textContent.replace(/\s+/g, ' ').trim();
             const scoreMatch = normalizedText.match(/(?:CIBIL (?:TRANSUNION )?SCORE|CREDITVISION. SCORE)\s*(\d{3})/i);
             setCreditScore(scoreMatch ? parseInt(scoreMatch[1], 10) : null);
+          } else if (type === 'bank') {
+            setBankRawText(textContent);
           }
         }
       };
@@ -451,7 +468,7 @@ export default function CreditWiseAIPage() {
   };
   
   const handleStartBankAnalysis = () => {
-    handleAnalyzeBankStatement(rawText);
+    handleAnalyzeBankStatement(bankRawText);
   };
 
 
@@ -600,6 +617,9 @@ export default function CreditWiseAIPage() {
         creditReportText: rawText,
         riskAssessment: riskAssessment,
       });
+      if (!output) {
+        throw new Error("AI failed to provide a rating.");
+      }
       setAiRating(output);
       updateTokenUsage(usage);
        toast({
@@ -1448,9 +1468,10 @@ export default function CreditWiseAIPage() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="asset">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="asset"><Landmark className="mr-2" />Asset Creation</TabsTrigger>
                 <TabsTrigger value="salary"><FileText className="mr-2" />Salary Slips</TabsTrigger>
+                <TabsTrigger value="bank"><Building2 className="mr-2" />Bank Statement</TabsTrigger>
                 <TabsTrigger value="business"><Wrench className="mr-2" />Business Verification</TabsTrigger>
                 <TabsTrigger value="verification"><ShieldCheck className="mr-2" />Cross-Verification</TabsTrigger>
               </TabsList>
@@ -1738,6 +1759,151 @@ export default function CreditWiseAIPage() {
                     </div>
                   )}
                 </div>
+              </TabsContent>
+               <TabsContent value="bank" className="mt-4">
+                <Card>
+                  <CardHeader>
+                      <CardTitle>Bank Statement Upload & Analysis</CardTitle>
+                      <CardDescription>Upload a bank statement PDF to analyze income, expenses, and financial health.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                      <div className="flex flex-wrap items-center gap-4">
+                          <Button onClick={() => bankFileInputRef.current?.click()}>
+                              <UploadCloud className="mr-2" />
+                              Choose Bank Statement PDF
+                          </Button>
+                          <Input ref={bankFileInputRef} type="file" accept=".pdf" onChange={(e) => handleFileChange(e, 'bank')} className="hidden" />
+                          <span className="text-muted-foreground flex-1 min-w-0 truncate">{bankFileName}</span>
+                          {bankFile && (
+                              <Button variant="ghost" size="icon" onClick={() => { setBankFile(null); setBankFileName('No bank statement chosen'); setBankAnalysisResult(null); setBankRawText(''); }}>
+                                  <Trash2 className="h-5 w-5" />
+                                  <span className="sr-only">Remove file</span>
+                              </Button>
+                          )}
+                      </div>
+                      {bankFile && !isLoading && !bankAnalysisResult && (
+                          <div className="mt-4">
+                              <Alert>
+                                  <AlertCircle className="h-4 w-4" />
+                                  <AlertTitle>Ready to Analyze</AlertTitle>
+                                  <AlertDescription>
+                                  The bank statement has been processed. Click the button below to run the AI analysis.
+                                  </AlertDescription>
+                              </Alert>
+                              <Button onClick={handleStartBankAnalysis} disabled={isAnalyzingBank} className="mt-4">
+                                  {isAnalyzingBank ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />}
+                                  Start Bank Statement Analysis
+                              </Button>
+                          </div>
+                      )}
+                  </CardContent>
+                </Card>
+                {isAnalyzingBank ? (
+                  <div className="flex items-center justify-center py-10">
+                      <Loader2 className="mr-3 h-8 w-8 animate-spin text-primary" />
+                      <span className="text-muted-foreground">AI is analyzing your statement... This can take up to a minute.</span>
+                  </div>
+                ) : bankAnalysisResult && (
+                    <div className="space-y-8 mt-4">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center text-xl font-bold"><FileText className="mr-3 h-6 w-6 text-primary" />Account Summary</CardTitle>
+                                <CardDescription>Key details extracted from the statement.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                              <InfoItem label="Account Holder" value={bankAnalysisResult.summary.accountHolder} />
+                              <InfoItem label="Bank Name" value={bankAnalysisResult.summary.bankName} />
+                              <InfoItem label="Account Number" value={bankAnalysisResult.summary.accountNumber} />
+                              <InfoItem label="Mobile Number" value={bankAnalysisResult.summary.mobileNumber} />
+                              <InfoItem label="Address" value={bankAnalysisResult.summary.address} />
+                              <InfoItem label="Statement Period" value={bankAnalysisResult.summary.statementPeriod} />
+                              <InfoItem label="Opening Balance" value={bankAnalysisResult.summary.openingBalance} />
+                              <InfoItem label="Closing Balance" value={bankAnalysisResult.summary.closingBalance} />
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center text-xl font-bold"><BarChartBig className="mr-3 h-6 w-6 text-primary" />Financial Overview</CardTitle>
+                            </CardHeader>
+                            <CardContent className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                <SummaryItem label="Total Deposits" value={bankAnalysisResult.overview.totalDeposits} valueClassName="text-green-600" />
+                                <SummaryItem label="Total Withdrawals" value={bankAnalysisResult.overview.totalWithdrawals} valueClassName="text-destructive" />
+                                <SummaryItem label="Average Balance" value={bankAnalysisResult.overview.averageBalance} valueClassName="text-foreground" />
+                                <SummaryItem label="Estimated Monthly Income" value={bankAnalysisResult.overview.estimatedMonthlyIncome} valueClassName="text-primary" />
+                            </CardContent>
+                        </Card>
+                        
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center text-xl font-bold"><ChevronsUpDown className="mr-3 h-6 w-6 text-primary" />Detailed Financial Overview</CardTitle>
+                            </CardHeader>
+                            <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                                <SummaryItem label="Salary Credits" value={bankAnalysisResult.detailedOverview.salaryCredits} valueClassName="text-green-600" />
+                                <SummaryItem label="Incentive Credits" value={bankAnalysisResult.detailedOverview.incentiveCredits} valueClassName="text-green-600" />
+                                <SummaryItem label="Mandate Debits" value={bankAnalysisResult.detailedOverview.mandateDebits} valueClassName="text-destructive" />
+                                <SummaryItem label="Cheque Inward" value={bankAnalysisResult.detailedOverview.chequeInward} valueClassName="text-green-600" />
+                                <SummaryItem label="Cheque Outward" value={bankAnalysisResult.detailedOverview.chequeOutward} valueClassName="text-destructive" />
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center text-xl font-bold"><BrainCircuit className="mr-3 h-6 w-6 text-primary" />AI Financial Health Summary</CardTitle>
+                            </CardHeader>
+                            <CardContent className="prose prose-sm dark:prose-invert max-w-none">
+                                <div>{bankAnalysisResult.health.summary}</div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                                    <div>
+                                        <h4 className="font-semibold text-green-600">Strengths</h4>
+                                        <ul className="list-disc pl-5">
+                                            {bankAnalysisResult.health.strengths.map((item, i) => <li key={i}>{item}</li>)}
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <h4 className="font-semibold text-destructive">Risks</h4>
+                                        <ul className="list-disc pl-5">
+                                            {bankAnalysisResult.health.risks.map((item, i) => <li key={i}>{item}</li>)}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="flex items-center text-xl font-bold">
+                              <Pencil className="mr-3 h-5 w-5" /> Recent Transactions
+                            </CardTitle>
+                            <CardDescription>A list of notable recent transactions identified by the AI.</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Date</TableHead>
+                                  <TableHead>Description</TableHead>
+                                  <TableHead>Category</TableHead>
+                                  <TableHead className="text-right">Amount</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {bankAnalysisResult.transactions.map((txn, index) => (
+                                  <TableRow key={index}>
+                                    <TableCell>{txn.date}</TableCell>
+                                    <TableCell className="font-medium">{txn.description}</TableCell>
+                                    <TableCell>{txn.category}</TableCell>
+                                    <TableCell className={cn("text-right font-semibold", txn.type === 'credit' ? 'text-green-600' : 'text-destructive')}>
+                                        {txn.type === 'credit' ? '+' : '-'} {txn.amount}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </CardContent>
+                        </Card>
+                    </div>
+                )}
               </TabsContent>
               <TabsContent value="business" className="mt-4">
                 <Alert>
@@ -2153,355 +2319,6 @@ export default function CreditWiseAIPage() {
   
   const { customerDetails, reportSummary } = analysisResult || initialAnalysis;
 
-  const renderCreditAnalysis = () => (
-    <>
-        <div className="text-center mb-12 print:hidden">
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">Advanced AI Credit Score Analyzer</h1>
-            <div className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">Upload your CIBIL report PDF to unlock instant AI-powered insights, personalized scoring, and actionable advice.</div>
-        </div>
-
-        <Card className="mb-8 shadow-lg hover:shadow-xl transition-shadow print:hidden">
-            <CardHeader>
-                <CardTitle className="flex items-center text-xl justify-between">
-                    <div className="flex items-center">
-                        <UploadCloud className="mr-3 h-6 w-6 text-primary" />Upload Your CIBIL Report (PDF)
-                    </div>
-                     <Button variant="outline" onClick={() => setAnalysisMode(null)}>
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Selection
-                    </Button>
-                </CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="flex flex-wrap items-center gap-4">
-                    <Button onClick={() => fileInputRef.current?.click()}>
-                        <UploadCloud className="mr-2" />
-                        Choose PDF File
-                    </Button>
-                    <Input ref={fileInputRef} type="file" accept=".pdf" onChange={handleFileChange} className="hidden" />
-                    <span className="text-muted-foreground flex-1 min-w-0 truncate">{fileName}</span>
-                    {file && (
-                        <Button variant="ghost" size="icon" onClick={() => { resetState(); setAnalysisMode('credit'); }}>
-                            <Trash2 className="h-5 w-5" />
-                            <span className="sr-only">Remove file</span>
-                        </Button>
-                    )}
-                </div>
-                {file && !isLoading && !analysisResult && (
-                  <div className="mt-4">
-                    <Alert>
-                       <AlertCircle className="h-4 w-4" />
-                       <AlertTitle>Ready to Analyze</AlertTitle>
-                       <AlertDescription>
-                        Your report has been processed. Click the button below to run the full AI analysis. This may use a significant portion of your free daily quota.
-                       </AlertDescription>
-                    </Alert>
-                    <Button onClick={handleStartFullAnalysis} disabled={isAnalyzing || isCalculatingEmi || isAssessingRisk} className="mt-4">
-                      {(isAnalyzing || isCalculatingEmi || isAssessingRisk) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />}
-                      Start Full AI Analysis
-                    </Button>
-                  </div>
-                )}
-            </CardContent>
-        </Card>
-        
-        {isLoading && (
-            <Card className="text-center p-8 my-8 print:hidden">
-                <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary mb-4" />
-                <h3 className="text-xl font-semibold">Processing your CIBIL report...</h3>
-                <div className="text-muted-foreground">This may take a moment.</div>
-                <Progress value={progress} className="w-full max-w-md mx-auto mt-4" />
-            </Card>
-        )}
-
-        {underwritingResult && (
-          <Card className="mb-8 border-2" style={{ borderColor: 'hsl(var(--primary))' }}>
-              <CardHeader>
-                  <CardTitle className="text-2xl flex items-center justify-between">
-                      <span>Final Profile Summary</span>
-                       <div className={cn('px-4 py-1.5 rounded-full text-base font-semibold flex items-center gap-2 border', getRiskColorClass(underwritingResult.finalProfileRating.toLowerCase(), 'bg'), getRiskColorClass(underwritingResult.finalProfileRating.toLowerCase(), 'text'), getRiskColorClass(underwritingResult.finalProfileRating.toLowerCase(), 'border'))}>
-                            {underwritingResult.finalProfileRating === 'Very Low Risk' || underwritingResult.finalProfileRating === 'Low Risk' ? <CheckCircle /> : <ShieldAlert />}
-                            {underwritingResult.finalProfileRating}
-                       </div>
-                  </CardTitle>
-                  <CardDescription>This card provides a consolidated view of the entire analysis.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-4 border-b">
-                      <InfoItem label={<div className="flex items-center gap-1"><UserIcon size={14}/> Name</div>} value={customerDetails.name} isLoading={isAnalyzing}/>
-                      <InfoItem label={<div className="flex items-center gap-1"><FileText size={14}/> PAN</div>} value={customerDetails.pan} isLoading={isAnalyzing}/>
-                       <div className={cn("col-span-2 font-semibold text-lg p-2 rounded-md text-center", getUnderwritingDecisionColor(underwritingResult.underwritingDecision))}>
-                            Decision: {underwritingResult.underwritingDecision}
-                       </div>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                      <SummaryItem label="CIBIL Score" value={creditScore || 'N/A'} valueClassName="text-primary" />
-                      <SummaryItem label="AI Credit Score" value={aiRating?.aiScore || 'N/A'} valueClassName={getRatingColorClass(aiRating?.rating || '')} />
-                      <SummaryItem label="Risk Score" value={riskAssessment?.score || 'N/A'} valueClassName={riskAssessment ? getRiskColorClass(riskAssessment.level.toLowerCase(), 'text') : ''} isLoading={isAssessingRisk} />
-                      <SummaryItem label="Approved Amount" value={`₹${underwritingResult.approvedLoanAmount.toLocaleString('en-IN')}`} />
-                      <SummaryItem label="Interest Rate" value={`${underwritingResult.recommendedInterestRate}`} />
-                      <SummaryItem label="Tenure" value={`${underwritingResult.recommendedTenure} months`} />
-                      <SummaryItem label="PD" value={`${underwritingResult.probabilityOfDefault}%`} valueClassName="text-destructive" />
-                      <SummaryItem label="LGD" value={`${underwritingResult.lossGivenDefault}%`} valueClassName="text-destructive" />
-                      <SummaryItem label="EAD" value={`₹${underwritingResult.exposureAtDefault.toLocaleString('en-IN')}`} valueClassName="text-destructive" />
-                       <SummaryItem label="Expected Loss" value={`₹${underwritingResult.expectedLoss.toLocaleString('en-IN')}`} valueClassName="text-destructive" />
-                  </div>
-              </CardContent>
-          </Card>
-        )}
-        
-        {rawText && !isLoading && (
-            <div className="space-y-8">
-              <Card>
-                  <CardHeader>
-                      <CardTitle className="flex items-center text-2xl font-bold"><FileText className="mr-3 h-6 w-6 text-primary" />Credit Score &amp; Consumer Information</CardTitle>
-                  </CardHeader>
-                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-                      <div className="text-center">
-                          <div className="text-muted-foreground">Official CIBIL Score</div>
-                          <div className="text-7xl font-bold text-primary">{creditScore || 'N/A'}</div>
-                          {creditScore && <Progress value={scoreProgress} className="mt-4" />}
-                      </div>
-                      <div className="space-y-2">
-                          <h4 className="font-semibold mb-4 border-b pb-2 text-lg">AI-Extracted Consumer Information</h4>
-                          <InfoItem label="Name" value={customerDetails.name} isLoading={isAnalyzing}/>
-                          <InfoItem label="Date of Birth" value={customerDetails.dateOfBirth} isLoading={isAnalyzing}/>
-                          <InfoItem label="Gender" value={customerDetails.gender} isLoading={isAnalyzing}/>
-                          <InfoItem label="PAN" value={customerDetails.pan} isLoading={isAnalyzing}/>
-                          <InfoItem label="Mobile Number" value={customerDetails.mobileNumber} isLoading={isAnalyzing}/>
-                          <InfoItem label="Address" value={customerDetails.address} isLoading={isAnalyzing}/>
-                      </div>
-                  </CardContent>
-              </Card>
-
-               <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center text-2xl font-bold"><BarChartBig className="mr-3 h-6 w-6 text-primary" />Report Summary</CardTitle>
-                    <CardDescription>This summary is generated by an AI analyzing your CIBIL report.</CardDescription>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div>
-                        <h3 className="font-semibold text-lg mb-2 border-b pb-1">Account Summary</h3>
-                        <div className="grid grid-cols-2 gap-4">
-                            <SummaryItem isLoading={isAnalyzing} label="Total Accounts" value={reportSummary.accountSummary.total} valueClassName="text-foreground" />
-                            <SummaryItem isLoading={isAnalyzing} label="Zero-Balance" value={reportSummary.accountSummary.zeroBalance} valueClassName="text-foreground" />
-                            <SummaryItem isLoading={isAnalyzing} label="High Credit/Sanc. Amt" value={reportSummary.accountSummary.highCredit} valueClassName="text-foreground" />
-                            <SummaryItem isLoading={isAnalyzing} label="Current Balance" value={reportSummary.accountSummary.currentBalance} valueClassName="text-destructive" />
-                            <SummaryItem isLoading={isAnalyzing} label="Overdue Amount" value={reportSummary.accountSummary.overdue} valueClassName="text-destructive" />
-                            <SummaryItem isLoading={isAnalyzing} label="Most Recent Account" value={reportSummary.accountSummary.recentDate} valueClassName="text-foreground" />
-                            <SummaryItem isLoading={isAnalyzing} label="Oldest Account" value={reportSummary.accountSummary.oldestDate} valueClassName="text-foreground" />
-                        </div>
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-lg mb-2 border-b pb-1">Enquiry Summary</h3>
-                         <div className="grid grid-cols-2 gap-4">
-                            <SummaryItem isLoading={isAnalyzing} label="Total Enquiries" value={reportSummary.enquirySummary.total} valueClassName="text-foreground" />
-                            <SummaryItem isLoading={isAnalyzing} label="Last 30 Days" value={reportSummary.enquirySummary.past30Days} valueClassName="text-foreground" />
-                            <SummaryItem isLoading={isAnalyzing} label="Last 12 Months" value={reportSummary.enquirySummary.past12Months} valueClassName="text-foreground" />
-                            <SummaryItem isLoading={isAnalyzing} label="Last 24 Months" value={reportSummary.enquirySummary.past24Months} valueClassName="text-foreground" />
-                            <SummaryItem isLoading={isAnalyzing} label="Most Recent Enquiry" value={reportSummary.enquirySummary.recentDate} valueClassName="text-foreground" />
-                        </div>
-                    </div>
-                </CardContent>
-              </Card>
-
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-2xl font-bold">Analysis Dashboard</CardTitle>
-                  <CardDescription>Select a section to view its detailed analysis. Some sections require previous steps to be completed.</CardDescription>
-                </CardHeader>
-                <CardContent className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                  <NavButton view="creditSummary" label="Credit Summary" icon={<LayoutGrid size={24} />} disabled={!analysisResult} />
-                  <NavButton view="aiAnalysis" label="AI Risk Assessment" icon={<BrainCircuit size={24} />} disabled={!analysisResult} />
-                  <NavButton view="aiMeter" label="AI Credit Meter" icon={<Bot size={24} />} disabled={!riskAssessment}/>
-                  <NavButton view="obligations" label="Financials & Obligations" icon={<Calculator size={24} />} disabled={!rawText} />
-                  <NavButton view="incomeGuess" label="Income Guess" icon={<Wallet size={24} />} disabled={!rawText} />
-                  <NavButton view="loanEligibility" label="AI Loan Eligibility" icon={<Banknote size={24} />} disabled={!aiRating || !estimatedIncome} />
-                  <NavButton view="financialRisk" label="AI Financial Risk" icon={<BadgeCent size={24} />} disabled={!estimatedIncome}/>
-                  <NavButton view="creditUnderwriting" label="AI Credit Underwriting" icon={<Gavel size={24} />} disabled={!loanEligibility} />
-                </CardContent>
-              </Card>
-              
-              {activeView && (
-                <div className="my-8">
-                  {renderActiveView()}
-                </div>
-              )}
-            </div>
-        )}
-    </>
-  );
-
-  const renderBankAnalysis = () => (
-    <>
-      <div className="text-center mb-12 print:hidden">
-        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">AI Bank Statement Analyzer</h1>
-        <div className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">Upload your bank statement PDF to get an instant, AI-powered financial health check-up.</div>
-      </div>
-      <Card className="mb-8 shadow-lg hover:shadow-xl transition-shadow print:hidden">
-        <CardHeader>
-            <CardTitle className="flex items-center text-xl justify-between">
-                <div className="flex items-center">
-                    <UploadCloud className="mr-3 h-6 w-6 text-primary" />Upload Your Bank Statement (PDF)
-                </div>
-                <Button variant="outline" onClick={() => setAnalysisMode(null)}>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Selection
-                </Button>
-            </CardTitle>
-        </CardHeader>
-        <CardContent>
-            <div className="flex flex-wrap items-center gap-4">
-                <Button onClick={() => fileInputRef.current?.click()}>
-                    <UploadCloud className="mr-2" />
-                    Choose PDF File
-                </Button>
-                <Input ref={fileInputRef} type="file" accept=".pdf" onChange={handleFileChange} className="hidden" />
-                <span className="text-muted-foreground flex-1 min-w-0 truncate">{fileName}</span>
-                 {file && (
-                    <Button variant="ghost" size="icon" onClick={() => { resetState(); setAnalysisMode('bank'); }}>
-                        <Trash2 className="h-5 w-5" />
-                        <span className="sr-only">Remove file</span>
-                    </Button>
-                )}
-            </div>
-             {file && !isLoading && !bankAnalysisResult && (
-                <div className="mt-4">
-                    <Alert>
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Ready to Analyze</AlertTitle>
-                        <AlertDescription>
-                        Your bank statement has been processed. Click the button below to run the AI analysis.
-                        </AlertDescription>
-                    </Alert>
-                    <Button onClick={handleStartBankAnalysis} disabled={isAnalyzingBank} className="mt-4">
-                        {isAnalyzingBank ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />}
-                        Start Bank Statement Analysis
-                    </Button>
-                </div>
-            )}
-        </CardContent>
-      </Card>
-      
-        {isLoading && (
-            <Card className="text-center p-8 my-8 print:hidden">
-                <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary mb-4" />
-                <h3 className="text-xl font-semibold">Processing your bank statement...</h3>
-                <div className="text-muted-foreground">This may take a moment.</div>
-                <Progress value={progress} className="w-full max-w-md mx-auto mt-4" />
-            </Card>
-        )}
-      
-       {isAnalyzingBank ? (
-         <div className="flex items-center justify-center py-10">
-            <Loader2 className="mr-3 h-8 w-8 animate-spin text-primary" />
-            <span className="text-muted-foreground">AI is analyzing your statement... This can take up to a minute.</span>
-          </div>
-       ) : bankAnalysisResult && (
-            <div className="space-y-8">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center text-xl font-bold"><FileText className="mr-3 h-6 w-6 text-primary" />Account Summary</CardTitle>
-                        <CardDescription>Key details extracted from the statement.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                       <InfoItem label="Account Holder" value={bankAnalysisResult.summary.accountHolder} />
-                       <InfoItem label="Bank Name" value={bankAnalysisResult.summary.bankName} />
-                       <InfoItem label="Account Number" value={bankAnalysisResult.summary.accountNumber} />
-                       <InfoItem label="Mobile Number" value={bankAnalysisResult.summary.mobileNumber} />
-                       <InfoItem label="Address" value={bankAnalysisResult.summary.address} />
-                       <InfoItem label="Statement Period" value={bankAnalysisResult.summary.statementPeriod} />
-                       <InfoItem label="Opening Balance" value={bankAnalysisResult.summary.openingBalance} />
-                       <InfoItem label="Closing Balance" value={bankAnalysisResult.summary.closingBalance} />
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center text-xl font-bold"><BarChartBig className="mr-3 h-6 w-6 text-primary" />Financial Overview</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        <SummaryItem label="Total Deposits" value={bankAnalysisResult.overview.totalDeposits} valueClassName="text-green-600" />
-                        <SummaryItem label="Total Withdrawals" value={bankAnalysisResult.overview.totalWithdrawals} valueClassName="text-destructive" />
-                        <SummaryItem label="Average Balance" value={bankAnalysisResult.overview.averageBalance} valueClassName="text-foreground" />
-                        <SummaryItem label="Estimated Monthly Income" value={bankAnalysisResult.overview.estimatedMonthlyIncome} valueClassName="text-primary" />
-                    </CardContent>
-                </Card>
-                
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center text-xl font-bold"><ChevronsUpDown className="mr-3 h-6 w-6 text-primary" />Detailed Financial Overview</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                        <SummaryItem label="Salary Credits" value={bankAnalysisResult.detailedOverview.salaryCredits} valueClassName="text-green-600" />
-                        <SummaryItem label="Incentive Credits" value={bankAnalysisResult.detailedOverview.incentiveCredits} valueClassName="text-green-600" />
-                        <SummaryItem label="Mandate Debits" value={bankAnalysisResult.detailedOverview.mandateDebits} valueClassName="text-destructive" />
-                        <SummaryItem label="Cheque Inward" value={bankAnalysisResult.detailedOverview.chequeInward} valueClassName="text-green-600" />
-                        <SummaryItem label="Cheque Outward" value={bankAnalysisResult.detailedOverview.chequeOutward} valueClassName="text-destructive" />
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center text-xl font-bold"><BrainCircuit className="mr-3 h-6 w-6 text-primary" />AI Financial Health Summary</CardTitle>
-                    </CardHeader>
-                    <CardContent className="prose prose-sm dark:prose-invert max-w-none">
-                        <div>{bankAnalysisResult.health.summary}</div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                            <div>
-                                <h4 className="font-semibold text-green-600">Strengths</h4>
-                                <ul className="list-disc pl-5">
-                                    {bankAnalysisResult.health.strengths.map((item, i) => <li key={i}>{item}</li>)}
-                                </ul>
-                            </div>
-                            <div>
-                                <h4 className="font-semibold text-destructive">Risks</h4>
-                                 <ul className="list-disc pl-5">
-                                    {bankAnalysisResult.health.risks.map((item, i) => <li key={i}>{item}</li>)}
-                                </ul>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-xl font-bold">
-                      <Pencil className="mr-3 h-5 w-5" /> Recent Transactions
-                    </CardTitle>
-                    <CardDescription>A list of notable recent transactions identified by the AI.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead>Category</TableHead>
-                          <TableHead className="text-right">Amount</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {bankAnalysisResult.transactions.map((txn, index) => (
-                          <TableRow key={index}>
-                            <TableCell>{txn.date}</TableCell>
-                            <TableCell className="font-medium">{txn.description}</TableCell>
-                            <TableCell>{txn.category}</TableCell>
-                            <TableCell className={cn("text-right font-semibold", txn.type === 'credit' ? 'text-green-600' : 'text-destructive')}>
-                                {txn.type === 'credit' ? '+' : '-'} {txn.amount}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-            </div>
-        )}
-    </>
-  );
-
   return (
     <div className={cn("min-h-screen bg-background font-body text-foreground", theme)}>
        <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm print:hidden">
@@ -2582,37 +2399,180 @@ export default function CreditWiseAIPage() {
               </form>
             </CardContent>
           </Card>
-        ) : !analysisMode ? (
-            <div className="text-center">
-                <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">Choose an Analyzer</h1>
-                <div className="mt-3 text-lg text-muted-foreground max-w-xl mx-auto">Select the type of document you would like to analyze with our AI.</div>
-                <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                    <Card 
-                        className="p-8 text-center cursor-pointer hover:shadow-lg hover:border-primary transition-all"
-                        onClick={() => { resetState(); setAnalysisMode('credit'); }}
-                    >
-                        <FileText className="h-16 w-16 mx-auto text-primary mb-4" />
-                        <h2 className="text-2xl font-bold">Credit Report Analysis</h2>
-                        <div className="text-muted-foreground mt-2">Upload a CIBIL report for in-depth credit health analysis, scoring, and loan underwriting.</div>
-                    </Card>
-                     <Card 
-                        className="p-8 text-center cursor-pointer hover:shadow-lg hover:border-primary transition-all"
-                        onClick={() => { resetState(); setAnalysisMode('bank'); }}
-                    >
-                        <Landmark className="h-16 w-16 mx-auto text-primary mb-4" />
-                        <h2 className="text-2xl font-bold">Bank Statement Analysis</h2>
-                        <div className="text-muted-foreground mt-2">Upload a bank statement to analyze income, expenses, and overall financial health.</div>
-                    </Card>
-                </div>
-            </div>
         ) : (
           <>
-            {analysisMode === 'credit' && renderCreditAnalysis()}
-            {analysisMode === 'bank' && renderBankAnalysis()}
+            <div className="text-center mb-12 print:hidden">
+              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">Advanced AI Credit Score Analyzer</h1>
+              <div className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">Upload your CIBIL report PDF to unlock instant AI-powered insights, personalized scoring, and actionable advice.</div>
+            </div>
 
-            {(rawText || (analysisMode === 'bank' && bankAnalysisResult)) && (
+            <Card className="mb-8 shadow-lg hover:shadow-xl transition-shadow print:hidden">
+              <CardHeader>
+                <CardTitle className="flex items-center text-xl">
+                  <UploadCloud className="mr-3 h-6 w-6 text-primary" />Upload Your CIBIL Report (PDF)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap items-center gap-4">
+                    <Button onClick={() => creditFileInputRef.current?.click()}>
+                        <UploadCloud className="mr-2" />
+                        Choose PDF File
+                    </Button>
+                    <Input ref={creditFileInputRef} type="file" accept=".pdf" onChange={(e) => handleFileChange(e, 'credit')} className="hidden" />
+                    <span className="text-muted-foreground flex-1 min-w-0 truncate">{creditFileName}</span>
+                    {creditFile && (
+                        <Button variant="ghost" size="icon" onClick={resetState}>
+                            <Trash2 className="h-5 w-5" />
+                            <span className="sr-only">Remove file</span>
+                        </Button>
+                    )}
+                </div>
+                {creditFile && !isLoading && !analysisResult && (
+                  <div className="mt-4">
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Ready to Analyze</AlertTitle>
+                      <AlertDescription>
+                      Your report has been processed. Click the button below to run the full AI analysis. This may use a significant portion of your free daily quota.
+                      </AlertDescription>
+                    </Alert>
+                    <Button onClick={handleStartFullAnalysis} disabled={isAnalyzing || isCalculatingEmi || isAssessingRisk} className="mt-4">
+                      {(isAnalyzing || isCalculatingEmi || isAssessingRisk) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />}
+                      Start Full AI Analysis
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {isLoading && (
+                <Card className="text-center p-8 my-8 print:hidden">
+                    <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary mb-4" />
+                    <h3 className="text-xl font-semibold">Processing your report...</h3>
+                    <div className="text-muted-foreground">This may take a moment.</div>
+                    <Progress value={progress} className="w-full max-w-md mx-auto mt-4" />
+                </Card>
+            )}
+
+            {underwritingResult && (
+              <Card className="mb-8 border-2" style={{ borderColor: 'hsl(var(--primary))' }}>
+                  <CardHeader>
+                      <CardTitle className="text-2xl flex items-center justify-between">
+                          <span>Final Profile Summary</span>
+                          <div className={cn('px-4 py-1.5 rounded-full text-base font-semibold flex items-center gap-2 border', getRiskColorClass(underwritingResult.finalProfileRating.toLowerCase(), 'bg'), getRiskColorClass(underwritingResult.finalProfileRating.toLowerCase(), 'text'), getRiskColorClass(underwritingResult.finalProfileRating.toLowerCase(), 'border'))}>
+                                {underwritingResult.finalProfileRating === 'Very Low Risk' || underwritingResult.finalProfileRating === 'Low Risk' ? <CheckCircle /> : <ShieldAlert />}
+                                {underwritingResult.finalProfileRating}
+                          </div>
+                      </CardTitle>
+                      <CardDescription>This card provides a consolidated view of the entire analysis.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-4 border-b">
+                          <InfoItem label={<div className="flex items-center gap-1"><UserIcon size={14}/> Name</div>} value={customerDetails.name} isLoading={isAnalyzing}/>
+                          <InfoItem label={<div className="flex items-center gap-1"><FileText size={14}/> PAN</div>} value={customerDetails.pan} isLoading={isAnalyzing}/>
+                          <div className={cn("col-span-2 font-semibold text-lg p-2 rounded-md text-center", getUnderwritingDecisionColor(underwritingResult.underwritingDecision))}>
+                                Decision: {underwritingResult.underwritingDecision}
+                          </div>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                          <SummaryItem label="CIBIL Score" value={creditScore || 'N/A'} valueClassName="text-primary" />
+                          <SummaryItem label="AI Credit Score" value={aiRating?.aiScore || 'N/A'} valueClassName={getRatingColorClass(aiRating?.rating || '')} />
+                          <SummaryItem label="Risk Score" value={riskAssessment?.score || 'N/A'} valueClassName={riskAssessment ? getRiskColorClass(riskAssessment.level.toLowerCase(), 'text') : ''} isLoading={isAssessingRisk} />
+                          <SummaryItem label="Approved Amount" value={`₹${underwritingResult.approvedLoanAmount.toLocaleString('en-IN')}`} />
+                          <SummaryItem label="Interest Rate" value={`${underwritingResult.recommendedInterestRate}`} />
+                          <SummaryItem label="Tenure" value={`${underwritingResult.recommendedTenure} months`} />
+                          <SummaryItem label="PD" value={`${underwritingResult.probabilityOfDefault}%`} valueClassName="text-destructive" />
+                          <SummaryItem label="LGD" value={`${underwritingResult.lossGivenDefault}%`} valueClassName="text-destructive" />
+                          <SummaryItem label="EAD" value={`₹${underwritingResult.exposureAtDefault.toLocaleString('en-IN')}`} valueClassName="text-destructive" />
+                          <SummaryItem label="Expected Loss" value={`₹${underwritingResult.expectedLoss.toLocaleString('en-IN')}`} valueClassName="text-destructive" />
+                      </div>
+                  </CardContent>
+              </Card>
+            )}
+            
+            {rawText && !isLoading && (
+                <div className="space-y-8">
+                  <Card>
+                      <CardHeader>
+                          <CardTitle className="flex items-center text-2xl font-bold"><FileText className="mr-3 h-6 w-6 text-primary" />Credit Score &amp; Consumer Information</CardTitle>
+                      </CardHeader>
+                      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                          <div className="text-center">
+                              <div className="text-muted-foreground">Official CIBIL Score</div>
+                              <div className="text-7xl font-bold text-primary">{creditScore || 'N/A'}</div>
+                              {creditScore && <Progress value={scoreProgress} className="mt-4" />}
+                          </div>
+                          <div className="space-y-2">
+                              <h4 className="font-semibold mb-4 border-b pb-2 text-lg">AI-Extracted Consumer Information</h4>
+                              <InfoItem label="Name" value={customerDetails.name} isLoading={isAnalyzing}/>
+                              <InfoItem label="Date of Birth" value={customerDetails.dateOfBirth} isLoading={isAnalyzing}/>
+                              <InfoItem label="Gender" value={customerDetails.gender} isLoading={isAnalyzing}/>
+                              <InfoItem label="PAN" value={customerDetails.pan} isLoading={isAnalyzing}/>
+                              <InfoItem label="Mobile Number" value={customerDetails.mobileNumber} isLoading={isAnalyzing}/>
+                              <InfoItem label="Address" value={customerDetails.address} isLoading={isAnalyzing}/>
+                          </div>
+                      </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center text-2xl font-bold"><BarChartBig className="mr-3 h-6 w-6 text-primary" />Report Summary</CardTitle>
+                        <CardDescription>This summary is generated by an AI analyzing your CIBIL report.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h3 className="font-semibold text-lg mb-2 border-b pb-1">Account Summary</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <SummaryItem isLoading={isAnalyzing} label="Total Accounts" value={reportSummary.accountSummary.total} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isAnalyzing} label="Zero-Balance" value={reportSummary.accountSummary.zeroBalance} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isAnalyzing} label="High Credit/Sanc. Amt" value={reportSummary.accountSummary.highCredit} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isAnalyzing} label="Current Balance" value={reportSummary.accountSummary.currentBalance} valueClassName="text-destructive" />
+                                <SummaryItem isLoading={isAnalyzing} label="Overdue Amount" value={reportSummary.accountSummary.overdue} valueClassName="text-destructive" />
+                                <SummaryItem isLoading={isAnalyzing} label="Most Recent Account" value={reportSummary.accountSummary.recentDate} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isAnalyzing} label="Oldest Account" value={reportSummary.accountSummary.oldestDate} valueClassName="text-foreground" />
+                            </div>
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-lg mb-2 border-b pb-1">Enquiry Summary</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <SummaryItem isLoading={isAnalyzing} label="Total Enquiries" value={reportSummary.enquirySummary.total} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isAnalyzing} label="Last 30 Days" value={reportSummary.enquirySummary.past30Days} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isAnalyzing} label="Last 12 Months" value={reportSummary.enquirySummary.past12Months} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isAnalyzing} label="Last 24 Months" value={reportSummary.enquirySummary.past24Months} valueClassName="text-foreground" />
+                                <SummaryItem isLoading={isAnalyzing} label="Most Recent Enquiry" value={reportSummary.enquirySummary.recentDate} valueClassName="text-foreground" />
+                            </div>
+                        </div>
+                    </CardContent>
+                  </Card>
+
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-2xl font-bold">Analysis Dashboard</CardTitle>
+                      <CardDescription>Select a section to view its detailed analysis. Some sections require previous steps to be completed.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      <NavButton view="creditSummary" label="Credit Summary" icon={<LayoutGrid size={24} />} disabled={!analysisResult} />
+                      <NavButton view="aiAnalysis" label="AI Risk Assessment" icon={<BrainCircuit size={24} />} disabled={!analysisResult} />
+                      <NavButton view="aiMeter" label="AI Credit Meter" icon={<Bot size={24} />} disabled={!riskAssessment}/>
+                      <NavButton view="obligations" label="Financials & Obligations" icon={<Calculator size={24} />} disabled={!rawText} />
+                      <NavButton view="incomeGuess" label="Income Guess" icon={<Wallet size={24} />} disabled={!rawText} />
+                      <NavButton view="loanEligibility" label="AI Loan Eligibility" icon={<Banknote size={24} />} disabled={!aiRating || !estimatedIncome} />
+                      <NavButton view="financialRisk" label="AI Financial Risk" icon={<BadgeCent size={24} />} disabled={!estimatedIncome}/>
+                      <NavButton view="creditUnderwriting" label="AI Credit Underwriting" icon={<Gavel size={24} />} disabled={!loanEligibility} />
+                    </CardContent>
+                  </Card>
+                  
+                  {activeView && (
+                    <div className="my-8">
+                      {renderActiveView()}
+                    </div>
+                  )}
+                </div>
+            )}
+
+            {(rawText || bankAnalysisResult) && (
               <div className="space-y-8 mt-8">
-                 
                   <Card className="print:hidden mt-8">
                       <Accordion type="single" collapsible className="w-full">
                           <AccordionItem value="item-1">
@@ -2636,7 +2596,7 @@ export default function CreditWiseAIPage() {
                                                 <CardTitle>Raw Text</CardTitle>
                                             </CardHeader>
                                             <CardContent>
-                                                <pre className="whitespace-pre-wrap text-xs bg-muted p-4 rounded-lg max-h-96 overflow-auto">{rawText}</pre>
+                                                <pre className="whitespace-pre-wrap text-xs bg-muted p-4 rounded-lg max-h-96 overflow-auto">{rawText || bankRawText}</pre>
                                             </CardContent>
                                         </Card>
                                       )}
@@ -2666,13 +2626,11 @@ export default function CreditWiseAIPage() {
             )}
             
             <AiAgentChat 
-              cibilReportText={analysisMode === 'credit' ? rawText : undefined} 
-              bankStatementText={analysisMode === 'bank' ? rawText : undefined}
+              cibilReportText={rawText ? rawText : undefined} 
+              bankStatementText={bankRawText ? bankRawText : undefined}
               onNewChat={() => setTokenUsage({ inputTokens: 0, outputTokens: 0 })}
               onTokensUsed={updateTokenUsage}
             />
-            
-            
           </>
         )}
       </main>
