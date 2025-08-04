@@ -59,7 +59,7 @@ const prompt = ai.definePrompt({
   input: {schema: SalarySlipAnalysisInputSchema},
   output: {schema: SalarySlipAnalysisOutputSchema},
   model: 'googleai/gemini-1.5-flash',
-  prompt: `You are a forensic document analyst specializing in verifying Indian salary slips for loan applications. Your task is to meticulously analyze a batch of salary slips, extract key information, and perform a comprehensive fraud detection analysis.
+  prompt: `You are a forensic document analyst specializing in verifying Indian salary slips for loan applications. Your task is to meticulously analyze a batch of salary slips, extract key information, and perform a comprehensive, multi-layered fraud detection analysis.
 
 **Input Documents:**
 {{#each salarySlips}}
@@ -82,11 +82,11 @@ const prompt = ai.definePrompt({
     *   Create one JSON object in the 'extractedSlips' array for each document. If a field isn't found, you MUST return "N/A".
 
 2.  **Comprehensive Fraud Report (fraudReport):**
-    *   After extracting data from all slips, perform a cross-document analysis.
+    *   After extracting data, perform a cross-document forensic analysis. Scrutinize each document for signs of tampering using the following layers:
     *   **Consistency Check:** Compare static details (Name, DOB, DOJ, company name, PAN) across all slips. Are they identical? Report any mismatch.
     *   **Pattern Analysis:** Analyze the salary figures. Is there a logical progression or are there unexplained, volatile changes in gross or net pay? Is the salary credit date consistent?
-    *   **Formatting Anomalies:** Scrutinize the layout of each document. Look for inconsistencies in fonts, alignments, spacing between text, or logos that differ slightly between slips. These are classic signs of a forged document. Mention things like "extra spaces" or "misaligned columns".
-    *   **Tampering Indicators:** Look for direct evidence of image manipulation. Are there blurry areas, pixelation around numbers, text that looks 'pasted on', or headers that don't match perfectly?
+    *   **Formatting Anomalies (Layout & Text Layer):** Scrutinize the layout of each document. Look for inconsistencies in fonts (e.g., a different font for one number), alignments (e.g., a misaligned column), spacing between text, or logos that differ slightly between slips. These are classic signs of a forged document. Mention things like "extra spaces" or "uneven line gaps".
+    *   **Tampering Indicators (Visual Layer):** Look for direct evidence of image manipulation. Are there blurry areas, compression artifacts, or pixelation around numbers that could indicate editing? Does any text look 'pasted on'? Are headers, logos, or signatures inconsistent?
     *   **Overall Assessment:** Based on all the above points, provide a final, conclusive summary of your findings. Give a clear recommendation on the document's authenticity.
     *   **Authenticity Confidence:** Provide a numerical confidence score from 0 to 100. A score of 95+ suggests high confidence in authenticity. A score below 70 suggests a high probability of fraud and requires manual review.
 
