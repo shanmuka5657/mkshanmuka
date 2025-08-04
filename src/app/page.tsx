@@ -102,7 +102,7 @@ import Link from 'next/link';
 import { saveTrainingCandidate } from '@/lib/training-store';
 import { Textarea } from '@/components/ui/textarea';
 import type { FlowUsage } from 'genkit/flow';
-import { format, differenceInMonths, parseISO, isValid } from 'date-fns';
+import { format, differenceInMonths, parseISO, isValid, parse } from 'date-fns';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 
@@ -557,6 +557,30 @@ export default function CreditWiseAIPage() {
       const { output, usage } = await analyzeSalarySlips(input);
       setSalaryAnalysisResult(output);
       updateTokenUsage(usage);
+
+      // Automation: Find the most recent salary and set the income
+      if (output && output.extractedSlips.length > 0) {
+        const sortedSlips = [...output.extractedSlips].sort((a, b) => {
+          const dateA = parse(a.payMonth, 'MMMM yyyy', new Date());
+          const dateB = parse(b.payMonth, 'MMMM yyyy', new Date());
+          if (!isValid(dateA)) return 1;
+          if (!isValid(dateB)) return -1;
+          return dateB.getTime() - dateA.getTime();
+        });
+
+        const mostRecentSlip = sortedSlips[0];
+        if (mostRecentSlip && mostRecentSlip.netSalary) {
+          const income = parseCurrency(mostRecentSlip.netSalary);
+          if (income > 0) {
+            setEstimatedIncome(String(income));
+            toast({
+              title: 'Income Automatically Detected',
+              description: `Estimated monthly income of ₹${income.toLocaleString('en-IN')} has been set from the latest salary slip.`,
+            });
+          }
+        }
+      }
+
       toast({ title: 'Salary Slip Analysis Complete' });
     } catch (error: any) {
       console.error('Error analyzing salary slips:', error);
