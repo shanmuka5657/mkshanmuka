@@ -57,6 +57,8 @@ import {
   Download,
   Share2,
   BadgeCheck,
+  PieChart as PieChartIcon,
+  BarChart as BarChartIcon,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -65,7 +67,7 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { useToast } from "@/hooks/use-toast"
 import { analyzeCreditReport, AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
 import { getAiRating, AiRatingOutput } from '@/ai/flows/ai-rating';
@@ -934,6 +936,7 @@ export default function CreditWiseAIPage() {
   // Perform calculations on the client-side for accuracy
   const calculatedSummary = useMemo(() => {
     const allAccounts = analysisResult?.allAccounts || [];
+    const enquirySummary = analysisResult?.reportSummary.enquirySummary;
     if (allAccounts.length === 0) {
       return {
         totalAccounts: 0,
@@ -949,6 +952,8 @@ export default function CreditWiseAIPage() {
         creditUtilization: "N/A",
         debtToLimitRatio: "N/A",
         dpd: { onTime: 0, late30: 0, late60: 0, late90: 0, late90Plus: 0, default: 0 },
+        accountDistribution: [],
+        enquiryTrend: [],
       };
     }
 
@@ -967,6 +972,7 @@ export default function CreditWiseAIPage() {
     let creditCardLimit = 0;
     let creditCardBalance = 0;
     let creditCardPayments = 0;
+    const accountDistribution: { [key: string]: number } = {};
 
     for (const acc of allAccounts) {
       const sanctioned = parseCurrency(acc.sanctioned);
@@ -976,6 +982,9 @@ export default function CreditWiseAIPage() {
 
       summary.totalCreditLimit += sanctioned;
       summary.totalOutstanding += outstanding;
+
+      const accType = acc.type || 'Other';
+      accountDistribution[accType] = (accountDistribution[accType] || 0) + 1;
       
       const isActive = !status.includes('closed') && !status.includes('written-off') && !status.includes('settled');
 
@@ -1040,6 +1049,14 @@ export default function CreditWiseAIPage() {
     } else {
         debtToLimitRatio = `${Math.round((summary.totalOutstanding / summary.totalCreditLimit) * 100)}%`;
     }
+    
+    const accountDistributionData = Object.entries(accountDistribution).map(([name, value]) => ({ name, value }));
+    const enquiryTrendData = enquirySummary ? [
+        { name: 'Last 30 Days', enquiries: parseInt(enquirySummary.past30Days || '0') },
+        { name: 'Last 12 Months', enquiries: parseInt(enquirySummary.past12Months || '0') },
+        { name: 'Last 24 Months', enquiries: parseInt(enquirySummary.past24Months || '0') },
+    ] : [];
+
 
     return {
       ...summary,
@@ -1048,6 +1065,8 @@ export default function CreditWiseAIPage() {
       creditUtilization,
       debtToLimitRatio,
       creditCardPayments,
+      accountDistribution: accountDistributionData,
+      enquiryTrend: enquiryTrendData,
     };
   }, [analysisResult]);
 
@@ -1200,6 +1219,8 @@ export default function CreditWiseAIPage() {
       <div className="text-xs font-medium uppercase">{label}</div>
     </div>
   );
+  
+  const CHART_COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
   const renderActiveView = () => {
     if (!activeView) return null;
@@ -1236,6 +1257,62 @@ export default function CreditWiseAIPage() {
                     <SummaryItem label="Settled" value={calculatedSummary.settled} valueClassName="text-orange-500" />
                     <SummaryItem label="Doubtful" value={calculatedSummary.doubtful} valueClassName="text-destructive" />
                     <SummaryItem label="Total Monthly EMI" value={`₹${calculatedSummary.totalMonthlyEMI.toLocaleString('en-IN')}`} valueClassName="text-foreground" />
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center"><PieChartIcon className="mr-3 h-5 w-5" />Account Type Distribution</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ResponsiveContainer width="100%" height={250}>
+                          <PieChart>
+                            <Pie
+                              data={calculatedSummary.accountDistribution}
+                              dataKey="value"
+                              nameKey="name"
+                              cx="50%"
+                              cy="50%"
+                              outerRadius={80}
+                              labelLine={false}
+                              label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }) => {
+                                const RADIAN = Math.PI / 180;
+                                const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                                const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                                const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+                                return (
+                                  <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
+                                    {`${(percent * 100).toFixed(0)}%`}
+                                  </text>
+                                );
+                              }}
+                            >
+                              {calculatedSummary.accountDistribution.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(value) => `${value} account(s)`}/>
+                            <Legend />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </CardContent>
+                    </Card>
+                     <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center"><BarChartIcon className="mr-3 h-5 w-5" />Enquiry Trends</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ResponsiveContainer width="100%" height={250}>
+                          <BarChart data={calculatedSummary.enquiryTrend}>
+                            <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                            <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                            <Tooltip formatter={(value) => [`${value} enquiries`, 'Count']}/>
+                            <Bar dataKey="enquiries" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </CardContent>
+                    </Card>
                   </div>
 
                   {calculatedSummary.dpd && (
@@ -1315,10 +1392,17 @@ export default function CreditWiseAIPage() {
             <CardDescription>This AI acts as a holistic credit advisor. It provides a comprehensive score of your overall credit health by balancing both the positive and negative factors in your report.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={handleGetAiRating} disabled={isRating || !riskAssessment}>
-              {isRating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-              Get AI Rating
-            </Button>
+            <UiTooltip>
+                <TooltipTrigger asChild>
+                    <div className="inline-block">
+                        <Button onClick={handleGetAiRating} disabled={isRating || !riskAssessment}>
+                            {isRating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                            Get AI Rating
+                        </Button>
+                    </div>
+                </TooltipTrigger>
+                {!riskAssessment && <TooltipContent><p>Please complete the AI Risk Assessment first.</p></TooltipContent>}
+            </UiTooltip>
             
             {aiRating && (
               <div className="mt-6">
@@ -1367,17 +1451,24 @@ export default function CreditWiseAIPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-              <Button
-                onClick={handleGetLoanEligibility}
-                disabled={isCalculatingEligibility || !aiRating || !estimatedIncome}
-              >
-                {isCalculatingEligibility ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Sparkles className="mr-2 h-4 w-4" />
-                )}
-                Calculate Loan Eligibility
-              </Button>
+              <UiTooltip>
+                <TooltipTrigger asChild>
+                    <div className="inline-block">
+                        <Button
+                            onClick={handleGetLoanEligibility}
+                            disabled={isCalculatingEligibility || !aiRating || !estimatedIncome}
+                        >
+                            {isCalculatingEligibility ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                            <Sparkles className="mr-2 h-4 w-4" />
+                            )}
+                            Calculate Loan Eligibility
+                        </Button>
+                    </div>
+                </TooltipTrigger>
+                {(!aiRating || !estimatedIncome) && <TooltipContent><p>Please complete AI Credit Meter and enter income first.</p></TooltipContent>}
+              </UiTooltip>
 
             {loanEligibility && (
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2085,10 +2176,17 @@ export default function CreditWiseAIPage() {
               </Alert>
             </CardContent>
             <CardFooter>
-               <Button type="submit" disabled={isUnderwriting || !aiRating || !estimatedIncome || !loanEligibility || !riskAssessment}>
-                {isUnderwriting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Gavel className="mr-2 h-4 w-4" />}
-                Start Final Underwriting
-              </Button>
+                <UiTooltip>
+                    <TooltipTrigger asChild>
+                        <div className="inline-block">
+                            <Button type="submit" disabled={isUnderwriting || !aiRating || !estimatedIncome || !loanEligibility || !riskAssessment}>
+                                {isUnderwriting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Gavel className="mr-2 h-4 w-4" />}
+                                Start Final Underwriting
+                            </Button>
+                        </div>
+                    </TooltipTrigger>
+                    {(!loanEligibility) && <TooltipContent><p>Please complete AI Loan Eligibility analysis first.</p></TooltipContent>}
+                </UiTooltip>
             </CardFooter>
           </form>
           
@@ -2288,17 +2386,24 @@ export default function CreditWiseAIPage() {
                 <CardDescription>Get the AI's perspective on your overall financial stability and health.</CardDescription>
             </CardHeader>
             <CardContent>
-                <Button
-                  onClick={handleGetFinancialRisk}
-                  disabled={isAssessingFinancialRisk || !estimatedIncome}
-                >
-                  {isAssessingFinancialRisk ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="mr-2 h-4 w-4" />
-                  )}
-                  Assess Financial Risk
-                </Button>
+                <UiTooltip>
+                    <TooltipTrigger asChild>
+                        <div className="inline-block">
+                            <Button
+                            onClick={handleGetFinancialRisk}
+                            disabled={isAssessingFinancialRisk || !estimatedIncome}
+                            >
+                            {isAssessingFinancialRisk ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                <Sparkles className="mr-2 h-4 w-4" />
+                            )}
+                            Assess Financial Risk
+                            </Button>
+                        </div>
+                    </TooltipTrigger>
+                    {!estimatedIncome && <TooltipContent><p>Please enter your estimated income first.</p></TooltipContent>}
+                </UiTooltip>
 
                 {financialRisk && financialRisk.dtiAnalysis && (
                   <div className="mt-6 space-y-6">
