@@ -307,14 +307,17 @@ export default function CreditWiseAIPage() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (error: any) {
+      // If sign in fails because the user doesn't exist, try creating a new account.
       if (error.code === 'auth/user-not-found') {
         try {
           await createUserWithEmailAndPassword(auth, email, password);
         } catch (createError: any) {
-          setAuthError(createError.message);
+          // Handle specific creation errors (e.g., weak password)
+          setAuthError(`Sign up failed: ${createError.message}`);
         }
       } else {
-        setAuthError(error.message);
+        // Handle other sign-in errors (e.g., wrong password)
+        setAuthError(`Sign in failed: ${error.message}`);
       }
     } finally {
       setIsSigningIn(false);
