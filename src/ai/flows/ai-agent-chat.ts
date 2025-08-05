@@ -61,14 +61,14 @@ const aiAgentChatFlow = ai.defineFlow(
     
     let contextPrompt = '';
     if (cibilReportAvailable) {
-      contextPrompt += `\nThe user has uploaded their CIBIL credit report. You can use this as a source of truth to answer questions. Do NOT ask them to upload it again.`;
+      contextPrompt += `\nThe user has uploaded their CIBIL credit report. You have access to this document. Use this as a source of truth to answer questions. Do NOT ask them to upload it again.`;
     }
     if (bankStatementAvailable) {
-        contextPrompt += `\nThe user has uploaded their bank statement. You can use this as a source of truth to answer questions. Do NOT ask them to upload it again.`;
+        contextPrompt += `\nThe user has uploaded their bank statement. You have access to this document. Use this as a source of truth to answer questions. Do NOT ask them to upload it again.`;
     }
 
     if (!contextPrompt) {
-        contextPrompt = `The user has not uploaded any document. If they ask questions that would require a CIBIL report or bank statement, inform them that you need them to upload a document first.`
+        contextPrompt = `The user has not uploaded any document. If they ask questions that would require a CIBIL report or bank statement, you MUST inform them that you need them to upload a document first.`
     }
 
     const systemPrompt = `You are a helpful AI Agent for the CreditWise AI application. Your goal is to be helpful and answer the user's questions accurately and concisely based on the documents they have provided. Maintain a friendly and conversational tone.

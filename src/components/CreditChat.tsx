@@ -152,9 +152,9 @@ export function AiAgentChat({
   return (
     <Card className={cn(
         "fixed bottom-4 right-4 z-50 w-full max-w-md shadow-2xl print:hidden transition-all",
-        isMinimized ? "h-16 overflow-hidden" : "h-auto"
+        isMinimized ? "h-16 overflow-hidden" : "h-[600px] flex flex-col"
       )}>
-      <CardHeader className="flex flex-row items-center justify-between p-4">
+      <CardHeader className="flex flex-row items-center justify-between p-4 border-b">
         <CardTitle className="flex items-center gap-2 text-lg">
           <Bot className="text-primary" />
           AI Agent
@@ -172,8 +172,9 @@ export function AiAgentChat({
       </CardHeader>
       
       {!isMinimized && (
-        <CardContent className="p-4 pt-0">
-          <ScrollArea className="h-64 pr-4" ref={scrollAreaRef}>
+        <>
+        <CardContent className="p-4 pt-4 flex-1">
+          <ScrollArea className="h-full pr-4" ref={scrollAreaRef}>
             <div className="space-y-4">
               {messages.map((message, index) => (
                 <div
@@ -226,7 +227,9 @@ export function AiAgentChat({
               )}
             </div>
           </ScrollArea>
-          <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-2">
+        </CardContent>
+        <div className="p-4 border-t">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-2">
             {mediaPreview && (
               <div className="relative w-24 h-24 mb-2">
                 <Image
@@ -287,7 +290,8 @@ export function AiAgentChat({
               </Button>
             </div>
           </form>
-        </CardContent>
+        </div>
+        </>
       )}
     </Card>
   );
