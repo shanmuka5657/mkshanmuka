@@ -175,6 +175,14 @@ type SalarySlipFile = {
   dataUri: string;
 };
 
+type BusinessFinancials = {
+  month: number;
+  revenue: number;
+  cogs: number; // Cost of Goods Sold
+  opex: number; // Operating Expenses
+};
+
+
 // Pricing for gemini-pro model per 1M tokens
 const INPUT_PRICE_PER_MILLION_TOKENS = 3.5; 
 const OUTPUT_PRICE_PER_MILLION_TOKENS = 10.5;
@@ -266,6 +274,19 @@ export default function CreditWiseAIPage() {
   });
   const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
 
+  // State for Business Verification
+  const [businessFinancials, setBusinessFinancials] = useState<BusinessFinancials[]>(
+    Array.from({ length: 6 }, (_, i) => ({ month: i + 1, revenue: 0, cogs: 0, opex: 0 }))
+  );
+  const [businessCalculations, setBusinessCalculations] = useState({
+      totalRevenue: 0,
+      totalCogs: 0,
+      totalOpex: 0,
+      totalGrossProfit: 0,
+      totalNetProfit: 0,
+      avgMonthlyIncome: 0,
+  });
+
 
   const { toast } = useToast()
   const creditFileInputRef = useRef<HTMLInputElement>(null);
@@ -300,6 +321,25 @@ export default function CreditWiseAIPage() {
     const outputCost = (tokenUsage.outputTokens / 1_000_000) * OUTPUT_PRICE_PER_MILLION_TOKENS;
     setEstimatedCost(inputCost + outputCost);
   }, [tokenUsage]);
+
+  // Effect to recalculate business income
+  useEffect(() => {
+    const totalRevenue = businessFinancials.reduce((sum, item) => sum + item.revenue, 0);
+    const totalCogs = businessFinancials.reduce((sum, item) => sum + item.cogs, 0);
+    const totalOpex = businessFinancials.reduce((sum, item) => sum + item.opex, 0);
+    const totalGrossProfit = totalRevenue - totalCogs;
+    const totalNetProfit = totalGrossProfit - totalOpex;
+    const avgMonthlyIncome = totalNetProfit > 0 ? totalNetProfit / 6 : 0;
+
+    setBusinessCalculations({
+        totalRevenue,
+        totalCogs,
+        totalOpex,
+        totalGrossProfit,
+        totalNetProfit,
+        avgMonthlyIncome,
+    });
+  }, [businessFinancials]);
 
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -404,6 +444,7 @@ export default function CreditWiseAIPage() {
     setEstimatedCost(0);
     setAssets([]);
     setEditingAssetId(null);
+    setBusinessFinancials(Array.from({ length: 6 }, (_, i) => ({ month: i + 1, revenue: 0, cogs: 0, opex: 0 })));
 
     if (creditFileInputRef.current) {
       creditFileInputRef.current.value = '';
@@ -906,6 +947,13 @@ export default function CreditWiseAIPage() {
   const handleNewAssetChange = (field: keyof Omit<Asset, 'id'>, value: string | number) => {
     setNewAsset(prev => ({ ...prev, [field]: value }));
   };
+
+  const handleBusinessFinancialsChange = (index: number, field: keyof Omit<BusinessFinancials, 'month'>, value: string) => {
+    const updatedFinancials = [...businessFinancials];
+    updatedFinancials[index] = { ...updatedFinancials[index], [field]: parseFloat(value) || 0 };
+    setBusinessFinancials(updatedFinancials);
+  };
+
 
   const assetCalculations = useMemo(() => {
     const totalAssetValue = assets.reduce((sum, asset) => sum + asset.consideredValue, 0);
@@ -2031,13 +2079,64 @@ export default function CreditWiseAIPage() {
                 )}
               </TabsContent>
               <TabsContent value="business" className="mt-4">
-                <Alert>
-                  <Wrench className="h-4 w-4" />
-                  <AlertTitle>Coming Soon!</AlertTitle>
-                  <AlertDescription>
-                    The Business Verification feature is currently under development.
-                  </AlertDescription>
-                </Alert>
+                  <div className="space-y-4">
+                    <Alert>
+                        <Wrench className="h-4 w-4" />
+                        <AlertTitle>For Self-Employed & Business Owners</AlertTitle>
+                        <AlertDescription>
+                          Enter your last 6 months of financials to calculate your average monthly income. This is used for more accurate loan eligibility assessments.
+                        </AlertDescription>
+                    </Alert>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Business Financials (Last 6 Months)</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="w-[80px]">Month</TableHead>
+                                <TableHead>Revenue (₹)</TableHead>
+                                <TableHead>Cost of Goods Sold (COGS) (₹)</TableHead>
+                                <TableHead>Operating Expenses (Opex) (₹)</TableHead>
+                                <TableHead>Gross Profit (₹)</TableHead>
+                                <TableHead>Net Profit (₹)</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {businessFinancials.map((item, index) => {
+                                const grossProfit = item.revenue - item.cogs;
+                                const netProfit = grossProfit - item.opex;
+                                return (
+                                  <TableRow key={item.month}>
+                                    <TableCell>{`Month ${item.month}`}</TableCell>
+                                    <TableCell><Input type="number" placeholder="0" value={item.revenue || ''} onChange={(e) => handleBusinessFinancialsChange(index, 'revenue', e.target.value)} /></TableCell>
+                                    <TableCell><Input type="number" placeholder="0" value={item.cogs || ''} onChange={(e) => handleBusinessFinancialsChange(index, 'cogs', e.target.value)} /></TableCell>
+                                    <TableCell><Input type="number" placeholder="0" value={item.opex || ''} onChange={(e) => handleBusinessFinancialsChange(index, 'opex', e.target.value)} /></TableCell>
+                                    <TableCell>₹{grossProfit.toLocaleString('en-IN')}</TableCell>
+                                    <TableCell>₹{netProfit.toLocaleString('en-IN')}</TableCell>
+                                  </TableRow>
+                                )
+                              })}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Business Income Summary</CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            <SummaryItem label="Total Revenue" value={`₹${businessCalculations.totalRevenue.toLocaleString('en-IN')}`} valueClassName="text-green-600"/>
+                            <SummaryItem label="Total Gross Profit" value={`₹${businessCalculations.totalGrossProfit.toLocaleString('en-IN')}`} valueClassName="text-green-600"/>
+                            <SummaryItem label="Total Net Profit" value={`₹${businessCalculations.totalNetProfit.toLocaleString('en-IN')}`} valueClassName="text-green-600"/>
+                            <SummaryItem label="Average Monthly Income" value={`₹${businessCalculations.avgMonthlyIncome.toLocaleString('en-IN')}`} valueClassName="text-primary font-bold"/>
+                        </CardContent>
+                    </Card>
+                  </div>
               </TabsContent>
               <TabsContent value="verification" className="mt-4">
                 <Card>
