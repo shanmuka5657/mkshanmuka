@@ -18,44 +18,28 @@ import {
   AlertCircle,
   BrainCircuit,
   FileSearch,
-  FileSymlink,
   LineChart,
-  CalendarDays,
   ShieldAlert,
-  Flag,
-  Search,
   Bot,
   ThumbsUp,
   ThumbsDown,
   Banknote,
   Printer,
   LogIn,
-  AreaChart,
   Gavel,
   BadgeCent,
   Wallet,
   CheckCircle,
   XCircle,
   Clock,
-  Coins,
   LayoutGrid,
   Pencil,
   PlayCircle,
-  Landmark,
   ArrowLeft,
   ChevronsUpDown,
-  TrendingUp,
-  Wrench,
   User as UserIcon,
-  PlusCircle,
-  Info,
   Save,
-  File as FileIcon,
-  Building2,
-  AlertTriangle,
-  Download,
-  Share2,
-  BadgeCheck,
+  Info,
   PieChart as PieChartIcon,
   BarChart as BarChartIcon,
 } from 'lucide-react';
@@ -65,7 +49,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { useToast } from "@/hooks/use-toast"
 import { analyzeCreditReport, AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
@@ -74,10 +57,7 @@ import { getLoanEligibility, LoanEligibilityOutput } from '@/ai/flows/loan-eligi
 import { getFinancialRiskAssessment, FinancialRiskOutput } from '@/ai/flows/financial-risk-assessment';
 import { getCreditUnderwriting, CreditUnderwritingOutput, CreditUnderwritingInput } from '@/ai/flows/credit-underwriting';
 import { calculateTotalEmi, CalculateTotalEmiOutput } from '@/ai/flows/calculate-total-emi';
-import { analyzeBankStatement, BankStatementAnalysisOutput } from '@/ai/flows/bank-statement-analysis';
-import { analyzeSalarySlips, SalarySlipAnalysisOutput } from '@/ai/flows/salary-slip-analysis';
 import { getRiskAssessment, RiskAssessmentOutput } from '@/ai/flows/risk-assessment';
-import { crossVerifyDocuments, CrossVerificationOutput } from '@/ai/flows/cross-verification';
 import { AiAgentChat } from '@/components/CreditChat';
 import { cn } from '@/lib/utils';
 import {
@@ -92,7 +72,6 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  TableCaption,
 } from "@/components/ui/table"
 import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { auth } from '@/lib/firebase';
@@ -103,7 +82,6 @@ import Link from 'next/link';
 import { saveTrainingCandidate } from '@/lib/training-store';
 import { Textarea } from '@/components/ui/textarea';
 import type { FlowUsage } from 'genkit/flow';
-import { format, differenceInMonths, parseISO, isValid, parse } from 'date-fns';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 
@@ -144,41 +122,17 @@ type ActiveView =
   | 'aiAnalysis' 
   | 'loanEligibility' 
   | 'obligations'
-  | 'incomeGuess'
   | 'creditUnderwriting'
   | 'financialRisk'
   | 'creditSummary'
   | null;
 
-type AnalysisType = 'credit' | 'bank' | 'salary';
+type AnalysisType = 'credit';
 
 type ActiveLoanDetail = CalculateTotalEmiOutput['activeLoans'][0] & {
     id: string; // Add a unique ID for React keys
     considerForObligation: 'Yes' | 'No';
     comment: string;
-};
-
-type Asset = {
-  id: string;
-  description: string;
-  type: string;
-  owner: string;
-  document: string;
-  purchaseDate: string;
-  investmentValue: number;
-  consideredValue: number;
-};
-
-type SalarySlipFile = {
-  file: File;
-  dataUri: string;
-};
-
-type BusinessFinancials = {
-  month: number;
-  revenue: number;
-  cogs: number; // Cost of Goods Sold
-  opex: number; // Operating Expenses
 };
 
 
@@ -210,23 +164,6 @@ export default function CreditWiseAIPage() {
   const [analysisResult, setAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   
-  // State for Bank Analysis
-  const [bankFile, setBankFile] = useState<File | null>(null);
-  const [bankFileName, setBankFileName] = useState('No bank statement chosen');
-  const [bankRawText, setBankRawText] = useState('');
-  const [bankAnalysisResult, setBankAnalysisResult] = useState<BankStatementAnalysisOutput | null>(null);
-  const [isAnalyzingBank, setIsAnalyzingBank] = useState(false);
-
-  // State for Salary Slip Analysis
-  const [salarySlipFiles, setSalarySlipFiles] = useState<SalarySlipFile[]>([]);
-  const [salaryAnalysisResult, setSalaryAnalysisResult] = useState<SalarySlipAnalysisOutput | null>(null);
-  const [isAnalyzingSalary, setIsAnalyzingSalary] = useState(false);
-  const [analystNotes, setAnalystNotes] = useState('');
-
-  // State for Cross-Verification
-  const [crossVerificationResult, setCrossVerificationResult] = useState<CrossVerificationOutput | null>(null);
-  const [isVerifying, setIsVerifying] = useState(false);
-
   const [totalEmi, setTotalEmi] = useState('');
   const [activeLoanDetails, setActiveLoanDetails] = useState<ActiveLoanDetail[]>([]);
   const [isCalculatingEmi, setIsCalculatingEmi] = useState(false);
@@ -260,37 +197,8 @@ export default function CreditWiseAIPage() {
   const [tokenUsage, setTokenUsage] = useState({ inputTokens: 0, outputTokens: 0 });
   const [estimatedCost, setEstimatedCost] = useState(0);
 
-  // New state for Asset Creation
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [newAsset, setNewAsset] = useState<Omit<Asset, 'id'>>({
-    description: '',
-    type: '',
-    owner: '',
-    document: '',
-    purchaseDate: '',
-    investmentValue: 0,
-    consideredValue: 0,
-  });
-  const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
-
-  // State for Business Verification
-  const [businessFinancials, setBusinessFinancials] = useState<BusinessFinancials[]>(
-    Array.from({ length: 6 }, (_, i) => ({ month: i + 1, revenue: 0, cogs: 0, opex: 0 }))
-  );
-  const [businessCalculations, setBusinessCalculations] = useState({
-      totalRevenue: 0,
-      totalCogs: 0,
-      totalOpex: 0,
-      totalGrossProfit: 0,
-      totalNetProfit: 0,
-      avgMonthlyIncome: 0,
-  });
-
-
   const { toast } = useToast()
   const creditFileInputRef = useRef<HTMLInputElement>(null);
-  const bankFileInputRef = useRef<HTMLInputElement>(null);
-  const salarySlipInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(setUser);
@@ -320,25 +228,6 @@ export default function CreditWiseAIPage() {
     const outputCost = (tokenUsage.outputTokens / 1_000_000) * OUTPUT_PRICE_PER_MILLION_TOKENS;
     setEstimatedCost(inputCost + outputCost);
   }, [tokenUsage]);
-
-  // Effect to recalculate business income
-  useEffect(() => {
-    const totalRevenue = businessFinancials.reduce((sum, item) => sum + item.revenue, 0);
-    const totalCogs = businessFinancials.reduce((sum, item) => sum + item.cogs, 0);
-    const totalOpex = businessFinancials.reduce((sum, item) => sum + item.opex, 0);
-    const totalGrossProfit = totalRevenue - totalCogs;
-    const totalNetProfit = totalGrossProfit - totalOpex;
-    const avgMonthlyIncome = totalNetProfit > 0 ? totalNetProfit / 6 : 0;
-
-    setBusinessCalculations({
-        totalRevenue,
-        totalCogs,
-        totalOpex,
-        totalGrossProfit,
-        totalNetProfit,
-        avgMonthlyIncome,
-    });
-  }, [businessFinancials]);
 
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -381,14 +270,7 @@ export default function CreditWiseAIPage() {
         resetState();
         setCreditFile(selectedFile);
         setCreditFileName(selectedFile.name);
-        processFile(selectedFile, 'credit');
-      } else if (type === 'bank') {
-        // Don't reset everything, just bank-related state
-        setBankFile(selectedFile);
-        setBankFileName(selectedFile.name);
-        setBankAnalysisResult(null);
-        setBankRawText('');
-        processFile(selectedFile, 'bank');
+        processFile(selectedFile);
       }
     }
   };
@@ -403,20 +285,6 @@ export default function CreditWiseAIPage() {
     setAnalysisResult(null);
     setIsAnalyzing(false);
     
-    setBankFile(null);
-    setBankFileName('No bank statement chosen');
-    setBankRawText('');
-    setBankAnalysisResult(null);
-    setIsAnalyzingBank(false);
-
-    setSalarySlipFiles([]);
-    setSalaryAnalysisResult(null);
-    setIsAnalyzingSalary(false);
-    setAnalystNotes('');
-
-    setCrossVerificationResult(null);
-    setIsVerifying(false);
-
     setTotalEmi('');
     setActiveLoanDetails([]);
     setIsCalculatingEmi(false);
@@ -441,15 +309,9 @@ export default function CreditWiseAIPage() {
     setIsAssessingRisk(false);
     setTokenUsage({ inputTokens: 0, outputTokens: 0 });
     setEstimatedCost(0);
-    setAssets([]);
-    setEditingAssetId(null);
-    setBusinessFinancials(Array.from({ length: 6 }, (_, i) => ({ month: i + 1, revenue: 0, cogs: 0, opex: 0 })));
 
     if (creditFileInputRef.current) {
       creditFileInputRef.current.value = '';
-    }
-    if (bankFileInputRef.current) {
-      bankFileInputRef.current.value = '';
     }
   };
 
@@ -462,7 +324,7 @@ export default function CreditWiseAIPage() {
   }, []);
 
 
-  const processFile = async (selectedFile: File, type: AnalysisType) => {
+  const processFile = async (selectedFile: File) => {
     setIsLoading(true);
     setProgress(10);
     try {
@@ -480,14 +342,10 @@ export default function CreditWiseAIPage() {
             setProgress(30 + Math.round((70 * i) / pdf.numPages));
           }
           
-          if (type === 'credit') {
-            setRawText(textContent);
-            const normalizedText = textContent.replace(/\s+/g, ' ').trim();
-            const scoreMatch = normalizedText.match(/(?:CIBIL (?:TRANSUNION )?SCORE|CREDITVISION. SCORE)\s*(\d{3})/i);
-            setCreditScore(scoreMatch ? parseInt(scoreMatch[1], 10) : null);
-          } else if (type === 'bank') {
-            setBankRawText(textContent);
-          }
+          setRawText(textContent);
+          const normalizedText = textContent.replace(/\s+/g, ' ').trim();
+          const scoreMatch = normalizedText.match(/(?:CIBIL (?:TRANSUNION )?SCORE|CREDITVISION. SCORE)\s*(\d{3})/i);
+          setCreditScore(scoreMatch ? parseInt(scoreMatch[1], 10) : null);
         }
       };
       reader.readAsArrayBuffer(selectedFile);
@@ -509,10 +367,6 @@ export default function CreditWiseAIPage() {
     handleGetRiskAssessment(rawText);
   };
   
-  const handleStartBankAnalysis = () => {
-    handleAnalyzeBankStatement(bankRawText);
-  };
-
 
   const handleAnalyze = async (text: string) => {
     if (!text) return;
@@ -535,104 +389,6 @@ export default function CreditWiseAIPage() {
       })
     } finally {
       setIsAnalyzing(false);
-    }
-  };
-  
-  const handleAnalyzeBankStatement = async (text: string) => {
-    if (!text) return;
-    setIsAnalyzingBank(true);
-    setBankAnalysisResult(null);
-    try {
-      const { output, usage } = await analyzeBankStatement({ statementText: text });
-      setBankAnalysisResult(output);
-      updateTokenUsage(usage);
-      toast({
-        title: "Bank Statement Analysis Complete",
-        description: "Your bank statement has been analyzed.",
-      })
-    } catch (error: any) {
-      console.error('Error analyzing bank statement:', error);
-       toast({
-        variant: "destructive",
-        title: "Analysis Failed",
-        description: error.message?.includes('429') || error.message?.includes('503') ? "The AI model is currently overloaded. Please try again later." : (error.message || "Could not get AI analysis. Please try again."),
-      })
-    } finally {
-      setIsAnalyzingBank(false);
-    }
-  };
-  
-  const handleSalarySlipFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files) {
-      const filePromises = Array.from(files).map(file => {
-        return new Promise<SalarySlipFile>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            resolve({ file, dataUri: e.target?.result as string });
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-      });
-
-      Promise.all(filePromises).then(newFiles => {
-        setSalarySlipFiles(prev => [...prev, ...newFiles].slice(0, 6)); // Limit to 6 files
-      }).catch(err => {
-        console.error("Error reading salary slip files:", err);
-        toast({ variant: 'destructive', title: 'Error reading files' });
-      });
-    }
-  };
-  
-  const handleAnalyzeSalarySlips = async () => {
-    if (salarySlipFiles.length === 0) {
-      toast({ variant: 'destructive', title: 'No files selected' });
-      return;
-    }
-    setIsAnalyzingSalary(true);
-    setSalaryAnalysisResult(null);
-    try {
-      const input = {
-        salarySlips: salarySlipFiles.map(f => ({ fileName: f.file.name, dataUri: f.dataUri })),
-      };
-      const { output, usage } = await analyzeSalarySlips(input);
-      setSalaryAnalysisResult(output);
-      updateTokenUsage(usage);
-
-      // Automation: Find the most recent salary and set the income
-      if (output && output.extractedSlips.length > 0) {
-        const sortedSlips = [...output.extractedSlips].sort((a, b) => {
-          const dateA = parse(a.payMonth, 'MMMM yyyy', new Date());
-          const dateB = parse(b.payMonth, 'MMMM yyyy', new Date());
-          if (!isValid(dateA)) return 1;
-          if (!isValid(dateB)) return -1;
-          return dateB.getTime() - dateA.getTime();
-        });
-
-        const mostRecentSlip = sortedSlips[0];
-        if (mostRecentSlip && mostRecentSlip.netSalary) {
-          const income = parseCurrency(mostRecentSlip.netSalary);
-          if (income > 0) {
-            setEstimatedIncome(String(income));
-            toast({
-              title: 'Income Automatically Detected',
-              description: `Estimated monthly income of ₹${income.toLocaleString('en-IN')} has been set from the latest salary slip.`,
-            });
-          }
-        }
-      }
-
-      toast({ title: 'Salary Slip Analysis Complete' });
-    } catch (error: any) {
-      console.error('Error analyzing salary slips:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Analysis Failed',
-        description: error.message?.includes('429') || error.message?.includes('503') ? "The AI model is currently overloaded. Please try again later." : (error.message || "Could not analyze salary slips."),
-      });
-    } finally {
-      setIsAnalyzingSalary(false);
     }
   };
 
@@ -869,33 +625,6 @@ export default function CreditWiseAIPage() {
     }
   };
 
-  const handleCrossVerify = async () => {
-    if (!analysisResult && !bankAnalysisResult && !salaryAnalysisResult) {
-      toast({ variant: 'destructive', title: 'No Data', description: 'Please analyze at least one document first.' });
-      return;
-    }
-    setIsVerifying(true);
-    setCrossVerificationResult(null);
-    try {
-      const { output, usage } = await crossVerifyDocuments({
-        cibilAnalysis: analysisResult || undefined,
-        bankStatementAnalysis: bankAnalysisResult || undefined,
-        salarySlipAnalysis: salaryAnalysisResult || undefined,
-      });
-      setCrossVerificationResult(output);
-      updateTokenUsage(usage);
-      toast({ title: 'Cross-Verification Complete' });
-    } catch (error: any) {
-      console.error('Error during cross-verification:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Verification Failed',
-        description: error.message?.includes('429') || error.message?.includes('503') ? "API limit reached." : (error.message || "Could not verify documents."),
-      });
-    } finally {
-      setIsVerifying(false);
-    }
-  };
 
   const handleLoanDetailChange = (id: string, field: 'considerForObligation' | 'comment' | 'emi', value: string | number) => {
       setActiveLoanDetails(prevDetails =>
@@ -905,77 +634,6 @@ export default function CreditWiseAIPage() {
       );
   };
 
-  const handleAddAsset = () => {
-    if (!newAsset.description || !newAsset.type || !newAsset.owner || !newAsset.document || !newAsset.purchaseDate || newAsset.investmentValue <= 0 || newAsset.consideredValue <= 0) {
-        toast({
-            variant: "destructive",
-            title: "All Fields Required",
-            description: "Please fill in all the asset details before adding.",
-        });
-        return;
-    }
-    const assetToAdd: Asset = {
-        ...newAsset,
-        id: `asset-${Date.now()}`
-    };
-    setAssets([...assets, assetToAdd]);
-    // Reset newAsset form
-    setNewAsset({
-        description: '',
-        type: '',
-        owner: '',
-        document: '',
-        purchaseDate: '',
-        investmentValue: 0,
-        consideredValue: 0,
-    });
-  };
-
-  const handleDeleteAsset = (id: string) => {
-    setAssets(assets.filter(asset => asset.id !== id));
-  };
-  
-  const handleAssetChange = (id: string, field: keyof Asset, value: string | number) => {
-    setAssets(prevAssets =>
-      prevAssets.map(asset =>
-        asset.id === id ? { ...asset, [field]: value } : asset
-      )
-    );
-  };
-
-  const handleNewAssetChange = (field: keyof Omit<Asset, 'id'>, value: string | number) => {
-    setNewAsset(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleBusinessFinancialsChange = (index: number, field: keyof Omit<BusinessFinancials, 'month'>, value: string) => {
-    const updatedFinancials = [...businessFinancials];
-    updatedFinancials[index] = { ...updatedFinancials[index], [field]: parseFloat(value) || 0 };
-    setBusinessFinancials(updatedFinancials);
-  };
-
-
-  const assetCalculations = useMemo(() => {
-    const totalAssetValue = assets.reduce((sum, asset) => sum + asset.consideredValue, 0);
-    const monthsIn4Years = 4 * 12;
-    // A simple surplus/income estimation. This can be made more complex.
-    const estimatedSurplus = totalAssetValue > 0 ? totalAssetValue * 0.1 : 0; // Assuming 10% surplus from total value
-    const approxIncome = totalAssetValue > 0 ? totalAssetValue / monthsIn4Years : 0;
-
-    return {
-      totalAssetValue,
-      estimatedSurplus,
-      approxIncome,
-    }
-  }, [assets]);
-
-  const dateConstraints = useMemo(() => {
-    const today = new Date();
-    const todayString = today.toISOString().split('T')[0];
-    const fourYearsAgo = new Date();
-    fourYearsAgo.setFullYear(today.getFullYear() - 4);
-    const fourYearsAgoString = fourYearsAgo.toISOString().split('T')[0];
-    return { min: fourYearsAgoString, max: todayString };
-  }, []);
 
   // Perform calculations on the client-side for accuracy
   const calculatedSummary = useMemo(() => {
@@ -1153,46 +811,6 @@ export default function CreditWiseAIPage() {
       default:
         return 'bg-muted border-border';
     }
-  };
-
-  const getFraudAssessmentBadge = (assessment: string) => {
-    const lowerCaseAssessment = assessment.toLowerCase();
-    if (lowerCaseAssessment.includes('appears authentic')) {
-      return (
-        <Badge variant="default" className="bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700">
-          <CheckCircle className="mr-1.5" /> Appears Authentic
-        </Badge>
-      );
-    }
-    if (lowerCaseAssessment.includes('moderate risk')) {
-      return (
-        <Badge variant="default" className="bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700">
-          <AlertTriangle className="mr-1.5" /> Moderate Risk
-        </Badge>
-      );
-    }
-    if (lowerCaseAssessment.includes('high risk')) {
-      return (
-        <Badge variant="destructive">
-          <ShieldAlert className="mr-1.5" /> High Risk of Fraud
-        </Badge>
-      );
-    }
-    return <Badge variant="outline">{assessment}</Badge>;
-  };
-
-  const getMatchStatusIcon = (status: string) => {
-    const lowerStatus = status.toLowerCase().replace(/\s+/g, '');
-    if (lowerStatus.includes('match')) {
-      return <BadgeCheck className="h-5 w-5 text-green-500" />;
-    }
-    if (lowerStatus.includes('mismatch')) {
-      return <XCircle className="h-5 w-5 text-destructive" />;
-    }
-    if (lowerStatus.includes('partialmatch')) {
-        return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
-    }
-    return <AlertCircle className="h-5 w-5 text-muted-foreground" />;
   };
 
 
@@ -1625,627 +1243,6 @@ export default function CreditWiseAIPage() {
                   <div>Click "Start Full AI Analysis" to generate the risk assessment.</div>
                 )}
             </CardContent>
-        </Card>
-      ),
-      incomeGuess: () => (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center text-xl font-bold">
-              <Wallet className="mr-3 h-6 w-6 text-primary" />
-              Income Guess
-            </CardTitle>
-            <CardDescription>
-              Provide your financial details through various verification methods.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="asset">
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="asset"><Landmark className="mr-2" />Asset Creation</TabsTrigger>
-                <TabsTrigger value="salary"><FileText className="mr-2" />Salary Slips</TabsTrigger>
-                <TabsTrigger value="bank"><Building2 className="mr-2" />Bank Statement</TabsTrigger>
-                <TabsTrigger value="business"><Wrench className="mr-2" />Business Verification</TabsTrigger>
-                <TabsTrigger value="verification"><ShieldCheck className="mr-2" />Cross-Verification</TabsTrigger>
-              </TabsList>
-              <TabsContent value="asset" className="mt-4">
-                 <div className="space-y-4">
-                    <Alert className="mb-4">
-                      <Info className="h-4 w-4" />
-                      <AlertTitle>What assets can I add?</AlertTitle>
-                      <AlertDescription>
-                          You can add any item of value that contributes to your financial standing. Examples include:
-                          <ul className="list-disc list-inside mt-2">
-                              <li><b>Financial Assets:</b> Stocks, Bonds, Mutual Funds, Fixed Deposits.</li>
-                              <li><b>Physical Assets:</b> Real Estate, Gold, Vehicles.</li>
-                              <li><b>Other Valuables:</b> Art, Antiques, or other items with significant market value.</li>
-                          </ul>
-                      </AlertDescription>
-                    </Alert>
-                    {/* New Asset Input Form */}
-                    <div className="p-4 border rounded-lg bg-muted/50">
-                        <h4 className="font-semibold mb-2">Add New Asset</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                            <div className="grid gap-1.5">
-                                <Label htmlFor="new-asset-desc">Asset Description</Label>
-                                <Input id="new-asset-desc" placeholder="e.g., Gold Chain, 24k" value={newAsset.description} onChange={(e) => handleNewAssetChange('description', e.target.value)} />
-                            </div>
-                             <div className="grid gap-1.5">
-                                <Label htmlFor="new-asset-type">Type</Label>
-                                <Input id="new-asset-type" placeholder="e.g., Jewellery" value={newAsset.type} onChange={(e) => handleNewAssetChange('type', e.target.value)} />
-                            </div>
-                            <div className="grid gap-1.5">
-                                <Label htmlFor="new-asset-owner">Owner</Label>
-                                <Input id="new-asset-owner" placeholder="e.g., Self, Joint" value={newAsset.owner} onChange={(e) => handleNewAssetChange('owner', e.target.value)} />
-                            </div>
-                             <div className="grid gap-1.5">
-                                <Label htmlFor="new-asset-doc">Document</Label>
-                                <Input id="new-asset-doc" placeholder="e.g., Purchase Bill" value={newAsset.document} onChange={(e) => handleNewAssetChange('document', e.target.value)} />
-                            </div>
-                             <div className="grid gap-1.5">
-                                <Label htmlFor="new-asset-date">Purchase Date</Label>
-                                <Input id="new-asset-date" type="date" value={newAsset.purchaseDate} onChange={(e) => handleNewAssetChange('purchaseDate', e.target.value)} min={dateConstraints.min} max={dateConstraints.max} />
-                            </div>
-                             <div className="grid gap-1.5">
-                                <Label htmlFor="new-asset-invest-value">Investment (₹)</Label>
-                                <Input id="new-asset-invest-value" type="number" placeholder="100000" value={newAsset.investmentValue || ''} onChange={(e) => handleNewAssetChange('investmentValue', parseFloat(e.target.value) || 0)} />
-                            </div>
-                             <div className="grid gap-1.5">
-                                <Label htmlFor="new-asset-cons-value">Considered Value (₹)</Label>
-                                <Input id="new-asset-cons-value" type="number" placeholder="90000" value={newAsset.consideredValue || ''} onChange={(e) => handleNewAssetChange('consideredValue', parseFloat(e.target.value) || 0)} />
-                            </div>
-                            <div className="flex items-end">
-                                <Button onClick={handleAddAsset} className="w-full"><PlusCircle className="mr-2"/> Add Asset</Button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="overflow-x-auto">
-                        <Table>
-                          <TableCaption>A list of your manually added assets.</TableCaption>
-                          <TableHeader>
-                            <TableRow>
-                                <TableHead className="min-w-[150px]">Description</TableHead>
-                                <TableHead className="min-w-[120px]">Type</TableHead>
-                                <TableHead className="min-w-[120px]">Owner</TableHead>
-                                <TableHead className="min-w-[150px]">Document</TableHead>
-                                <TableHead className="min-w-[150px]">Purchase Date</TableHead>
-                                <TableHead>Months</TableHead>
-                                <TableHead className="min-w-[150px]">Investment (₹)</TableHead>
-                                <TableHead className="min-w-[150px]">Considered (₹)</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {assets.map((asset) => {
-                                const isEditing = editingAssetId === asset.id;
-                                const purchaseDate = isValid(parseISO(asset.purchaseDate)) ? parseISO(asset.purchaseDate) : null;
-                                const months = purchaseDate ? differenceInMonths(new Date(), purchaseDate) : 0;
-                                return (
-                                <TableRow key={asset.id}>
-                                    <TableCell>
-                                      {isEditing ? <Input value={asset.description} onChange={(e) => handleAssetChange(asset.id, 'description', e.target.value)} /> : asset.description}
-                                    </TableCell>
-                                    <TableCell>
-                                      {isEditing ? <Input value={asset.type} onChange={(e) => handleAssetChange(asset.id, 'type', e.target.value)} /> : asset.type}
-                                    </TableCell>
-                                    <TableCell>
-                                      {isEditing ? <Input value={asset.owner} onChange={(e) => handleAssetChange(asset.id, 'owner', e.target.value)} /> : asset.owner}
-                                    </TableCell>
-                                    <TableCell>
-                                      {isEditing ? <Input value={asset.document} onChange={(e) => handleAssetChange(asset.id, 'document', e.target.value)}/> : asset.document}
-                                    </TableCell>
-                                    <TableCell>
-                                      {isEditing ? <Input type="date" value={asset.purchaseDate} onChange={(e) => handleAssetChange(asset.id, 'purchaseDate', e.target.value)} min={dateConstraints.min} max={dateConstraints.max} />: asset.purchaseDate}
-                                    </TableCell>
-                                    <TableCell className="text-center">{months}</TableCell>
-                                    <TableCell>
-                                      {isEditing ? <Input type="number" value={asset.investmentValue || ''} onChange={(e) => handleAssetChange(asset.id, 'investmentValue', parseFloat(e.target.value) || 0)} /> : `₹${asset.investmentValue.toLocaleString('en-IN')}`}
-                                    </TableCell>
-                                    <TableCell>
-                                      {isEditing ? <Input type="number" value={asset.consideredValue || ''} onChange={(e) => handleAssetChange(asset.id, 'consideredValue', parseFloat(e.target.value) || 0)}/> : `₹${asset.consideredValue.toLocaleString('en-IN')}`}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        {isEditing ? (
-                                             <Button variant="ghost" size="icon" onClick={() => setEditingAssetId(null)}>
-                                                <Save className="h-4 w-4 text-primary"/>
-                                            </Button>
-                                        ) : (
-                                            <div className="flex gap-2 justify-end">
-                                              <Button variant="ghost" size="icon" onClick={() => setEditingAssetId(asset.id)}>
-                                                  <Pencil className="h-4 w-4"/>
-                                              </Button>
-                                              <Button variant="ghost" size="icon" onClick={() => handleDeleteAsset(asset.id)}>
-                                                  <Trash2 className="h-4 w-4 text-destructive"/>
-                                              </Button>
-                                            </div>
-                                        )}
-                                    </TableCell>
-                                </TableRow>
-                            )})}
-                          </TableBody>
-                        </Table>
-                    </div>
-
-                    {assets.length > 0 && (
-                        <Card className="bg-muted/50">
-                            <CardHeader>
-                                <CardTitle>Asset Summary</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <SummaryItem label="Total Asset Value" value={`₹${assetCalculations.totalAssetValue.toLocaleString('en-IN')}`} valueClassName="text-primary"/>
-                                    <SummaryItem label="Estimated Surplus" value={`₹${assetCalculations.estimatedSurplus.toLocaleString('en-IN')}`} valueClassName="text-green-600"/>
-                                    <SummaryItem label="Approx. Income / Month" value={`₹${assetCalculations.approxIncome.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} valueClassName="text-green-600"/>
-                                </div>
-                                <Accordion type="single" collapsible className="w-full mt-4">
-                                  <AccordionItem value="item-1">
-                                    <AccordionTrigger>
-                                        <div className="flex items-center text-sm gap-2">
-                                            <Info className="h-4 w-4"/> How are these calculated?
-                                        </div>
-                                    </AccordionTrigger>
-                                    <AccordionContent>
-                                        <div className="prose prose-sm dark:prose-invert max-w-none">
-                                            <ul>
-                                                <li><strong>Total Asset Value:</strong> This is the sum of the "Considered Value" for all assets you have entered.</li>
-                                                <li><strong>Estimated Surplus:</strong> A simple assumption that 10% of your total asset value could be considered as a financial surplus or buffer. (Formula: <code>Total Asset Value * 0.10</code>)</li>
-                                                <li><strong>Approx. Income / Month:</strong> This metric estimates a potential monthly income by distributing the "Total Asset Value" over a 4-year period (48 months). This is a common heuristic in some financial assessments to model asset liquidation over time. (Formula: <code>Total Asset Value / 48</code>)</li>
-                                            </ul>
-                                        </div>
-                                    </AccordionContent>
-                                  </AccordionItem>
-                                </Accordion>
-                            </CardContent>
-                        </Card>
-                    )}
-                 </div>
-              </TabsContent>
-              <TabsContent value="salary" className="mt-4">
-                <div className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Salary Slip Upload & Analysis</CardTitle>
-                      <CardDescription>Upload up to 6 salary slips (PDF) for AI analysis and fraud detection. Analysis will start automatically.</CardDescription>
-                      <div className="flex gap-2 pt-2">
-                           <Button onClick={() => salarySlipInputRef.current?.click()}>
-                              <UploadCloud className="mr-2" />
-                              Choose Salary Slips
-                          </Button>
-                           <Button onClick={handleAnalyzeSalarySlips} disabled={isAnalyzingSalary || salarySlipFiles.length === 0}>
-                            {isAnalyzingSalary ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                            Analyze {salarySlipFiles.length} Salary Slips
-                          </Button>
-                          <Input ref={salarySlipInputRef} type="file" accept=".pdf" onChange={handleSalarySlipFileChange} className="hidden" multiple />
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {salarySlipFiles.length > 0 && (
-                        <div className="space-y-2">
-                          <p className="text-sm font-medium">Selected Files:</p>
-                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                          {salarySlipFiles.map((slip, index) => (
-                            <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md text-sm">
-                              <FileIcon className="h-4 w-4 shrink-0"/>
-                              <span className="truncate">{slip.file.name}</span>
-                              <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto shrink-0" onClick={() => setSalarySlipFiles(salarySlipFiles.filter((_, i) => i !== index))}>
-                                <XCircle className="h-4 w-4"/>
-                              </Button>
-                            </div>
-                          ))}
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                  {isAnalyzingSalary ? (
-                     <div className="flex items-center justify-center py-10">
-                        <Loader2 className="mr-3 h-8 w-8 animate-spin text-primary" />
-                        <span className="text-muted-foreground">AI is analyzing salary slips... This may take a minute.</span>
-                    </div>
-                  ) : salaryAnalysisResult && (
-                    <div className="space-y-6">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Extracted Salary Details</CardTitle>
-                          <CardDescription>Last analysis: {new Date().toLocaleString()}</CardDescription>
-                        </CardHeader>
-                        <CardContent className="overflow-x-auto">
-                           <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>File Name</TableHead>
-                                  <TableHead>Pay Month</TableHead>
-                                  <TableHead>Name</TableHead>
-                                  <TableHead>DOB</TableHead>
-                                  <TableHead>DOJ</TableHead>
-                                  <TableHead>Gross Salary</TableHead>
-                                  <TableHead>Incentives</TableHead>
-                                  <TableHead>Net Salary</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {salaryAnalysisResult.extractedSlips.map((slip, index) => (
-                                  <TableRow key={index}>
-                                    <TableCell className="font-medium text-muted-foreground">{slip.fileName}</TableCell>
-                                    <TableCell>{slip.payMonth}</TableCell>
-                                    <TableCell>{slip.name}</TableCell>
-                                    <TableCell>{slip.dateOfBirth}</TableCell>
-                                    <TableCell>{slip.dateOfJoining}</TableCell>
-                                    <TableCell>{slip.grossSalary}</TableCell>
-                                    <TableCell>{slip.incentives}</TableCell>
-                                    <TableCell className="font-semibold text-primary">{slip.netSalary}</TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                        </CardContent>
-                      </Card>
-                       <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center justify-between">
-                            <span className="flex items-center gap-2"><ShieldCheck/>AI Fraud Detection Report</span>
-                            <div className="flex items-center gap-4">
-                              {getFraudAssessmentBadge(salaryAnalysisResult.fraudReport.overallAssessment)}
-                              <div className="text-sm">
-                                  Authenticity Confidence: <strong className="text-lg">{salaryAnalysisResult.fraudReport.authenticityConfidence}%</strong>
-                              </div>
-                            </div>
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                           <div className="prose prose-sm dark:prose-invert max-w-none grid md:grid-cols-2 gap-x-8">
-                            <div>
-                              <h4 className="font-bold">Consistency Check</h4>
-                              <p>{salaryAnalysisResult.fraudReport.consistencyCheck}</p>
-                            </div>
-                            <div>
-                              <h4 className="font-bold">Pattern Analysis</h4>
-                              <p>{salaryAnalysisResult.fraudReport.patternAnalysis}</p>
-                            </div>
-                            <div>
-                              <h4 className="font-bold">Formatting & Tampering Anomalies</h4>
-                              <p>{salaryAnalysisResult.fraudReport.formattingAnomalies}</p>
-                              <p>{salaryAnalysisResult.fraudReport.tamperingIndicators}</p>
-                            </div>
-                           </div>
-                        </CardContent>
-                      </Card>
-                      <Card>
-                          <CardHeader>
-                              <CardTitle>Analyst Notes</CardTitle>
-                              <CardDescription>Internal notes for this report. Not shared with the applicant.</CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                              <Textarea
-                                  value={analystNotes}
-                                  onChange={(e) => setAnalystNotes(e.target.value)}
-                                  placeholder="Enter any internal notes about this analysis..."
-                                  rows={4}
-                              />
-                          </CardContent>
-                          <CardFooter className="gap-2">
-                               <Button><Download className="mr-2" /> Download PDF</Button>
-                               <Button variant="outline"><Share2 className="mr-2" /> Share Report</Button>
-                           </CardFooter>
-                      </Card>
-                    </div>
-                  )}
-                </div>
-              </TabsContent>
-               <TabsContent value="bank" className="mt-4">
-                <Card>
-                  <CardHeader>
-                      <CardTitle>Bank Statement Upload & Analysis</CardTitle>
-                      <CardDescription>Upload a bank statement PDF to analyze income, expenses, and financial health.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                      <div className="flex flex-wrap items-center gap-4">
-                          <Button onClick={() => bankFileInputRef.current?.click()}>
-                              <UploadCloud className="mr-2" />
-                              Choose Bank Statement PDF
-                          </Button>
-                          <Input ref={bankFileInputRef} type="file" accept=".pdf" onChange={(e) => handleFileChange(e, 'bank')} className="hidden" />
-                          <span className="text-muted-foreground flex-1 min-w-0 truncate">{bankFileName}</span>
-                          {bankFile && (
-                              <Button variant="ghost" size="icon" onClick={() => { setBankFile(null); setBankFileName('No bank statement chosen'); setBankAnalysisResult(null); setBankRawText(''); }}>
-                                  <Trash2 className="h-5 w-5" />
-                                  <span className="sr-only">Remove file</span>
-                              </Button>
-                          )}
-                      </div>
-                      {bankFile && !isLoading && !bankAnalysisResult && (
-                          <div className="mt-4">
-                              <Alert>
-                                  <AlertCircle className="h-4 w-4" />
-                                  <AlertTitle>Ready to Analyze</AlertTitle>
-                                  <AlertDescription>
-                                  The bank statement has been processed. Click the button below to run the AI analysis.
-                                  </AlertDescription>
-                              </Alert>
-                              <Button onClick={handleStartBankAnalysis} disabled={isAnalyzingBank} className="mt-4">
-                                  {isAnalyzingBank ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />}
-                                  Start Bank Statement Analysis
-                              </Button>
-                          </div>
-                      )}
-                  </CardContent>
-                </Card>
-                {isAnalyzingBank ? (
-                  <div className="flex items-center justify-center py-10">
-                      <Loader2 className="mr-3 h-8 w-8 animate-spin text-primary" />
-                      <span className="text-muted-foreground">AI is analyzing your statement... This can take up to a minute.</span>
-                  </div>
-                ) : bankAnalysisResult && (
-                    <div className="space-y-8 mt-4">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center text-xl font-bold"><FileText className="mr-3 h-6 w-6 text-primary" />Account Summary</CardTitle>
-                                <CardDescription>Key details extracted from the statement.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                              <InfoItem label="Account Holder" value={bankAnalysisResult.summary.accountHolder} />
-                              <InfoItem label="Bank Name" value={bankAnalysisResult.summary.bankName} />
-                              <InfoItem label="Account Number" value={bankAnalysisResult.summary.accountNumber} />
-                              <InfoItem label="Mobile Number" value={bankAnalysisResult.summary.mobileNumber} />
-                              <InfoItem label="Address" value={bankAnalysisResult.summary.address} />
-                              <InfoItem label="Statement Period" value={bankAnalysisResult.summary.statementPeriod} />
-                              <InfoItem label="Opening Balance" value={bankAnalysisResult.summary.openingBalance} />
-                              <InfoItem label="Closing Balance" value={bankAnalysisResult.summary.closingBalance} />
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center text-xl font-bold"><BarChartBig className="mr-3 h-6 w-6 text-primary" />Financial Overview</CardTitle>
-                            </Header>
-                            <CardContent className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                <SummaryItem label="Total Deposits" value={bankAnalysisResult.overview.totalDeposits} valueClassName="text-green-600" />
-                                <SummaryItem label="Total Withdrawals" value={bankAnalysisResult.overview.totalWithdrawals} valueClassName="text-destructive" />
-                                <SummaryItem label="Average Balance" value={bankAnalysisResult.overview.averageBalance} valueClassName="text-foreground" />
-                                <SummaryItem label="Estimated Monthly Income" value={bankAnalysisResult.overview.estimatedMonthlyIncome} valueClassName="text-primary" />
-                            </CardContent>
-                        </Card>
-                        
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center text-xl font-bold"><ChevronsUpDown className="mr-3 h-6 w-6 text-primary" />Detailed Financial Overview</CardTitle>
-                            </Header>
-                            <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                                <SummaryItem label="Salary Credits" value={bankAnalysisResult.detailedOverview.salaryCredits} valueClassName="text-green-600" />
-                                <SummaryItem label="Incentive Credits" value={bankAnalysisResult.detailedOverview.incentiveCredits} valueClassName="text-green-600" />
-                                <SummaryItem label="Mandate Debits" value={bankAnalysisResult.detailedOverview.mandateDebits} valueClassName="text-destructive" />
-                                <SummaryItem label="Cheque Inward" value={bankAnalysisResult.detailedOverview.chequeInward} valueClassName="text-green-600" />
-                                <SummaryItem label="Cheque Outward" value={bankAnalysisResult.detailedOverview.chequeOutward} valueClassName="text-destructive" />
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center text-xl font-bold"><BrainCircuit className="mr-3 h-6 w-6 text-primary" />AI Financial Health Summary</CardTitle>
-                            </Header>
-                            <CardContent className="prose prose-sm dark:prose-invert max-w-none">
-                                <div>{bankAnalysisResult.health.summary}</div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                                    <div>
-                                        <h4 className="font-semibold text-green-600">Strengths</h4>
-                                        <ul className="list-disc pl-5">
-                                            {bankAnalysisResult.health.strengths.map((item, i) => <li key={i}>{item}</li>)}
-                                        </ul>
-                                    </div>
-                                    <div>
-                                        <h4 className="font-semibold text-destructive">Risks</h4>
-                                        <ul className="list-disc pl-5">
-                                            {bankAnalysisResult.health.risks.map((item, i) => <li key={i}>{item}</li>)}
-                                        </ul>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="flex items-center text-xl font-bold">
-                              <Pencil className="mr-3 h-5 w-5" /> Recent Transactions
-                            </CardTitle>
-                            <CardDescription>A list of notable recent transactions identified by the AI.</CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Date</TableHead>
-                                  <TableHead>Description</TableHead>
-                                  <TableHead>Category</TableHead>
-                                  <TableHead className="text-right">Amount</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {bankAnalysisResult.transactions.map((txn, index) => (
-                                  <TableRow key={index}>
-                                    <TableCell>{txn.date}</TableCell>
-                                    <TableCell className="font-medium">{txn.description}</TableCell>
-                                    <TableCell>{txn.category}</TableCell>
-                                    <TableCell className={cn("text-right font-semibold", txn.type === 'credit' ? 'text-green-600' : 'text-destructive')}>
-                                        {txn.type === 'credit' ? '+' : '-'} {txn.amount}
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </CardContent>
-                        </Card>
-                    </div>
-                )}
-              </TabsContent>
-              <TabsContent value="business" className="mt-4">
-                  <div className="space-y-4">
-                    <Alert>
-                        <Wrench className="h-4 w-4" />
-                        <AlertTitle>For Self-Employed & Business Owners</AlertTitle>
-                        <AlertDescription>
-                          Enter your last 6 months of financials to calculate your average monthly income. This is used for more accurate loan eligibility assessments.
-                        </AlertDescription>
-                    </Alert>
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Business Financials (Last 6 Months)</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="overflow-x-auto">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead className="w-[80px]">Month</TableHead>
-                                <TableHead>Revenue (₹)</TableHead>
-                                <TableHead>Cost of Goods Sold (COGS) (₹)</TableHead>
-                                <TableHead>Operating Expenses (Opex) (₹)</TableHead>
-                                <TableHead>Gross Profit (₹)</TableHead>
-                                <TableHead>Net Profit (₹)</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {businessFinancials.map((item, index) => {
-                                const grossProfit = item.revenue - item.cogs;
-                                const netProfit = grossProfit - item.opex;
-                                return (
-                                  <TableRow key={item.month}>
-                                    <TableCell>{`Month ${item.month}`}</TableCell>
-                                    <TableCell><Input type="number" placeholder="0" value={item.revenue || ''} onChange={(e) => handleBusinessFinancialsChange(index, 'revenue', e.target.value)} /></TableCell>
-                                    <TableCell><Input type="number" placeholder="0" value={item.cogs || ''} onChange={(e) => handleBusinessFinancialsChange(index, 'cogs', e.target.value)} /></TableCell>
-                                    <TableCell><Input type="number" placeholder="0" value={item.opex || ''} onChange={(e) => handleBusinessFinancialsChange(index, 'opex', e.target.value)} /></TableCell>
-                                    <TableCell>₹{grossProfit.toLocaleString('en-IN')}</TableCell>
-                                    <TableCell>₹{netProfit.toLocaleString('en-IN')}</TableCell>
-                                  </TableRow>
-                                )
-                              })}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Business Income Summary</CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            <SummaryItem label="Total Revenue" value={`₹${businessCalculations.totalRevenue.toLocaleString('en-IN')}`} valueClassName="text-green-600"/>
-                            <SummaryItem label="Total Gross Profit" value={`₹${businessCalculations.totalGrossProfit.toLocaleString('en-IN')}`} valueClassName="text-green-600"/>
-                            <SummaryItem label="Total Net Profit" value={`₹${businessCalculations.totalNetProfit.toLocaleString('en-IN')}`} valueClassName="text-green-600"/>
-                            <SummaryItem label="Average Monthly Income" value={`₹${businessCalculations.avgMonthlyIncome.toLocaleString('en-IN')}`} valueClassName="text-primary font-bold"/>
-                        </CardContent>
-                    </Card>
-                  </div>
-              </TabsContent>
-              <TabsContent value="verification" className="mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Cross-Verification Analysis</CardTitle>
-                    <CardDescription>
-                      Compare key details between all uploaded documents to check for consistency.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button onClick={handleCrossVerify} disabled={isVerifying || (!analysisResult && !bankAnalysisResult && !salaryAnalysisResult)}>
-                      {isVerifying ? <Loader2 className="mr-2 animate-spin" /> : <ShieldCheck className="mr-2" />}
-                      Verify Documents
-                    </Button>
-                    {isVerifying && (
-                      <div className="flex items-center justify-center py-10">
-                        <Loader2 className="mr-3 h-8 w-8 animate-spin text-primary" />
-                        <span className="text-muted-foreground">AI is comparing documents...</span>
-                      </div>
-                    )}
-                    {crossVerificationResult && (
-                      <div className="mt-6 space-y-4">
-                        <Alert>
-                          <AlertCircle className="h-4 w-4" />
-                          <AlertTitle>Overall Assessment</AlertTitle>
-                          <AlertDescription>{crossVerificationResult.overallAssessment}</AlertDescription>
-                        </Alert>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Field</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead>CIBIL</TableHead>
-                              <TableHead>Bank Stmt.</TableHead>
-                              <TableHead>Salary Slip</TableHead>
-                              <TableHead>AI Remarks</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            <TableRow>
-                              <TableCell className="font-semibold">Name</TableCell>
-                              <TableCell>{getMatchStatusIcon(crossVerificationResult.name.status)}</TableCell>
-                              <TableCell>{crossVerificationResult.name.cibilValue}</TableCell>
-                              <TableCell>{crossVerificationResult.name.bankStatementValue}</TableCell>
-                              <TableCell>{crossVerificationResult.name.salarySlipValue}</TableCell>
-                              <TableCell>{crossVerificationResult.name.details}</TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell className="font-semibold">Date of Birth</TableCell>
-                              <TableCell>{getMatchStatusIcon(crossVerificationResult.dob.status)}</TableCell>
-                              <TableCell>{crossVerificationResult.dob.cibilValue}</TableCell>
-                              <TableCell>{crossVerificationResult.dob.bankStatementValue}</TableCell>
-                              <TableCell>{crossVerificationResult.dob.salarySlipValue}</TableCell>
-                              <TableCell>{crossVerificationResult.dob.details}</TableCell>
-                            </TableRow>
-                             <TableRow>
-                              <TableCell className="font-semibold">PAN</TableCell>
-                              <TableCell>{getMatchStatusIcon(crossVerificationResult.pan.status)}</TableCell>
-                              <TableCell>{crossVerificationResult.pan.cibilValue}</TableCell>
-                              <TableCell>{crossVerificationResult.pan.bankStatementValue}</TableCell>
-                              <TableCell>{crossVerificationResult.pan.salarySlipValue}</TableCell>
-                              <TableCell>{crossVerificationResult.pan.details}</TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell className="font-semibold">Mobile</TableCell>
-                              <TableCell>{getMatchStatusIcon(crossVerificationResult.mobile.status)}</TableCell>
-                              <TableCell>{crossVerificationResult.mobile.cibilValue}</TableCell>
-                              <TableCell>{crossVerificationResult.mobile.bankStatementValue}</TableCell>
-                              <TableCell>{crossVerificationResult.mobile.salarySlipValue}</TableCell>
-                              <TableCell>{crossVerificationResult.mobile.details}</TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell className="font-semibold">Address</TableCell>
-                              <TableCell>{getMatchStatusIcon(crossVerificationResult.address.status)}</TableCell>
-                              <TableCell className="max-w-xs truncate">{crossVerificationResult.address.cibilValue}</TableCell>
-                              <TableCell className="max-w-xs truncate">{crossVerificationResult.address.bankStatementValue}</TableCell>
-                              <TableCell className="max-w-xs truncate">{crossVerificationResult.address.salarySlipValue}</TableCell>
-                              <TableCell>{crossVerificationResult.address.details}</TableCell>
-                            </TableRow>
-                          </TableBody>
-                        </Table>
-                         <Card>
-                            <CardHeader>
-                                <CardTitle className="text-lg">Income Consistency</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div className="flex flex-col items-center">
-                                        <div className="text-sm text-muted-foreground">Status</div>
-                                        <div className="font-bold">{crossVerificationResult.income.status}</div>
-                                    </div>
-                                    <div className="flex flex-col items-center">
-                                        <div className="text-sm text-muted-foreground">Bank Stmt Income</div>
-                                        <div className="font-bold">{crossVerificationResult.income.bankStatementIncome}</div>
-                                    </div>
-                                    <div className="flex flex-col items-center">
-                                        <div className="text-sm text-muted-foreground">Salary Slip Income</div>
-                                        <div className="font-bold">{crossVerificationResult.income.salarySlipIncome}</div>
-                                    </div>
-                                </div>
-                                <div className="text-sm text-muted-foreground mt-4 text-center">{crossVerificationResult.income.details}</div>
-                            </CardContent>
-                         </Card>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
         </Card>
       ),
       creditUnderwriting: (
@@ -2817,12 +1814,11 @@ export default function CreditWiseAIPage() {
                       <CardTitle className="text-2xl font-bold">Analysis Dashboard</CardTitle>
                       <CardDescription>Select a section to view its detailed analysis. Some sections require previous steps to be completed.</CardDescription>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    <CardContent className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
                       <NavButton view="creditSummary" label="Credit Summary" icon={<LayoutGrid size={24} />} disabled={!analysisResult} tooltipContent="Please run the main analysis first." />
                       <NavButton view="aiAnalysis" label="AI Risk Assessment" icon={<BrainCircuit size={24} />} disabled={!analysisResult} tooltipContent="Please run the main analysis first." />
                       <NavButton view="aiMeter" label="AI Credit Meter" icon={<Bot size={24} />} disabled={!riskAssessment} tooltipContent="Please complete the AI Risk Assessment first."/>
                       <NavButton view="obligations" label="Financials & Obligations" icon={<Calculator size={24} />} disabled={!rawText} tooltipContent="Please upload and parse a CIBIL report first." />
-                      <NavButton view="incomeGuess" label="Income Guess" icon={<Wallet size={24} />} disabled={!rawText} tooltipContent="Please upload and parse a CIBIL report first." />
                       <NavButton view="loanEligibility" label="AI Loan Eligibility" icon={<Banknote size={24} />} disabled={!aiRating || !estimatedIncome} tooltipContent="Please complete AI Credit Meter and enter income first."/>
                       <NavButton view="financialRisk" label="AI Financial Risk" icon={<BadgeCent size={24} />} disabled={!estimatedIncome} tooltipContent="Please enter your estimated income first."/>
                       <NavButton view="creditUnderwriting" label="AI Credit Underwriting" icon={<Gavel size={24} />} disabled={!loanEligibility} tooltipContent="Please complete AI Loan Eligibility analysis first." />
@@ -2837,7 +1833,7 @@ export default function CreditWiseAIPage() {
                 </div>
             )}
 
-            {(rawText || bankAnalysisResult) && (
+            {rawText && (
               <div className="space-y-8 mt-8">
                   <Card className="print:hidden mt-8">
                       <Accordion type="single" collapsible className="w-full">
@@ -2862,13 +1858,13 @@ export default function CreditWiseAIPage() {
                                                 <CardTitle>Raw Text</CardTitle>
                                             </CardHeader>
                                             <CardContent>
-                                                <pre className="whitespace-pre-wrap text-xs bg-muted p-4 rounded-lg max-h-96 overflow-auto">{rawText || bankRawText}</pre>
+                                                <pre className="whitespace-pre-wrap text-xs bg-muted p-4 rounded-lg max-h-96 overflow-auto">{rawText}</pre>
                                             </CardContent>
                                         </Card>
                                       )}
                                       <Card className="bg-muted/50">
                                           <CardHeader>
-                                              <CardTitle className="text-lg flex items-center"><Coins className="mr-3 text-primary"/>Analysis Cost</CardTitle>
+                                              <CardTitle className="text-lg flex items-center"><Wallet className="mr-3 text-primary"/>Analysis Cost</CardTitle>
                                           </CardHeader>
                                           <CardContent className="grid grid-cols-3 gap-4">
                                               <SummaryItem label="Input Tokens" value={tokenUsage.inputTokens.toLocaleString()} valueClassName="text-foreground" />
@@ -2893,7 +1889,7 @@ export default function CreditWiseAIPage() {
             
             <AiAgentChat 
               cibilReportText={rawText ? rawText : undefined} 
-              bankStatementText={bankRawText ? bankRawText : undefined}
+              bankStatementText={undefined}
               onNewChat={() => setTokenUsage({ inputTokens: 0, outputTokens: 0 })}
               onTokensUsed={updateTokenUsage}
             />
