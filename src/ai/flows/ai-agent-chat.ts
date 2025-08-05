@@ -28,8 +28,8 @@ const AiAgentChatMessageSchema = z.object({
 // The input now includes the history of the conversation and the CIBIL report
 const AiAgentChatInputSchema = z.object({
   history: z.array(AiAgentChatMessageSchema).describe('The conversation history.'),
-  cibilReportText: z.string().optional().describe('The full text of the user\'s CIBIL report.'),
-  bankStatementText: z.string().optional().describe('The full text of the user\'s bank statement.'),
+  cibilReportAvailable: z.boolean().describe('Whether a CIBIL report has been uploaded.'),
+  bankStatementAvailable: z.boolean().describe('Whether a bank statement has been uploaded.'),
 });
 export type AiAgentChatHistory = z.infer<typeof AiAgentChatMessageSchema>;
 export type AiAgentChatInput = z.infer<typeof AiAgentChatInputSchema>;
@@ -57,27 +57,23 @@ const aiAgentChatFlow = ai.defineFlow(
         usage: z.any(),
     }),
   },
-  async ({ history, cibilReportText, bankStatementText }) => {
+  async ({ history, cibilReportAvailable, bankStatementAvailable }) => {
     
     let contextPrompt = '';
-    if (cibilReportText) {
-      contextPrompt = `
-      IMPORTANT: You have access to the user's CIBIL credit report. Use it as the primary source of truth to answer any questions related to their credit history, score, accounts, etc. When asked about their score or other specific data, reference this report directly. Here is the report:
-      \`\`\`
-      ${cibilReportText}
-      \`\`\``
-    } else if (bankStatementText) {
-        contextPrompt = `
-        IMPORTANT: You have access to the user's Bank Statement. Use it as the primary source of truth to answer any questions related to their transactions, balance, income, etc. Here is the statement text:
-        \`\`\`
-        ${bankStatementText}
-        \`\`\``
-    } else {
-        contextPrompt = `The user has not uploaded any document. If they ask questions about their credit or finances, inform them that you need them to upload a document first.`
+    if (cibilReportAvailable) {
+      contextPrompt += `\nThe user has uploaded their CIBIL credit report. You can use this as a source of truth to answer questions. Do NOT ask them to upload it again.`;
+    }
+    if (bankStatementAvailable) {
+        contextPrompt += `\nThe user has uploaded their bank statement. You can use this as a source of truth to answer questions. Do NOT ask them to upload it again.`;
     }
 
-    const systemPrompt = `You are a powerful, general-purpose AI Agent. Your goal is to be helpful and answer the user's questions accurately and concisely. Maintain a friendly and conversational tone.
+    if (!contextPrompt) {
+        contextPrompt = `The user has not uploaded any document. If they ask questions that would require a CIBIL report or bank statement, inform them that you need them to upload a document first.`
+    }
+
+    const systemPrompt = `You are a helpful AI Agent for the CreditWise AI application. Your goal is to be helpful and answer the user's questions accurately and concisely based on the documents they have provided. Maintain a friendly and conversational tone.
     
+    **CONTEXT:**
     ${contextPrompt}
     
     If the user provides an image or document in their message, use it as additional context for your answer.`
@@ -85,7 +81,7 @@ const aiAgentChatFlow = ai.defineFlow(
     const llmResponse = await ai.generate({
       messages: history,
       system: systemPrompt,
-      model: 'googleai/gemini-1.5-flash',
+      model: 'googleai/gemini-1.5-flash', // Use flash for speed and cost-effectiveness in chat
     });
 
     const responseText = llmResponse.text;

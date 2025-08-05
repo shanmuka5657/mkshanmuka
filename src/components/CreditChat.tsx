@@ -110,8 +110,8 @@ export function AiAgentChat({
     try {
       const flowInput: AiAgentChatInput = {
         history: conversationHistory,
-        cibilReportText: cibilReportText,
-        bankStatementText: bankStatementText,
+        cibilReportAvailable: !!cibilReportText,
+        bankStatementAvailable: !!bankStatementText,
       };
       const { output, usage } = await aiAgentChat(flowInput);
       onTokensUsed?.(usage);
@@ -123,7 +123,7 @@ export function AiAgentChat({
         variant: 'destructive',
         title: 'Chat Failed',
         description:
-          error.message?.includes('503')
+          error.message?.includes('503') || error.message?.includes('overloaded')
             ? 'The AI model is currently overloaded. Please try again in a moment.'
             : error.message || 'Could not get chat response. Please try again.',
       });
@@ -160,11 +160,11 @@ export function AiAgentChat({
           AI Agent
         </CardTitle>
         <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsMinimized(!isMinimized)}>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsMinimized(!isMinimized)}>
                 <Minus className="h-4 w-4" />
                 <span className="sr-only">Minimize</span>
             </Button>
-             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsOpen(false)}>
+             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsOpen(false)}>
                 <X className="h-4 w-4" />
                 <span className="sr-only">Close</span>
             </Button>
@@ -277,7 +277,7 @@ export function AiAgentChat({
                 placeholder="Ask the AI Agent anything..."
                 disabled={isLoading}
               />
-              <Button type="submit" disabled={isLoading} size="icon">
+              <Button type="submit" disabled={isLoading || (!input.trim() && !mediaDataUri)} size="icon">
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
