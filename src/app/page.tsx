@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -176,8 +175,8 @@ type SalarySlipFile = {
 };
 
 // Pricing for gemini-pro model per 1M tokens
-const INPUT_PRICE_PER_MILLION_TOKENS = 0.5; 
-const OUTPUT_PRICE_PER_MILLION_TOKENS = 1.5; 
+const INPUT_PRICE_PER_MILLION_TOKENS = 3.5; 
+const OUTPUT_PRICE_PER_MILLION_TOKENS = 10.5;
 
 const parseCurrency = (currencyString: string): number => {
     if (typeof currencyString !== 'string' || currencyString === '₹NaN') return 0;
@@ -491,7 +490,7 @@ export default function CreditWiseAIPage() {
        toast({
         variant: "destructive",
         title: "Analysis Failed",
-        description: error.message?.includes('429') ? "You've exceeded the daily limit for the AI. Please try again tomorrow." : (error.message || "Could not get AI analysis. Please try again."),
+        description: error.message?.includes('429') || error.message?.includes('503') ? "The AI model is currently overloaded. Please try again later." : (error.message || "Could not get AI analysis. Please try again."),
       })
     } finally {
       setIsAnalyzing(false);
@@ -515,7 +514,7 @@ export default function CreditWiseAIPage() {
        toast({
         variant: "destructive",
         title: "Analysis Failed",
-        description: error.message?.includes('429') ? "You've exceeded the daily limit for the AI. Please try again tomorrow." : (error.message || "Could not get AI analysis. Please try again."),
+        description: error.message?.includes('429') || error.message?.includes('503') ? "The AI model is currently overloaded. Please try again later." : (error.message || "Could not get AI analysis. Please try again."),
       })
     } finally {
       setIsAnalyzingBank(false);
@@ -589,7 +588,7 @@ export default function CreditWiseAIPage() {
       toast({
         variant: 'destructive',
         title: 'Analysis Failed',
-        description: error.message?.includes('429') ? "You've exceeded the daily limit for the AI. Please try again tomorrow." : (error.message || "Could not analyze salary slips."),
+        description: error.message?.includes('429') || error.message?.includes('503') ? "The AI model is currently overloaded. Please try again later." : (error.message || "Could not analyze salary slips."),
       });
     } finally {
       setIsAnalyzingSalary(false);
@@ -619,7 +618,7 @@ export default function CreditWiseAIPage() {
       toast({
         variant: "destructive",
         title: "AI EMI Calculation Failed",
-        description: error.message?.includes('429') ? "You've exceeded the daily limit for the AI. Please try again tomorrow." : (error.message || "Could not calculate total EMI. Please try again."),
+        description: error.message?.includes('429') || error.message?.includes('503') ? "The AI model is currently overloaded. Please try again later." : (error.message || "Could not calculate total EMI. Please try again."),
       })
     } finally {
       setIsCalculatingEmi(false);
@@ -657,7 +656,7 @@ export default function CreditWiseAIPage() {
        toast({
         variant: "destructive",
         title: "AI Rating Failed",
-        description: error.message?.includes('429') ? "You've exceeded the daily limit for the AI. Please try again tomorrow." : (error.message || "Could not get AI rating. Please try again."),
+        description: error.message?.includes('429') || error.message?.includes('503') ? "The AI model is currently overloaded. Please try again later." : (error.message || "Could not get AI rating. Please try again."),
       })
     } finally {
       setIsRating(false);
@@ -696,8 +695,8 @@ export default function CreditWiseAIPage() {
         variant: 'destructive',
         title: 'Eligibility Calculation Failed',
         description:
-          error.message?.includes('429')
-            ? "You've exceeded the daily limit for the AI. Please try again tomorrow."
+          error.message?.includes('429') || error.message?.includes('503')
+            ? "The AI model is currently overloaded. Please try again later."
             : error.message || 'Could not calculate loan eligibility. Please try again.',
       });
     } finally {
@@ -729,8 +728,8 @@ export default function CreditWiseAIPage() {
         variant: 'destructive',
         title: 'Financial Risk Assessment Failed',
         description:
-          error.message?.includes('429')
-            ? "You've exceeded the daily limit for the AI. Please try again tomorrow."
+          error.message?.includes('429') || error.message?.includes('503')
+            ? "The AI model is currently overloaded. Please try again later."
             : error.message || 'Could not assess financial risk. Please try again.',
       });
     } finally {
@@ -756,8 +755,8 @@ export default function CreditWiseAIPage() {
         variant: 'destructive',
         title: 'Risk Assessment Failed',
         description:
-          error.message?.includes('429')
-            ? "You've exceeded the daily limit for the AI. Please try again tomorrow."
+          error.message?.includes('429') || error.message?.includes('503')
+            ? "The AI model is currently overloaded. Please try again later."
             : error.message || 'Could not perform risk assessment.',
       });
     } finally {
@@ -820,8 +819,8 @@ export default function CreditWiseAIPage() {
         variant: 'destructive',
         title: 'Underwriting Failed',
         description:
-          error.message?.includes('429')
-            ? "You've exceeded the daily limit for the AI. Please try again tomorrow."
+          error.message?.includes('429') || error.message?.includes('503')
+            ? "The AI model is currently overloaded. Please try again later."
             : error.message || 'Could not get underwriting analysis. Please try again.',
       });
     } finally {
@@ -830,16 +829,17 @@ export default function CreditWiseAIPage() {
   };
 
   const handleCrossVerify = async () => {
-    if (!rawText || !salaryAnalysisResult) {
-      toast({ variant: 'destructive', title: 'Missing Data', description: 'Please analyze a CIBIL report and salary slips first.' });
+    if (!analysisResult && !bankAnalysisResult && !salaryAnalysisResult) {
+      toast({ variant: 'destructive', title: 'No Data', description: 'Please analyze at least one document first.' });
       return;
     }
     setIsVerifying(true);
     setCrossVerificationResult(null);
     try {
       const { output, usage } = await crossVerifyDocuments({
-        cibilReportText: rawText,
-        salarySlipAnalysis: salaryAnalysisResult,
+        cibilAnalysis: analysisResult || undefined,
+        bankStatementAnalysis: bankAnalysisResult || undefined,
+        salarySlipAnalysis: salaryAnalysisResult || undefined,
       });
       setCrossVerificationResult(output);
       updateTokenUsage(usage);
@@ -849,7 +849,7 @@ export default function CreditWiseAIPage() {
       toast({
         variant: 'destructive',
         title: 'Verification Failed',
-        description: error.message?.includes('429') ? "API limit reached." : (error.message || "Could not verify documents."),
+        description: error.message?.includes('429') || error.message?.includes('503') ? "API limit reached." : (error.message || "Could not verify documents."),
       });
     } finally {
       setIsVerifying(false);
@@ -1134,14 +1134,17 @@ export default function CreditWiseAIPage() {
   };
 
   const getMatchStatusIcon = (status: string) => {
-    const lowerStatus = status.toLowerCase();
+    const lowerStatus = status.toLowerCase().replace(/\s+/g, '');
     if (lowerStatus.includes('match')) {
       return <BadgeCheck className="h-5 w-5 text-green-500" />;
     }
     if (lowerStatus.includes('mismatch')) {
       return <XCircle className="h-5 w-5 text-destructive" />;
     }
-    return <AlertCircle className="h-5 w-5 text-yellow-500" />;
+    if (lowerStatus.includes('partialmatch')) {
+        return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
+    }
+    return <AlertCircle className="h-5 w-5 text-muted-foreground" />;
   };
 
 
@@ -1576,7 +1579,7 @@ export default function CreditWiseAIPage() {
             </CardContent>
         </Card>
       ),
-       incomeGuess: (
+      incomeGuess: (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center text-xl font-bold">
@@ -1946,7 +1949,7 @@ export default function CreditWiseAIPage() {
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center text-xl font-bold"><BarChartBig className="mr-3 h-6 w-6 text-primary" />Financial Overview</CardTitle>
-                            </CardHeader>
+                            </Header>
                             <CardContent className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                                 <SummaryItem label="Total Deposits" value={bankAnalysisResult.overview.totalDeposits} valueClassName="text-green-600" />
                                 <SummaryItem label="Total Withdrawals" value={bankAnalysisResult.overview.totalWithdrawals} valueClassName="text-destructive" />
@@ -1958,7 +1961,7 @@ export default function CreditWiseAIPage() {
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center text-xl font-bold"><ChevronsUpDown className="mr-3 h-6 w-6 text-primary" />Detailed Financial Overview</CardTitle>
-                            </CardHeader>
+                            </Header>
                             <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                                 <SummaryItem label="Salary Credits" value={bankAnalysisResult.detailedOverview.salaryCredits} valueClassName="text-green-600" />
                                 <SummaryItem label="Incentive Credits" value={bankAnalysisResult.detailedOverview.incentiveCredits} valueClassName="text-green-600" />
@@ -1971,7 +1974,7 @@ export default function CreditWiseAIPage() {
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center text-xl font-bold"><BrainCircuit className="mr-3 h-6 w-6 text-primary" />AI Financial Health Summary</CardTitle>
-                            </CardHeader>
+                            </Header>
                             <CardContent className="prose prose-sm dark:prose-invert max-w-none">
                                 <div>{bankAnalysisResult.health.summary}</div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
@@ -2040,11 +2043,11 @@ export default function CreditWiseAIPage() {
                   <CardHeader>
                     <CardTitle>Cross-Verification Analysis</CardTitle>
                     <CardDescription>
-                      Compare key details between the CIBIL report and salary slips to check for consistency.
+                      Compare key details between all uploaded documents to check for consistency.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <Button onClick={handleCrossVerify} disabled={isVerifying || !rawText || !salaryAnalysisResult}>
+                    <Button onClick={handleCrossVerify} disabled={isVerifying || (!analysisResult && !bankAnalysisResult && !salaryAnalysisResult)}>
                       {isVerifying ? <Loader2 className="mr-2 animate-spin" /> : <ShieldCheck className="mr-2" />}
                       Verify Documents
                     </Button>
@@ -2066,35 +2069,77 @@ export default function CreditWiseAIPage() {
                             <TableRow>
                               <TableHead>Field</TableHead>
                               <TableHead>Status</TableHead>
-                              <TableHead>CIBIL Report Value</TableHead>
-                              <TableHead>Salary Slip Value</TableHead>
+                              <TableHead>CIBIL</TableHead>
+                              <TableHead>Bank Stmt.</TableHead>
+                              <TableHead>Salary Slip</TableHead>
                               <TableHead>AI Remarks</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             <TableRow>
                               <TableCell className="font-semibold">Name</TableCell>
-                              <TableCell>{getMatchStatusIcon(crossVerificationResult.nameMatch.status)}</TableCell>
-                              <TableCell>{crossVerificationResult.nameMatch.cibilValue}</TableCell>
-                              <TableCell>{crossVerificationResult.nameMatch.salarySlipValue}</TableCell>
-                              <TableCell>{crossVerificationResult.nameMatch.details}</TableCell>
+                              <TableCell>{getMatchStatusIcon(crossVerificationResult.name.status)}</TableCell>
+                              <TableCell>{crossVerificationResult.name.cibilValue}</TableCell>
+                              <TableCell>{crossVerificationResult.name.bankStatementValue}</TableCell>
+                              <TableCell>{crossVerificationResult.name.salarySlipValue}</TableCell>
+                              <TableCell>{crossVerificationResult.name.details}</TableCell>
                             </TableRow>
                             <TableRow>
                               <TableCell className="font-semibold">Date of Birth</TableCell>
-                              <TableCell>{getMatchStatusIcon(crossVerificationResult.dobMatch.status)}</TableCell>
-                              <TableCell>{crossVerificationResult.dobMatch.cibilValue}</TableCell>
-                              <TableCell>{crossVerificationResult.dobMatch.salarySlipValue}</TableCell>
-                              <TableCell>{crossVerificationResult.dobMatch.details}</TableCell>
+                              <TableCell>{getMatchStatusIcon(crossVerificationResult.dob.status)}</TableCell>
+                              <TableCell>{crossVerificationResult.dob.cibilValue}</TableCell>
+                              <TableCell>{crossVerificationResult.dob.bankStatementValue}</TableCell>
+                              <TableCell>{crossVerificationResult.dob.salarySlipValue}</TableCell>
+                              <TableCell>{crossVerificationResult.dob.details}</TableCell>
                             </TableRow>
                              <TableRow>
                               <TableCell className="font-semibold">PAN</TableCell>
-                              <TableCell>{getMatchStatusIcon(crossVerificationResult.panMatch.status)}</TableCell>
-                              <TableCell>{crossVerificationResult.panMatch.cibilValue}</TableCell>
-                              <TableCell>{crossVerificationResult.panMatch.salarySlipValue}</TableCell>
-                              <TableCell>{crossVerificationResult.panMatch.details}</TableCell>
+                              <TableCell>{getMatchStatusIcon(crossVerificationResult.pan.status)}</TableCell>
+                              <TableCell>{crossVerificationResult.pan.cibilValue}</TableCell>
+                              <TableCell>{crossVerificationResult.pan.bankStatementValue}</TableCell>
+                              <TableCell>{crossVerificationResult.pan.salarySlipValue}</TableCell>
+                              <TableCell>{crossVerificationResult.pan.details}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="font-semibold">Mobile</TableCell>
+                              <TableCell>{getMatchStatusIcon(crossVerificationResult.mobile.status)}</TableCell>
+                              <TableCell>{crossVerificationResult.mobile.cibilValue}</TableCell>
+                              <TableCell>{crossVerificationResult.mobile.bankStatementValue}</TableCell>
+                              <TableCell>{crossVerificationResult.mobile.salarySlipValue}</TableCell>
+                              <TableCell>{crossVerificationResult.mobile.details}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="font-semibold">Address</TableCell>
+                              <TableCell>{getMatchStatusIcon(crossVerificationResult.address.status)}</TableCell>
+                              <TableCell className="max-w-xs truncate">{crossVerificationResult.address.cibilValue}</TableCell>
+                              <TableCell className="max-w-xs truncate">{crossVerificationResult.address.bankStatementValue}</TableCell>
+                              <TableCell className="max-w-xs truncate">{crossVerificationResult.address.salarySlipValue}</TableCell>
+                              <TableCell>{crossVerificationResult.address.details}</TableCell>
                             </TableRow>
                           </TableBody>
                         </Table>
+                         <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg">Income Consistency</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="flex flex-col items-center">
+                                        <div className="text-sm text-muted-foreground">Status</div>
+                                        <div className="font-bold">{crossVerificationResult.income.status}</div>
+                                    </div>
+                                    <div className="flex flex-col items-center">
+                                        <div className="text-sm text-muted-foreground">Bank Stmt Income</div>
+                                        <div className="font-bold">{crossVerificationResult.income.bankStatementIncome}</div>
+                                    </div>
+                                    <div className="flex flex-col items-center">
+                                        <div className="text-sm text-muted-foreground">Salary Slip Income</div>
+                                        <div className="font-bold">{crossVerificationResult.income.salarySlipIncome}</div>
+                                    </div>
+                                </div>
+                                <div className="text-sm text-muted-foreground mt-4 text-center">{crossVerificationResult.income.details}</div>
+                            </CardContent>
+                         </Card>
                       </div>
                     )}
                   </CardContent>
