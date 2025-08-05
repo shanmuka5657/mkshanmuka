@@ -1628,7 +1628,7 @@ export default function CreditWiseAIPage() {
             </CardContent>
         </Card>
       ),
-      incomeGuess: (
+      incomeGuess: () => (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center text-xl font-bold">
@@ -2581,7 +2581,7 @@ export default function CreditWiseAIPage() {
          </Card>
       ),
     };
-    return views[activeView!];
+    return views[activeView!] as React.ReactNode;
   };
   
   const { customerDetails, reportSummary } = analysisResult || initialAnalysis;
