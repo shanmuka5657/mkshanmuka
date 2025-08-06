@@ -8,7 +8,6 @@ import '@/ai/flows/loan-eligibility.ts';
 import '@/ai/flows/credit-underwriting.ts';
 import '@/ai/flows/financial-risk-assessment.ts';
 import '@/ai/flows/ai-agent-chat.ts';
-import '@/ai/flows/calculate-total-emi.ts';
 import '@/ai/flows/risk-assessment.ts';
 import '@/ai/flows/bank-statement-analysis.ts';
 import '@/ai/flows/salary-slip-analysis.ts';

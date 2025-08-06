@@ -14,11 +14,13 @@ import type { FlowUsage } from 'genkit/flow';
 import type { AiRatingOutput } from './ai-rating';
 import type { LoanEligibilityOutput } from './loan-eligibility';
 import type { RiskAssessmentOutput } from './risk-assessment';
+import type { AnalyzeCreditReportOutput } from './credit-report-analysis';
+
 
 const CreditUnderwritingInputSchema = z.object({
-  creditReportText: z
-    .string()
-    .describe('The full text extracted from the credit report.'),
+  analysisResult: z
+    .any()
+    .describe('The full, structured analysis from the initial credit report parsing flow.'),
   aiRating: z
     .any()
     .describe('The previously generated AI Credit Rating.'),
@@ -49,10 +51,17 @@ const CreditUnderwritingInputSchema = z.object({
     .describe('A string containing any comments or notes the user has added about their specific loans.'),
 });
 
-export type CreditUnderwritingInput = Omit<z.infer<typeof CreditUnderwritingInputSchema>, 'aiRating' | 'loanEligibility' | 'riskAssessment'> & {
+export type CreditUnderwritingInput = {
+    analysisResult: AnalyzeCreditReportOutput;
     aiRating: AiRatingOutput;
     loanEligibility: LoanEligibilityOutput;
     riskAssessment: RiskAssessmentOutput;
+    estimatedIncome: number;
+    employmentType: "Salaried" | "Self-employed" | "Daily Wage Earner";
+    loanType: "Personal Loan" | "Home Loan" | "Auto Loan" | "Loan Against Property";
+    desiredLoanAmount: number;
+    desiredTenure: number;
+    userComments?: string;
 };
 
 
@@ -113,10 +122,10 @@ const prompt = ai.definePrompt({
   input: {schema: CreditUnderwritingInputSchema},
   output: {schema: CreditUnderwritingOutputSchema},
   model: 'googleai/gemini-1.5-flash',
-  prompt: `You are a senior credit underwriter for a major bank in India. Your task is to perform a final, comprehensive underwriting analysis and provide a definitive overall rating for the profile. You must act like a real, prudent underwriter.
+  prompt: `You are a senior credit underwriter for a major bank in India. Your task is to perform a final, comprehensive underwriting analysis based on a collection of pre-analyzed, structured data. Do NOT use raw text.
 
 **CRITICAL RULES:**
-1.  **NEVER APPROVE MORE THAN REQUESTED:** The 'approvedLoanAmount' CANNOT be higher than the 'desiredLoanAmount'. You can approve a lower amount if risk factors warrant it, but never more.
+1.  **NEVER APPROVE MORE THAN REQUESTED:** The 'approvedLoanAmount' CANNOT be higher than the 'desiredLoanAmount'.
 2.  **RESPECT ELIGIBILITY LIMITS:** The 'approvedLoanAmount' must ALSO NOT exceed the 'Pre-Calculated Max Eligible Loan Amount'. If the 'repaymentCapacity' is 0, you MUST decline the loan. Your final approved amount must be the lower of the desired amount and the eligible amount.
 3.  **USE PRE-CALCULATED RISK METRICS**: You have been provided with pre-calculated risk metrics (PD, LGD, EAD, EL). You MUST use these exact values in your output. Do NOT recalculate them.
 
@@ -126,40 +135,40 @@ const prompt = ai.definePrompt({
 - **Desired Tenure:** {{{desiredTenure}}} months
 - **Estimated Monthly Income:** ₹{{{estimatedIncome}}}
 - **Employment Type:** {{{employmentType}}}
-- **AI Credit Score:** {{{aiRating.aiScore}}}/100 (Rating: {{{aiRating.rating}}})
 - **Pre-Calculated Max Repayment Capacity:** ₹{{{loanEligibility.repaymentCapacity}}}/month
 - **Pre-Calculated Max Eligible Loan Amount:** ₹{{{loanEligibility.eligibleLoanAmount}}}
-- **Pre-Calculated Probability of Default (PD):** {{{riskAssessment.probabilityOfDefault}}}%
-- **Pre-Calculated Loss Given Default (LGD):** {{{riskAssessment.lossGivenDefault}}}%
-- **Pre-Calculated Exposure At Default (EAD):** ₹{{{riskAssessment.exposureAtDefault}}}
-- **Pre-Calculated Expected Loss (EL):** ₹{{{riskAssessment.expectedLoss}}}
 
 {{#if userComments}}
 **IMPORTANT USER COMMENTS ON LOANS:**
-The user has provided the following notes about their loans. You MUST consider these comments in your analysis and reference them in your summary. For example, if a user states they are not paying for a guarantor loan, you should acknowledge this.
+The user has provided the following notes about their loans. You MUST consider these comments in your analysis and reference them in your summary.
 \`\`\`
 {{{userComments}}}
 \`\`\`
 {{/if}}
 
-**Full Credit Report Text:**
+**Full Structured Credit Data:**
+\`\`\`json
+{{{json analysisResult}}}
 \`\`\`
-{{{creditReportText}}}
+
+**AI Credit Rating Data:**
+\`\`\`json
+{{{json aiRating}}}
+\`\`\`
+
+**Financial Risk Assessment Data:**
+\`\`\`json
+{{{json riskAssessment}}}
 \`\`\`
 
 **Your Underwriting Task:**
 
-1.  **Make a Final Decision:** Based on a holistic analysis of all data, decide on one outcome: 'Approved', 'Conditionally Approved', 'Declined', 'Requires Manual Review'.
-2.  **Determine and Justify Loan Terms:** If approved, determine the final loan terms.
-    *   **approvedLoanAmount:** Adhere strictly to the critical rules above.
-    *   **recommendedInterestRate:** Provide a clear interest rate or range.
-    *   **recommendedTenure:** Usually the same as desired, unless risk warrants a change.
-3.  **Write a Comprehensive Summary:** This is critical. Provide a detailed, multi-paragraph summary. Explain *exactly* how you reached your decision. Reference specific positive and negative factors from the report. If the user provided comments, you MUST address them in your summary. If you reduce the loan amount, explain *why*, linking it to specific risks (e.g., "While the applicant requested ₹6,00,000, the approved amount was reduced to ₹4,50,000 due to a high DTI ratio and a recent 30-day delinquency on their credit card...").
-4.  **List Documents and Conditions:**
-    *   Provide a standard list of 'requiredDocuments'.
-    *   **Add Conditions Based on Risk:** If you see a potential inconsistency (e.g., a 'Daily Wage Earner' with an unusually high estimated income of > ₹50,000/month), add a condition like "Income verification via bank statements and ITR for the last 2 years is mandatory." to the 'conditions' array.
-5.  **Use Pre-Calculated Risk Metrics:** Populate the 'probabilityOfDefault', 'lossGivenDefault', 'exposureAtDefault', and 'expectedLoss' fields with the exact values provided in the input. Write detailed explanations for each metric in 'riskMetricsExplanation' based on the report.
-6.  **Assign a Final, Overall Profile Rating:** Synthesize every piece of information into a single, definitive 'finalProfileRating': 'Very Low Risk', 'Low Risk', 'Moderate Risk', 'High Risk', 'Very High Risk'. This rating is the ultimate summary of the applicant's profile.
+1.  **Make a Final Decision:** Based on a holistic analysis of all structured data, decide on one outcome: 'Approved', 'Conditionally Approved', 'Declined', 'Requires Manual Review'.
+2.  **Determine and Justify Loan Terms:** If approved, determine the final loan terms, adhering strictly to the critical rules.
+3.  **Write a Comprehensive Summary:** Explain *exactly* how you reached your decision. Reference specific positive and negative factors from the structured data. If the user provided comments, you MUST address them. If you reduce the loan amount, explain *why*, linking it to specific risks (e.g., "While the applicant requested ₹6,00,000, the approved amount was reduced to ₹4,50,000 due to a high DTI ratio and a recent 30-day delinquency...").
+4.  **List Documents and Conditions:** Provide a standard list of 'requiredDocuments'. Add risk-based 'conditions' if you see inconsistencies (e.g., a 'Daily Wage Earner' with an unusually high income).
+5.  **Use Pre-Calculated Risk Metrics:** Populate the risk fields with the exact values from the input. Write detailed explanations for each metric in 'riskMetricsExplanation'.
+6.  **Assign a Final, Overall Profile Rating:** Synthesize everything into a single, definitive 'finalProfileRating'.
 
 Generate the final, structured output.`,
 });

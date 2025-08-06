@@ -43,8 +43,6 @@ import {
   PieChart as PieChartIcon,
   BarChart as BarChartIcon,
   Landmark,
-  Building,
-  Briefcase,
   Receipt,
   ClipboardCheck,
 } from 'lucide-react';
@@ -58,10 +56,9 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 import { useToast } from "@/hooks/use-toast"
 import { analyzeCreditReport, AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
 import { getAiRating, AiRatingOutput } from '@/ai/flows/ai-rating';
-import { getLoanEligibility, LoanEligibilityOutput } from '@/ai/flows/loan-eligibility';
+import { getLoanEligibility, LoanEligibilityOutput, LoanEligibilityInput } from '@/ai/flows/loan-eligibility';
 import { getFinancialRiskAssessment, FinancialRiskOutput } from '@/ai/flows/financial-risk-assessment';
 import { getCreditUnderwriting, CreditUnderwritingOutput, CreditUnderwritingInput } from '@/ai/flows/credit-underwriting';
-import { calculateTotalEmi, CalculateTotalEmiOutput } from '@/ai/flows/calculate-total-emi';
 import { getRiskAssessment, RiskAssessmentOutput } from '@/ai/flows/risk-assessment';
 import { analyzeSalarySlips, SalarySlipAnalysisInput, SalarySlipAnalysisOutput } from '@/ai/flows/salary-slip-analysis';
 import { AiAgentChat } from '@/components/CreditChat';
@@ -121,6 +118,10 @@ const initialAnalysis: AnalyzeCreditReportOutput = {
     }
   },
   allAccounts: [],
+  emiDetails: {
+    totalEmi: 0,
+    activeLoans: [],
+  }
 };
 
 
@@ -137,7 +138,7 @@ type ActiveView =
 
 type AnalysisType = 'credit' | 'salary';
 
-type ActiveLoanDetail = CalculateTotalEmiOutput['activeLoans'][0] & {
+type ActiveLoanDetail = AnalyzeCreditReportOutput['emiDetails']['activeLoans'][0] & {
     id: string; // Add a unique ID for React keys
     considerForObligation: 'Yes' | 'No';
     comment: string;
@@ -174,7 +175,7 @@ export default function CreditWiseAIPage() {
   
   const [totalEmi, setTotalEmi] = useState('');
   const [activeLoanDetails, setActiveLoanDetails] = useState<ActiveLoanDetail[]>([]);
-  const [isCalculatingEmi, setIsCalculatingEmi] = useState(false);
+  const [isCalculatingEmi, setIsCalculatingEmi] = useState(false); // This can be removed or repurposed if EMI is part of main analysis
   const [otherObligations, setOtherObligations] = useState('');
   const [estimatedIncome, setEstimatedIncome] = useState<string>('');
   const [theme, setTheme] = useState('light');
@@ -404,63 +405,55 @@ export default function CreditWiseAIPage() {
     }
   };
   
-  const handleStartFullAnalysis = () => {
+  const handleStartFullAnalysis = async () => {
     setIsModelOverloaded(false); // Reset overload state on new attempt
-    // Run all three analyses in parallel
-    handleAnalyze(rawText);
-    handleCalculateTotalEmi(rawText);
-    handleGetRiskAssessment(rawText);
-  };
-  
-
-  const handleAnalyze = async (text: string) => {
-    if (!text) return;
-    setIsAnalyzing(true);
     setAnalysisResult(null);
-    try {
-      const { output, usage } = await analyzeCreditReport({ creditReportText: text });
-      setAnalysisResult(output);
-      updateTokenUsage(usage);
-      toast({
-        title: "AI Analysis Complete",
-        description: "Your credit report has been analyzed.",
-      })
-    } catch (error: any) {
-      console.error('Error analyzing report:', error);
-      handleOverloadedError(error);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
+    setRiskAssessment(null);
 
-
-  const handleCalculateTotalEmi = async (text: string) => {
-    if (!text) return;
-    setIsCalculatingEmi(true);
-    setActiveLoanDetails([]);
+    // Step 1: Perform the main, consolidated analysis
+    setIsAnalyzing(true);
+    setIsAssessingRisk(true);
+    let analysisOutput: AnalyzeCreditReportOutput | null = null;
     try {
-      const { output, usage } = await calculateTotalEmi({ creditReportText: text });
-      updateTokenUsage(usage);
-      
-      const enhancedLoanDetails = output.activeLoans.map((loan, index) => ({
-        ...loan,
-        id: `loan-${index}-${Date.now()}`, // Simple unique ID
-        considerForObligation: 'Yes' as 'Yes' | 'No',
-        comment: '',
-      }));
-      
-      setActiveLoanDetails(enhancedLoanDetails);
-      // The total EMI will be calculated by the useEffect hook
+        const { output, usage } = await analyzeCreditReport({ creditReportText: rawText });
+        analysisOutput = output;
+        setAnalysisResult(output);
+        updateTokenUsage(usage);
+        
+        const enhancedLoanDetails = output.emiDetails.activeLoans.map((loan, index) => ({
+            ...loan,
+            id: `loan-${index}-${Date.now()}`,
+            considerForObligation: 'Yes' as 'Yes' | 'No',
+            comment: '',
+        }));
+        setActiveLoanDetails(enhancedLoanDetails);
+        toast({ title: "AI Analysis Complete", description: "Credit report has been analyzed." });
     } catch (error: any) {
-      console.error('Error calculating total EMI:', error);
-      handleOverloadedError(error);
-    } finally {
-      setIsCalculatingEmi(false);
+        console.error('Error analyzing report:', error);
+        handleOverloadedError(error);
+        setIsAnalyzing(false);
+        setIsAssessingRisk(false);
+        return; // Stop if the first step fails
     }
-  };
-  
+    setIsAnalyzing(false);
+
+    // Step 2: Run subsequent analyses that depend on the first one
+    if (analysisOutput) {
+        try {
+            const { output: riskOutput, usage: riskUsage } = await getRiskAssessment({ analysisResult: analysisOutput });
+            setRiskAssessment(riskOutput);
+            updateTokenUsage(riskUsage);
+            toast({ title: 'AI Risk Assessment Complete', description: 'The AI has performed a detailed risk analysis.' });
+        } catch (error: any) {
+            console.error('Error during risk assessment:', error);
+            handleOverloadedError(error);
+        }
+    }
+    setIsAssessingRisk(false);
+};
+
   const handleGetAiRating = async () => {
-    if (!rawText || !riskAssessment) {
+    if (!analysisResult || !riskAssessment) {
       toast({
         variant: "destructive",
         title: "Missing Information",
@@ -474,7 +467,7 @@ export default function CreditWiseAIPage() {
     
     try {
       const { output, usage } = await getAiRating({
-        creditReportText: rawText,
+        analysisResult: analysisResult,
         riskAssessment: riskAssessment,
       });
       if (!output) {
@@ -495,7 +488,7 @@ export default function CreditWiseAIPage() {
   }
 
   const handleGetLoanEligibility = async () => {
-    if (!aiRating || !estimatedIncome) {
+    if (!aiRating || !estimatedIncome || !analysisResult) {
       toast({
         variant: 'destructive',
         title: 'Missing Information',
@@ -508,13 +501,14 @@ export default function CreditWiseAIPage() {
     setLoanEligibility(null);
     setIsModelOverloaded(false);
     try {
-      const { output, usage } = await getLoanEligibility({
+      const input: LoanEligibilityInput = {
         aiScore: aiRating.aiScore,
         rating: aiRating.rating,
         monthlyIncome: parseFloat(estimatedIncome),
         totalMonthlyEMI: parseFloat(totalEmi || '0'),
-        creditReportText: rawText,
-      });
+        analysisResult: analysisResult,
+      };
+      const { output, usage } = await getLoanEligibility(input);
       setLoanEligibility(output);
       updateTokenUsage(usage);
       toast({
@@ -530,8 +524,8 @@ export default function CreditWiseAIPage() {
   };
 
   const handleGetFinancialRisk = async () => {
-    if (!estimatedIncome) {
-      toast({ variant: "destructive", title: "Enter Income First", description: "Please enter your income before getting advice."});
+    if (!estimatedIncome || !analysisResult) {
+      toast({ variant: "destructive", title: "Missing Information", description: "Please analyze the report and enter your income first."});
       return;
     }
     setIsAssessingFinancialRisk(true);
@@ -540,7 +534,7 @@ export default function CreditWiseAIPage() {
     try {
       const { output, usage } = await getFinancialRiskAssessment({
         estimatedIncome: parseFloat(estimatedIncome),
-        creditReportText: rawText,
+        analysisResult: analysisResult,
       });
       setFinancialRisk(output);
       updateTokenUsage(usage);
@@ -556,33 +550,13 @@ export default function CreditWiseAIPage() {
     }
   };
 
-  const handleGetRiskAssessment = async (text: string) => {
-    if (!text) return;
-    setIsAssessingRisk(true);
-    setRiskAssessment(null);
-    try {
-      const { output, usage } = await getRiskAssessment({ creditReportText: text });
-      setRiskAssessment(output);
-      updateTokenUsage(usage);
-      toast({
-        title: 'AI Risk Assessment Complete',
-        description: 'The AI has performed a detailed risk analysis.',
-      });
-    } catch (error: any) {
-      console.error('Error during risk assessment:', error);
-      handleOverloadedError(error);
-    } finally {
-      setIsAssessingRisk(false);
-    }
-  };
-
   const handleGetUnderwriting = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!aiRating || !estimatedIncome || !loanEligibility || !riskAssessment) {
+    if (!analysisResult || !aiRating || !estimatedIncome || !loanEligibility || !riskAssessment) {
       toast({
         variant: 'destructive',
         title: 'Missing Prerequisites',
-        description: 'Please complete AI Rating, Income Estimation, Loan Eligibility, Risk Assessment and fill all loan fields before underwriting.',
+        description: 'Please complete all prior analysis steps and fill all loan fields before underwriting.',
       });
       return;
     }
@@ -597,7 +571,7 @@ export default function CreditWiseAIPage() {
 
     try {
       const input: CreditUnderwritingInput = {
-        creditReportText: rawText,
+        analysisResult: analysisResult,
         aiRating: aiRating,
         loanEligibility: loanEligibility,
         riskAssessment: riskAssessment,
@@ -958,7 +932,7 @@ export default function CreditWiseAIPage() {
     if (!activeView) return null;
 
     const views: { [key in NonNullable<ActiveView>]: React.ReactNode } = {
-       creditSummary: (
+      creditSummary: (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center text-xl font-bold">
@@ -1514,7 +1488,7 @@ export default function CreditWiseAIPage() {
               <Label htmlFor="total-emi">Total Monthly Loan EMI</Label>
               <div className="flex items-center gap-2">
                 <Input id="total-emi" type="number" placeholder="AI is calculating..." value={totalEmi} onChange={(e) => setTotalEmi(e.target.value)} disabled />
-                {isCalculatingEmi && <Loader2 className="h-5 w-5 animate-spin" />}
+                {(isAnalyzing) && <Loader2 className="h-5 w-5 animate-spin" />}
               </div>
               <div className="text-xs text-muted-foreground mt-1">This is auto-calculated from your report and your selections below. You can override it.</div>
             </div>
@@ -1902,11 +1876,11 @@ export default function CreditWiseAIPage() {
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>Ready to Analyze</AlertTitle>
                       <AlertDescription>
-                      Your report has been processed. Click the button below to run the full AI analysis. This may use a significant portion of your free daily quota.
+                      Your report has been processed. Click the button below to run the full AI analysis.
                       </AlertDescription>
                     </Alert>
-                    <Button onClick={handleStartFullAnalysis} disabled={isAnalyzing || isCalculatingEmi || isAssessingRisk} className="mt-4">
-                      {(isAnalyzing || isCalculatingEmi || isAssessingRisk) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />}
+                    <Button onClick={handleStartFullAnalysis} disabled={isAnalyzing || isAssessingRisk} className="mt-4">
+                      {(isAnalyzing || isAssessingRisk) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />}
                       Start Full AI Analysis
                     </Button>
                   </div>

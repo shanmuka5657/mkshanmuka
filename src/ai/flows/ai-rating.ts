@@ -12,18 +12,20 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { FlowUsage } from 'genkit/flow';
-import type { RiskAssessmentOutput } from './risk-assessment'; // Import the type
+import type { RiskAssessmentOutput } from './risk-assessment';
+import type { AnalyzeCreditReportOutput } from './credit-report-analysis';
 
 const AiRatingInputSchema = z.object({
-  creditReportText: z
-    .string()
-    .describe('The full text extracted from the credit report.'),
+  analysisResult: z
+    .any()
+    .describe('The full, structured analysis from the initial credit report parsing flow.'),
   riskAssessment: z
-    .any() // Using z.any() because we can't import the Zod schema directly without circular deps.
+    .any()
     .describe('A client-side pre-calculated risk assessment.'),
 });
-export type AiRatingInput = Omit<z.infer<typeof AiRatingInputSchema>, 'riskAssessment'> & {
-  riskAssessment: RiskAssessmentOutput; // Use the precise TypeScript type
+export type AiRatingInput = {
+  analysisResult: AnalyzeCreditReportOutput;
+  riskAssessment: RiskAssessmentOutput;
 };
 
 const AiRatingOutputSchema = z.object({
@@ -62,26 +64,23 @@ const prompt = ai.definePrompt({
   input: {schema: AiRatingInputSchema},
   output: {schema: AiRatingOutputSchema},
   model: 'googleai/gemini-1.5-flash',
-  prompt: `You are an expert credit analyst. Your task is to provide a holistic AI-powered credit rating based on the provided credit report text and a pre-calculated risk assessment.
+  prompt: `You are an expert credit analyst. Your task is to provide a holistic AI-powered credit rating based on the provided structured credit report data and a pre-calculated risk assessment. Do NOT use the raw text.
 
-Analyze the user's full credit report and the pre-calculated risk factors. Then, generate a comprehensive score, a final rating, a summary, and lists of the most important positive and negative factors.
+Analyze the user's structured credit data and the pre-calculated risk factors. Then, generate a comprehensive score, a final rating, a summary, and lists of the most important positive and negative factors.
 
 The final aiScore should be a number between 0 and 100, where 100 is a perfect score.
 
-**Credit Report Text:**
-\`\`\`
-{{{creditReportText}}}
+**Structured Credit Report Data:**
+\`\`\`json
+{{{json analysisResult}}}
 \`\`\`
 
 **Pre-Calculated Risk Assessment:**
-- Risk Score: {{{riskAssessment.score}}}/100
-- Risk Level: {{{riskAssessment.level}}}
-- Risk Factors:
-{{#each riskAssessment.factors}}
-  - {{factor}} ({{severity}}): {{details}}
-{{/each}}
+\`\`\`json
+{{{json riskAssessment}}}
+\`\`\`
 
-Based on your complete analysis of all the provided information, generate the final output.
+Based on your complete analysis of all the provided structured information, generate the final output.
 `,
 });
 
