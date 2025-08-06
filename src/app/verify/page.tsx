@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   UploadCloud,
   FileText,
@@ -185,6 +185,7 @@ export default function VerifyPdfPage() {
   };
 
   const getRecommendationColor = (recommendation: string) => {
+    if (!recommendation) return 'bg-muted';
     const rec = recommendation.toLowerCase();
     if (rec.includes('appears authentic')) return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-500/50';
     if (rec.includes('manual review')) return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border-yellow-500/50';
@@ -323,15 +324,15 @@ export default function VerifyPdfPage() {
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    <Alert className={cn('border-2 p-4', getRecommendationColor(analysisResult.recommendation))}>
+                    <Alert className={cn('border-2 p-4', getRecommendationColor(analysisResult.fraudReport.overallAssessment))}>
                         <div className="flex justify-between items-center">
                             <div>
                                 <AlertTitle className="text-lg font-bold">Overall Recommendation</AlertTitle>
-                                <AlertDescription className="text-base">{analysisResult.recommendation}</AlertDescription>
+                                <AlertDescription className="text-base">{analysisResult.fraudReport.overallAssessment}</AlertDescription>
                             </div>
                             <div className="text-center">
-                                <div className={cn("text-5xl font-bold", getAuthenticityColor(analysisResult.authenticityScore))}>
-                                    {analysisResult.authenticityScore}
+                                <div className={cn("text-5xl font-bold", getAuthenticityColor(analysisResult.fraudReport.authenticityConfidence))}>
+                                    {analysisResult.fraudReport.authenticityConfidence}
                                 </div>
                                 <div className="text-sm font-medium text-muted-foreground">Authenticity Score</div>
                             </div>
@@ -344,59 +345,34 @@ export default function VerifyPdfPage() {
                                 <CardTitle className="text-lg flex items-center gap-2"><FileUp className="h-5 w-5"/>Document Overview</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                {analysisResult.documentDetails.map((doc, i) => (
+                                {analysisResult.extractedDetails.map((doc, i) => (
                                     <div key={i} className="mb-4 last:mb-0">
                                         <InfoItem label="File Name" value={doc.fileName} />
                                         <InfoItem label="Detected Type" value={doc.documentType} />
-                                        <InfoItem label="Page Count" value={doc.pageCount} />
+                                        <InfoItem label="Key Info" value={doc.keyInfo} />
+                                        <InfoItem label="Primary Amount" value={doc.primaryAmount} />
                                     </div>
                                 ))}
                             </CardContent>
                         </Card>
                         <Card>
                              <CardHeader>
-                                <CardTitle className="text-lg flex items-center gap-2"><FileJson className="h-5 w-5"/>Metadata Analysis</CardTitle>
+                                <CardTitle className="text-lg flex items-center gap-2"><FileJson className="h-5 w-5"/>Consistency & Pattern Analysis</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <InfoItem label="PDF Producer" value={analysisResult.metadataAnalysis.producer} />
-                                <InfoItem label="Creation Date" value={analysisResult.metadataAnalysis.creationDate} />
-                                <InfoItem label="Modified Date" value={analysisResult.metadataAnalysis.modificationDate} />
-                                <InfoItem label="AI Interpretation" value={analysisResult.metadataAnalysis.aiInterpretation} />
+                                <InfoItem label="Cross-Document Consistency" value={analysisResult.fraudReport.consistencyCheck} />
+                                <InfoItem label="Salary/Value Pattern" value={analysisResult.fraudReport.patternAnalysis} />
                             </CardContent>
                         </Card>
                     </div>
 
                     <Card>
                         <CardHeader>
-                            <CardTitle className="text-lg flex items-center gap-2"><Eye className="h-5 w-5"/>Visual & Textual Analysis</CardTitle>
+                            <CardTitle className="text-lg flex items-center gap-2"><Eye className="h-5 w-5"/>Formatting & Tampering Analysis</CardTitle>
                         </CardHeader>
                         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                            <InfoItem label="Text Selectable" value={analysisResult.textAnalysis.isTextSelectable ? 'Yes' : 'No'} valueClass={analysisResult.textAnalysis.isTextSelectable ? 'text-green-600' : 'text-red-600'}/>
-                            <InfoItem label="Font Consistency" value={analysisResult.textAnalysis.fontConsistency} />
-                            <InfoItem label="Spacing Anomalies" value={analysisResult.textAnalysis.spacingAnomalies} />
-                            <InfoItem label="Image Manipulation" value={analysisResult.visualAnalysis.imageManipulationSigns} />
-                            <InfoItem label="Logo/Header Consistency" value={analysisResult.visualAnalysis.logoHeaderConsistency} />
-                            <InfoItem label="Visible Edits/Blurring" value={analysisResult.visualAnalysis.visibleEditsOrBlurring} />
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg flex items-center gap-2"><ShieldAlert className="h-5 w-5 text-destructive"/>Suspicion Flags</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                             {analysisResult.suspicionFlags.length > 0 ? (
-                                <ul className="space-y-2">
-                                {analysisResult.suspicionFlags.map((flag, i) => (
-                                    <li key={i} className="flex items-start gap-2 text-sm">
-                                        <AlertCircle className="h-4 w-4 mt-0.5 text-destructive flex-shrink-0" />
-                                        <span>{flag}</span>
-                                    </li>
-                                ))}
-                                </ul>
-                            ) : (
-                                <p className="text-sm text-muted-foreground">No significant suspicion flags were automatically detected by the AI.</p>
-                            )}
+                           <InfoItem label="Formatting Anomalies" value={analysisResult.fraudReport.formattingAnomalies} />
+                           <InfoItem label="Tampering Indicators" value={analysisResult.fraudReport.tamperingIndicators} />
                         </CardContent>
                     </Card>
                 </CardContent>
