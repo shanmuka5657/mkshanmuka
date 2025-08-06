@@ -692,10 +692,10 @@ export default function CreditWiseAIPage() {
           } else {
             const daysLate = parseInt(status, 10);
             if (!isNaN(daysLate)) {
-              if (daysLate >= 1 && daysLate <= 30) summary.dpd.late30++;
-              else if (daysLate >= 31 && daysLate <= 60) summary.dpd.late60++;
+              if (daysLate > 90) summary.dpd.late90Plus++;
               else if (daysLate >= 61 && daysLate <= 90) summary.dpd.late90++;
-              else if (daysLate > 90) summary.dpd.late90Plus++;
+              else if (daysLate >= 31 && daysLate <= 60) summary.dpd.late60++;
+              else if (daysLate >= 1 && daysLate <= 30) summary.dpd.late30++;
             }
           }
         }
