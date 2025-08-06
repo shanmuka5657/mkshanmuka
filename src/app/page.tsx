@@ -43,6 +43,9 @@ import {
   Info,
   PieChart as PieChartIcon,
   BarChart as BarChartIcon,
+  Landmark,
+  Receipt,
+  ClipboardCheck,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -59,6 +62,7 @@ import { getFinancialRiskAssessment, FinancialRiskOutput } from '@/ai/flows/fina
 import { getCreditUnderwriting, CreditUnderwritingOutput, CreditUnderwritingInput } from '@/ai/flows/credit-underwriting';
 import { calculateTotalEmi, CalculateTotalEmiOutput } from '@/ai/flows/calculate-total-emi';
 import { getRiskAssessment, RiskAssessmentOutput } from '@/ai/flows/risk-assessment';
+import { analyzeSalarySlips, SalarySlipAnalysisInput, SalarySlipAnalysisOutput } from '@/ai/flows/salary-slip-analysis';
 import { AiAgentChat } from '@/components/CreditChat';
 import { cn } from '@/lib/utils';
 import {
@@ -74,6 +78,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { auth } from '@/lib/firebase';
 import type { User } from 'firebase/auth';
@@ -126,9 +131,10 @@ type ActiveView =
   | 'creditUnderwriting'
   | 'financialRisk'
   | 'creditSummary'
+  | 'incomeGuess'
   | null;
 
-type AnalysisType = 'credit';
+type AnalysisType = 'credit' | 'salary';
 
 type ActiveLoanDetail = CalculateTotalEmiOutput['activeLoans'][0] & {
     id: string; // Add a unique ID for React keys
@@ -193,6 +199,11 @@ export default function CreditWiseAIPage() {
   // New state for dedicated risk assessment
   const [riskAssessment, setRiskAssessment] = useState<RiskAssessmentOutput | null>(null);
   const [isAssessingRisk, setIsAssessingRisk] = useState(false);
+
+  // New state for Salary Slip Analysis
+  const [salarySlips, setSalarySlips] = useState<File[]>([]);
+  const [salarySlipAnalysisResult, setSalarySlipAnalysisResult] = useState<SalarySlipAnalysisOutput | null>(null);
+  const [isAnalyzingSalarySlips, setIsAnalyzingSalarySlips] = useState(false);
   
   // New state for token tracking and cost
   const [tokenUsage, setTokenUsage] = useState({ inputTokens: 0, outputTokens: 0 });
@@ -200,6 +211,7 @@ export default function CreditWiseAIPage() {
 
   const { toast } = useToast()
   const creditFileInputRef = useRef<HTMLInputElement>(null);
+  const salarySlipInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(setUser);
@@ -265,14 +277,20 @@ export default function CreditWiseAIPage() {
   };
   
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>, type: AnalysisType) => {
-    const selectedFile = event.target.files?.[0];
-    if (selectedFile) {
-      if (type === 'credit') {
+    const selectedFiles = event.target.files;
+    if (!selectedFiles || selectedFiles.length === 0) return;
+  
+    if (type === 'credit') {
+      const selectedFile = selectedFiles[0];
+      if (selectedFile) {
         resetState();
         setCreditFile(selectedFile);
         setCreditFileName(selectedFile.name);
         processFile(selectedFile);
       }
+    } else if (type === 'salary') {
+      const newFiles = Array.from(selectedFiles);
+      setSalarySlips(prev => [...prev, ...newFiles]);
     }
   };
   
@@ -308,11 +326,17 @@ export default function CreditWiseAIPage() {
     setIsAssessingFinancialRisk(false);
     setRiskAssessment(null);
     setIsAssessingRisk(false);
+    setSalarySlips([]);
+    setSalarySlipAnalysisResult(null);
+    setIsAnalyzingSalarySlips(false);
     setTokenUsage({ inputTokens: 0, outputTokens: 0 });
     setEstimatedCost(0);
 
     if (creditFileInputRef.current) {
       creditFileInputRef.current.value = '';
+    }
+    if (salarySlipInputRef.current) {
+      salarySlipInputRef.current.value = '';
     }
   };
 
@@ -633,6 +657,60 @@ export default function CreditWiseAIPage() {
               loan.id === id ? { ...loan, [field]: value } : loan
           )
       );
+  };
+
+  const fileToDataUri = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleAnalyzeSalarySlips = async () => {
+    if (salarySlips.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'No Files Selected',
+        description: 'Please upload at least one salary slip to analyze.',
+      });
+      return;
+    }
+    setIsAnalyzingSalarySlips(true);
+    setSalarySlipAnalysisResult(null);
+
+    try {
+      const salarySlipsWithData = await Promise.all(
+        salarySlips.map(async (file) => ({
+          fileName: file.name,
+          dataUri: await fileToDataUri(file),
+        }))
+      );
+
+      const input: SalarySlipAnalysisInput = { salarySlips: salarySlipsWithData };
+      const { output, usage } = await analyzeSalarySlips(input);
+
+      setSalarySlipAnalysisResult(output);
+      updateTokenUsage(usage);
+      toast({
+        title: 'Salary Slip Analysis Complete',
+        description: "The AI has performed a forensic analysis of your documents.",
+      });
+
+    } catch (error: any) {
+      console.error('Error analyzing salary slips:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Salary Slip Analysis Failed',
+        description:
+          error.message?.includes('429') || error.message?.includes('503')
+            ? "The AI model is currently overloaded. Please try again later."
+            : error.message || 'Could not analyze salary slips. Please try again.',
+      });
+    } finally {
+      setIsAnalyzingSalarySlips(false);
+    }
   };
 
 
@@ -1591,6 +1669,142 @@ export default function CreditWiseAIPage() {
             </CardContent>
          </Card>
       ),
+      incomeGuess: (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center text-xl font-bold">
+              <Wallet className="mr-3 h-6 w-6 text-primary" />
+              Income & Asset Verification
+            </CardTitle>
+            <CardDescription>
+              Verify your income and declare assets for a more comprehensive financial profile.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="asset">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="asset"><Landmark className="mr-2" />Asset Creation</TabsTrigger>
+                <TabsTrigger value="salary"><Receipt className="mr-2" />Salary Slip Analysis</TabsTrigger>
+              </TabsList>
+              <TabsContent value="asset">
+                <Card>
+                  <CardHeader>
+                      <CardTitle>Declare Your Assets</CardTitle>
+                      <CardDescription>Manually add details about your assets like property, vehicles, or investments.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Placeholder for asset creation form */}
+                    <div className="text-center py-10 text-muted-foreground border-2 border-dashed rounded-lg">
+                      <Landmark className="mx-auto h-12 w-12 mb-4" />
+                      <h3 className="text-lg font-semibold">Asset Creation Form</h3>
+                      <p>This feature is not yet implemented.</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="salary">
+                 <Card>
+                    <CardHeader>
+                      <CardTitle>Salary Slip Analysis</CardTitle>
+                      <CardDescription>Upload one or more salary slips (PDF or images) for forensic analysis.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center gap-4">
+                        <Button onClick={() => salarySlipInputRef.current?.click()}>
+                          <UploadCloud className="mr-2" /> Upload Slips
+                        </Button>
+                        <Input ref={salarySlipInputRef} type="file" accept=".pdf,image/*" onChange={(e) => handleFileChange(e, 'salary')} className="hidden" multiple />
+                         {salarySlips.length > 0 && (
+                          <Button onClick={handleAnalyzeSalarySlips} disabled={isAnalyzingSalarySlips}>
+                            {isAnalyzingSalarySlips ? <Loader2 className="mr-2 animate-spin" /> : <Sparkles className="mr-2" />}
+                            Analyze {salarySlips.length} Slip(s)
+                          </Button>
+                        )}
+                      </div>
+                      {salarySlips.length > 0 && (
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium">Uploaded files:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {salarySlips.map((file, i) => (
+                              <Badge key={i} variant="secondary">{file.name}</Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {isAnalyzingSalarySlips && (
+                        <div className="flex items-center justify-center py-10">
+                          <Loader2 className="mr-3 h-8 w-8 animate-spin text-primary" />
+                          <span className="text-muted-foreground">AI is running forensic analysis on documents...</span>
+                        </div>
+                      )}
+                      
+                      {salarySlipAnalysisResult && (
+                        <div className="space-y-6 mt-4">
+                           <Accordion type="multiple" className="w-full" defaultValue={['report', 'slip-0']}>
+                             <AccordionItem value="report">
+                                <AccordionTrigger>
+                                    <h4 className="font-semibold text-lg flex items-center"><ClipboardCheck className="mr-2 text-primary" />Forensic & Fraud Report</h4>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                  <div className="space-y-4 p-2">
+                                    <Alert className={cn(
+                                        salarySlipAnalysisResult.fraudReport.authenticityConfidence > 90 ? 'border-green-500' :
+                                        salarySlipAnalysisResult.fraudReport.authenticityConfidence > 70 ? 'border-yellow-500' : 'border-red-500'
+                                    )}>
+                                      <AlertTitle>Overall Assessment</AlertTitle>
+                                      <AlertDescription>
+                                        <Progress value={salarySlipAnalysisResult.fraudReport.authenticityConfidence} className="mb-2 h-2" />
+                                        <p><strong className="text-foreground">Authenticity Score: {salarySlipAnalysisResult.fraudReport.authenticityConfidence}/100.</strong> {salarySlipAnalysisResult.fraudReport.overallAssessment}</p>
+                                      </AlertDescription>
+                                    </Alert>
+                                    <InfoItem label="Consistency Check" value={salarySlipAnalysisResult.fraudReport.consistencyCheck} />
+                                    <InfoItem label="Pattern Analysis" value={salarySlipAnalysisResult.fraudReport.patternAnalysis} />
+                                    <InfoItem label="Formatting Anomalies" value={salarySlipAnalysisResult.fraudReport.formattingAnomalies} />
+                                    <InfoItem label="Tampering Indicators" value={salarySlipAnalysisResult.fraudReport.tamperingIndicators} />
+                                  </div>
+                                </AccordionContent>
+                             </AccordionItem>
+                              <AccordionItem value="data">
+                                <AccordionTrigger>
+                                    <h4 className="font-semibold text-lg flex items-center"><FileText className="mr-2 text-primary" />Extracted Data</h4>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                   <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>File</TableHead>
+                                        <TableHead>Pay Month</TableHead>
+                                        <TableHead>Gross Salary</TableHead>
+                                        <TableHead>Incentives</TableHead>
+                                        <TableHead>Net Salary</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {salarySlipAnalysisResult.extractedSlips.map((slip, i) => (
+                                        <TableRow key={i}>
+                                          <TableCell className="font-medium">{slip.fileName}</TableCell>
+                                          <TableCell>{slip.payMonth}</TableCell>
+                                          <TableCell>{slip.grossSalary}</TableCell>
+                                          <TableCell>{slip.incentives}</TableCell>
+                                          <TableCell className="font-semibold">{slip.netSalary}</TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </AccordionContent>
+                             </AccordionItem>
+                           </Accordion>
+                        </div>
+                      )}
+
+                    </CardContent>
+                 </Card>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      ),
     };
     return views[activeView!] as React.ReactNode;
   };
@@ -1829,14 +2043,15 @@ export default function CreditWiseAIPage() {
                       <CardTitle className="text-2xl font-bold">Analysis Dashboard</CardTitle>
                       <CardDescription>Select a section to view its detailed analysis. Some sections require previous steps to be completed.</CardDescription>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    <CardContent className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                       <NavButton view="creditSummary" label="Credit Summary" icon={<LayoutGrid size={24} />} disabled={!analysisResult} tooltipContent="Please run the main analysis first." />
                       <NavButton view="aiAnalysis" label="AI Risk Assessment" icon={<BrainCircuit size={24} />} disabled={!analysisResult} tooltipContent="Please run the main analysis first." />
                       <NavButton view="aiMeter" label="AI Credit Meter" icon={<Bot size={24} />} disabled={!riskAssessment} tooltipContent="Please complete the AI Risk Assessment first."/>
-                      <NavButton view="obligations" label="Financials & Obligations" icon={<Calculator size={24} />} disabled={!rawText} tooltipContent="Please upload and parse a CIBIL report first." />
-                      <NavButton view="loanEligibility" label="AI Loan Eligibility" icon={<Banknote size={24} />} disabled={!aiRating || !estimatedIncome} tooltipContent="Please complete AI Credit Meter and enter income first."/>
-                      <NavButton view="financialRisk" label="AI Financial Risk" icon={<BadgeCent size={24} />} disabled={!estimatedIncome} tooltipContent="Please enter your estimated income first."/>
-                      <NavButton view="creditUnderwriting" label="AI Credit Underwriting" icon={<Gavel size={24} />} disabled={!loanEligibility} tooltipContent="Please complete AI Loan Eligibility analysis first." />
+                      <NavButton view="obligations" label="Financials" icon={<Calculator size={24} />} disabled={!rawText} tooltipContent="Please upload and parse a CIBIL report first." />
+                      <NavButton view="incomeGuess" label="Income Guess" icon={<Wallet size={24} />} disabled={!rawText} tooltipContent="Please upload and parse a CIBIL report first." />
+                      <NavButton view="loanEligibility" label="Loan Eligibility" icon={<Banknote size={24} />} disabled={!aiRating || !estimatedIncome} tooltipContent="Please complete AI Credit Meter and enter income first."/>
+                      <NavButton view="financialRisk" label="Financial Risk" icon={<BadgeCent size={24} />} disabled={!estimatedIncome} tooltipContent="Please enter your estimated income first."/>
+                      <NavButton view="creditUnderwriting" label="Underwriting" icon={<Gavel size={24} />} disabled={!loanEligibility} tooltipContent="Please complete AI Loan Eligibility analysis first." />
                     </CardContent>
                   </Card>
                   
@@ -1951,4 +2166,3 @@ export default function CreditWiseAIPage() {
     </div>
   );
 }
-
