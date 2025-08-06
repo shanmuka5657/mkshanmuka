@@ -13,6 +13,7 @@ import {
   Sparkles,
   ClipboardCheck,
   ShieldCheck,
+  XCircle,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -328,3 +329,5 @@ export default function VerifyPdfPage() {
     </div>
   );
 }
+
+    
