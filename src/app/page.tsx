@@ -175,7 +175,6 @@ export default function CreditWiseAIPage() {
   
   const [totalEmi, setTotalEmi] = useState('');
   const [activeLoanDetails, setActiveLoanDetails] = useState<ActiveLoanDetail[]>([]);
-  const [isCalculatingEmi, setIsCalculatingEmi] = useState(false); // This can be removed or repurposed if EMI is part of main analysis
   const [otherObligations, setOtherObligations] = useState('');
   const [estimatedIncome, setEstimatedIncome] = useState<string>('');
   const [theme, setTheme] = useState('light');
@@ -311,7 +310,6 @@ export default function CreditWiseAIPage() {
     
     setTotalEmi('');
     setActiveLoanDetails([]);
-    setIsCalculatingEmi(false);
     setOtherObligations('');
     setEstimatedIncome('');
     setShowRawText(false);
@@ -405,18 +403,14 @@ export default function CreditWiseAIPage() {
     }
   };
   
-  const handleStartFullAnalysis = async () => {
-    setIsModelOverloaded(false); // Reset overload state on new attempt
-    setAnalysisResult(null);
-    setRiskAssessment(null);
-
-    // Step 1: Perform the main, consolidated analysis
+  const handleAnalyzeCreditReport = async () => {
+    if (analysisResult) return; // Don't re-run if we have results
+    
     setIsAnalyzing(true);
-    setIsAssessingRisk(true);
-    let analysisOutput: AnalyzeCreditReportOutput | null = null;
+    setIsModelOverloaded(false);
+    
     try {
         const { output, usage } = await analyzeCreditReport({ creditReportText: rawText });
-        analysisOutput = output;
         setAnalysisResult(output);
         updateTokenUsage(usage);
         
@@ -427,37 +421,44 @@ export default function CreditWiseAIPage() {
             comment: '',
         }));
         setActiveLoanDetails(enhancedLoanDetails);
-        toast({ title: "AI Analysis Complete", description: "Credit report has been analyzed." });
+        toast({ title: "Credit Summary Complete", description: "Credit report has been analyzed." });
     } catch (error: any) {
         console.error('Error analyzing report:', error);
         handleOverloadedError(error);
+    } finally {
         setIsAnalyzing(false);
-        setIsAssessingRisk(false);
-        return; // Stop if the first step fails
     }
-    setIsAnalyzing(false);
+  };
 
-    // Step 2: Run subsequent analyses that depend on the first one
-    if (analysisOutput) {
-        try {
-            const { output: riskOutput, usage: riskUsage } = await getRiskAssessment({ analysisResult: analysisOutput });
-            setRiskAssessment(riskOutput);
-            updateTokenUsage(riskUsage);
-            toast({ title: 'AI Risk Assessment Complete', description: 'The AI has performed a detailed risk analysis.' });
-        } catch (error: any) {
-            console.error('Error during risk assessment:', error);
-            handleOverloadedError(error);
-        }
+  const handleGetRiskAssessment = async () => {
+    if (riskAssessment || !analysisResult) {
+        toast({ variant: "destructive", title: "Prerequisite Missing", description: "Please generate the Credit Summary first." });
+        return;
     }
-    setIsAssessingRisk(false);
-};
+    
+    setIsAssessingRisk(true);
+    setIsModelOverloaded(false);
+    
+    try {
+        const { output, usage } = await getRiskAssessment({ analysisResult });
+        setRiskAssessment(output);
+        updateTokenUsage(usage);
+        toast({ title: 'AI Risk Assessment Complete', description: 'The AI has performed a detailed risk analysis.' });
+    } catch (error: any) {
+        console.error('Error during risk assessment:', error);
+        handleOverloadedError(error);
+    } finally {
+        setIsAssessingRisk(false);
+    }
+  }
+
 
   const handleGetAiRating = async () => {
     if (!analysisResult || !riskAssessment) {
       toast({
         variant: "destructive",
         title: "Missing Information",
-        description: "Please ensure the report is parsed and the initial risk assessment is complete.",
+        description: "Please complete the Credit Summary and AI Risk Assessment first.",
       });
       return;
     }
@@ -479,7 +480,8 @@ export default function CreditWiseAIPage() {
         title: "AI Rating Complete",
         description: "Your comprehensive AI credit rating is ready.",
       })
-    } catch (error: any) {
+    } catch (error: any)
+{
       console.error('Error getting AI rating:', error);
       handleOverloadedError(error);
     } finally {
@@ -525,7 +527,7 @@ export default function CreditWiseAIPage() {
 
   const handleGetFinancialRisk = async () => {
     if (!estimatedIncome || !analysisResult) {
-      toast({ variant: "destructive", title: "Missing Information", description: "Please analyze the report and enter your income first."});
+      toast({ variant: "destructive", title: "Missing Information", description: "Please complete the Credit Summary and enter your income first."});
       return;
     }
     setIsAssessingFinancialRisk(true);
@@ -864,6 +866,7 @@ export default function CreditWiseAIPage() {
     label,
     icon,
     disabled = false,
+    isLoading = false,
     onClick,
     tooltipContent,
   }: {
@@ -871,9 +874,12 @@ export default function CreditWiseAIPage() {
     label: string;
     icon: React.ReactNode;
     disabled?: boolean;
+    isLoading?: boolean;
     onClick?: () => void;
     tooltipContent?: React.ReactNode;
   }) => {
+      const buttonContent = isLoading ? <Loader2 className="animate-spin" /> : icon;
+      
       const button = (
          <Button
             variant={activeView === view ? 'default' : 'outline'}
@@ -882,9 +888,9 @@ export default function CreditWiseAIPage() {
               setActiveView(activeView === view ? null : view);
             }}
             className="flex flex-col h-24 text-center justify-center items-center gap-2 w-full"
-            disabled={disabled}
+            disabled={disabled || isLoading}
           >
-            {icon}
+            {buttonContent}
             <span className="text-xs font-normal">{label}</span>
           </Button>
       );
@@ -1089,7 +1095,7 @@ export default function CreditWiseAIPage() {
                 </div>
             ) : (
                 <div className="text-center py-10 text-muted-foreground">
-                    No account data found in the report.
+                    Click the button above to generate your credit summary.
                 </div>
             )}
           </CardContent>
@@ -1102,19 +1108,12 @@ export default function CreditWiseAIPage() {
             <CardDescription>This AI acts as a holistic credit advisor. It provides a comprehensive score of your overall credit health by balancing both the positive and negative factors in your report.</CardDescription>
           </CardHeader>
           <CardContent>
-            <UiTooltip>
-                <TooltipTrigger asChild>
-                    <div className="inline-block">
-                        <Button onClick={handleGetAiRating} disabled={isRating || !riskAssessment}>
-                            {isRating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                            Get AI Rating
-                        </Button>
-                    </div>
-                </TooltipTrigger>
-                {!riskAssessment && <TooltipContent><p>Please complete the AI Risk Assessment first.</p></TooltipContent>}
-            </UiTooltip>
-            
-            {aiRating && (
+            {isRating ? (
+                <div className="flex items-center justify-center py-10">
+                    <Loader2 className="mr-3 h-8 w-8 animate-spin text-primary" />
+                    <span className="text-muted-foreground">AI is generating your credit rating...</span>
+                </div>
+            ) : aiRating ? (
               <div className="mt-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
                   <div className="text-center">
@@ -1145,6 +1144,10 @@ export default function CreditWiseAIPage() {
                   </div>
                 </div>
               </div>
+            ) : (
+                 <div className="text-center py-10 text-muted-foreground">
+                    Click the button in the dashboard to generate your AI credit rating.
+                </div>
             )}
           </CardContent>
         </Card>
@@ -1161,26 +1164,12 @@ export default function CreditWiseAIPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-              <UiTooltip>
-                <TooltipTrigger asChild>
-                    <div className="inline-block">
-                        <Button
-                            onClick={handleGetLoanEligibility}
-                            disabled={isCalculatingEligibility || !aiRating || !estimatedIncome}
-                        >
-                            {isCalculatingEligibility ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                            <Sparkles className="mr-2 h-4 w-4" />
-                            )}
-                            Calculate Loan Eligibility
-                        </Button>
-                    </div>
-                </TooltipTrigger>
-                {(!aiRating || !estimatedIncome) && <TooltipContent><p>Please complete AI Credit Meter and enter income first.</p></TooltipContent>}
-              </UiTooltip>
-
-            {loanEligibility && (
+              {isCalculatingEligibility ? (
+                <div className="flex items-center justify-center py-10">
+                    <Loader2 className="mr-3 h-8 w-8 animate-spin text-primary" />
+                    <span className="text-muted-foreground">AI is calculating your loan eligibility...</span>
+                </div>
+              ) : loanEligibility ? (
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="p-4 bg-muted rounded-lg">
                     <h4 className="font-semibold flex items-center gap-2"><Wallet className="h-5 w-5 text-primary"/>Repayment Capacity</h4>
@@ -1222,7 +1211,11 @@ export default function CreditWiseAIPage() {
                     </div>
                   )}
                 </div>
-            )}
+              ) : (
+                <div className="text-center py-10 text-muted-foreground">
+                    Click the button in the dashboard to calculate your loan eligibility.
+                </div>
+              )}
           </CardContent>
         </Card>
       ),
@@ -1285,7 +1278,7 @@ export default function CreditWiseAIPage() {
                     </div>
                   </div>
                 ) : (
-                  <div>Click "Start Full AI Analysis" to generate the risk assessment.</div>
+                  <div className="text-center py-10 text-muted-foreground">Click the button in the dashboard to generate your AI risk assessment.</div>
                 )}
             </CardContent>
         </Card>
@@ -1372,7 +1365,12 @@ export default function CreditWiseAIPage() {
             </CardFooter>
           </form>
           
-          {underwritingResult && (
+          {isUnderwriting ? (
+                <div className="flex items-center justify-center py-10">
+                    <Loader2 className="mr-3 h-8 w-8 animate-spin text-primary" />
+                    <span className="text-muted-foreground">AI is running final underwriting...</span>
+                </div>
+          ) : underwritingResult && (
             <CardContent>
               <div className={cn('p-4 rounded-lg border-l-4 mb-6', getUnderwritingDecisionColor(underwritingResult.underwritingDecision))}>
                 <h4 className="font-bold text-lg">Underwriting Decision: {underwritingResult.underwritingDecision}</h4>
@@ -1488,7 +1486,7 @@ export default function CreditWiseAIPage() {
               <Label htmlFor="total-emi">Total Monthly Loan EMI</Label>
               <div className="flex items-center gap-2">
                 <Input id="total-emi" type="number" placeholder="AI is calculating..." value={totalEmi} onChange={(e) => setTotalEmi(e.target.value)} disabled />
-                {(isAnalyzing) && <Loader2 className="h-5 w-5 animate-spin" />}
+                {isAnalyzing && <Loader2 className="h-5 w-5 animate-spin" />}
               </div>
               <div className="text-xs text-muted-foreground mt-1">This is auto-calculated from your report and your selections below. You can override it.</div>
             </div>
@@ -1568,26 +1566,12 @@ export default function CreditWiseAIPage() {
                 <CardDescription>Get the AI's perspective on your overall financial stability and health.</CardDescription>
             </CardHeader>
             <CardContent>
-                <UiTooltip>
-                    <TooltipTrigger asChild>
-                        <div className="inline-block">
-                            <Button
-                            onClick={handleGetFinancialRisk}
-                            disabled={isAssessingFinancialRisk || !estimatedIncome}
-                            >
-                            {isAssessingFinancialRisk ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <Sparkles className="mr-2 h-4 w-4" />
-                            )}
-                            Assess Financial Risk
-                            </Button>
-                        </div>
-                    </TooltipTrigger>
-                    {!estimatedIncome && <TooltipContent><p>Please enter your estimated income first.</p></TooltipContent>}
-                </UiTooltip>
-
-                {financialRisk && financialRisk.dtiAnalysis && (
+                {isAssessingFinancialRisk ? (
+                   <div className="flex items-center justify-center py-10">
+                        <Loader2 className="mr-3 h-8 w-8 animate-spin text-primary" />
+                        <span className="text-muted-foreground">AI is assessing financial risk...</span>
+                    </div>
+                ) : financialRisk && financialRisk.dtiAnalysis ? (
                   <div className="mt-6 space-y-6">
                     <div className={cn('p-4 rounded-lg border-l-4 font-semibold text-lg', getRiskColorClass(financialRisk.financialRiskRating.toLowerCase(), 'bg'), getRiskColorClass(financialRisk.financialRiskRating.toLowerCase(), 'text'), getRiskColorClass(financialRisk.financialRiskRating.toLowerCase(), 'border'))}>
                        Overall Financial Risk: {financialRisk.financialRiskRating}
@@ -1616,6 +1600,10 @@ export default function CreditWiseAIPage() {
                         </AlertDescription>
                     </Alert>
                   </div>
+                ) : (
+                    <div className="text-center py-10 text-muted-foreground">
+                        Click the button in the dashboard to assess your financial risk.
+                    </div>
                 )}
 
             </CardContent>
@@ -1876,13 +1864,9 @@ export default function CreditWiseAIPage() {
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>Ready to Analyze</AlertTitle>
                       <AlertDescription>
-                      Your report has been processed. Click the button below to run the full AI analysis.
+                        Your report has been processed. Use the Analysis Dashboard below to start generating AI insights.
                       </AlertDescription>
                     </Alert>
-                    <Button onClick={handleStartFullAnalysis} disabled={isAnalyzing || isAssessingRisk} className="mt-4">
-                      {(isAnalyzing || isAssessingRisk) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />}
-                      Start Full AI Analysis
-                    </Button>
                   </div>
                 )}
                 {isModelOverloaded && (
@@ -2004,14 +1988,14 @@ export default function CreditWiseAIPage() {
                       <CardDescription>Select a section to view its detailed analysis. Some sections require previous steps to be completed.</CardDescription>
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                      <NavButton view="creditSummary" label="Credit Summary" icon={<LayoutGrid size={24} />} disabled={!analysisResult} tooltipContent="Please run the main analysis first." />
-                      <NavButton view="aiAnalysis" label="AI Risk Assessment" icon={<BrainCircuit size={24} />} disabled={!analysisResult} tooltipContent="Please run the main analysis first." />
-                      <NavButton view="aiMeter" label="AI Credit Meter" icon={<Bot size={24} />} disabled={!riskAssessment} tooltipContent="Please complete the AI Risk Assessment first."/>
+                      <NavButton view="creditSummary" label="Credit Summary" icon={<LayoutGrid size={24} />} onClick={handleAnalyzeCreditReport} isLoading={isAnalyzing} disabled={!rawText} tooltipContent="Upload a CIBIL report first." />
+                      <NavButton view="aiAnalysis" label="AI Risk Assessment" icon={<BrainCircuit size={24} />} onClick={handleGetRiskAssessment} isLoading={isAssessingRisk} disabled={!analysisResult} tooltipContent="Please run the Credit Summary first." />
+                      <NavButton view="aiMeter" label="AI Credit Meter" icon={<Bot size={24} />} onClick={handleGetAiRating} isLoading={isRating} disabled={!riskAssessment} tooltipContent="Please complete the AI Risk Assessment first."/>
                       <NavButton view="obligations" label="Financials" icon={<Calculator size={24} />} disabled={!rawText} tooltipContent="Please upload and parse a CIBIL report first." />
                       <NavButton view="incomeGuess" label="Income Guess" icon={<Wallet size={24} />} disabled={!rawText} tooltipContent="Please upload and parse a CIBIL report first." />
-                      <NavButton view="loanEligibility" label="Loan Eligibility" icon={<Banknote size={24} />} disabled={!aiRating || !estimatedIncome} tooltipContent="Please complete AI Credit Meter and enter income first."/>
-                      <NavButton view="financialRisk" label="Financial Risk" icon={<BadgeCent size={24} />} disabled={!estimatedIncome} tooltipContent="Please enter your estimated income first."/>
-                      <NavButton view="creditUnderwriting" label="Underwriting" icon={<Gavel size={24} />} disabled={!loanEligibility} tooltipContent="Please complete AI Loan Eligibility analysis first." />
+                      <NavButton view="loanEligibility" label="Loan Eligibility" icon={<Banknote size={24} />} onClick={handleGetLoanEligibility} isLoading={isCalculatingEligibility} disabled={!aiRating || !estimatedIncome} tooltipContent="Please complete AI Credit Meter and enter income first."/>
+                      <NavButton view="financialRisk" label="Financial Risk" icon={<BadgeCent size={24} />} onClick={handleGetFinancialRisk} isLoading={isAssessingFinancialRisk} disabled={!analysisResult || !estimatedIncome} tooltipContent="Please run Credit Summary and enter your income first."/>
+                      <NavButton view="creditUnderwriting" label="Underwriting" icon={<Gavel size={24} />} isLoading={isUnderwriting} disabled={!loanEligibility} tooltipContent="Please complete AI Loan Eligibility analysis first." />
                     </CardContent>
                   </Card>
                   
