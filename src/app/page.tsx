@@ -209,6 +209,9 @@ export default function CreditWiseAIPage() {
   const [tokenUsage, setTokenUsage] = useState({ inputTokens: 0, outputTokens: 0 });
   const [estimatedCost, setEstimatedCost] = useState(0);
 
+  // New state for overload error
+  const [isModelOverloaded, setIsModelOverloaded] = useState(false);
+
   const { toast } = useToast()
   const creditFileInputRef = useRef<HTMLInputElement>(null);
   const salarySlipInputRef = useRef<HTMLInputElement>(null);
@@ -331,6 +334,7 @@ export default function CreditWiseAIPage() {
     setIsAnalyzingSalarySlips(false);
     setTokenUsage({ inputTokens: 0, outputTokens: 0 });
     setEstimatedCost(0);
+    setIsModelOverloaded(false);
 
     if (creditFileInputRef.current) {
       creditFileInputRef.current.value = '';
@@ -348,6 +352,19 @@ export default function CreditWiseAIPage() {
     }));
   }, []);
 
+  const handleOverloadedError = (error: any) => {
+    const errorMessage = error.message || '';
+    if (errorMessage.includes('429') || errorMessage.includes('503') || errorMessage.includes('overloaded')) {
+      setIsModelOverloaded(true);
+      return true; // Indicates the error was handled
+    }
+    toast({
+      variant: "destructive",
+      title: "An Error Occurred",
+      description: errorMessage || "An unknown error occurred. Please try again.",
+    });
+    return false; // Indicates the error was not the overload error
+  };
 
   const processFile = async (selectedFile: File) => {
     setIsLoading(true);
@@ -387,6 +404,7 @@ export default function CreditWiseAIPage() {
   };
   
   const handleStartFullAnalysis = () => {
+    setIsModelOverloaded(false);
     handleAnalyze(rawText);
     handleCalculateTotalEmi(rawText);
     handleGetRiskAssessment(rawText);
@@ -407,11 +425,7 @@ export default function CreditWiseAIPage() {
       })
     } catch (error: any) {
       console.error('Error analyzing report:', error);
-       toast({
-        variant: "destructive",
-        title: "Analysis Failed",
-        description: error.message?.includes('429') || error.message?.includes('503') ? "The AI model is currently overloaded. Please try again later." : (error.message || "Could not get AI analysis. Please try again."),
-      })
+      handleOverloadedError(error);
     } finally {
       setIsAnalyzing(false);
     }
@@ -437,11 +451,7 @@ export default function CreditWiseAIPage() {
       // The total EMI will be calculated by the useEffect hook
     } catch (error: any) {
       console.error('Error calculating total EMI:', error);
-      toast({
-        variant: "destructive",
-        title: "AI EMI Calculation Failed",
-        description: error.message?.includes('429') || error.message?.includes('503') ? "The AI model is currently overloaded. Please try again later." : (error.message || "Could not calculate total EMI. Please try again."),
-      })
+      handleOverloadedError(error);
     } finally {
       setIsCalculatingEmi(false);
     }
@@ -458,6 +468,7 @@ export default function CreditWiseAIPage() {
     }
     setIsRating(true);
     setAiRating(null);
+    setIsModelOverloaded(false);
     
     try {
       const { output, usage } = await getAiRating({
@@ -475,11 +486,7 @@ export default function CreditWiseAIPage() {
       })
     } catch (error: any) {
       console.error('Error getting AI rating:', error);
-       toast({
-        variant: "destructive",
-        title: "AI Rating Failed",
-        description: error.message?.includes('429') || error.message?.includes('503') ? "The AI model is currently overloaded. Please try again later." : (error.message || "Could not get AI rating. Please try again."),
-      })
+      handleOverloadedError(error);
     } finally {
       setIsRating(false);
     }
@@ -497,6 +504,7 @@ export default function CreditWiseAIPage() {
     }
     setIsCalculatingEligibility(true);
     setLoanEligibility(null);
+    setIsModelOverloaded(false);
     try {
       const { output, usage } = await getLoanEligibility({
         aiScore: aiRating.aiScore,
@@ -513,14 +521,7 @@ export default function CreditWiseAIPage() {
       });
     } catch (error: any) {
       console.error('Error calculating loan eligibility:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Eligibility Calculation Failed',
-        description:
-          error.message?.includes('429') || error.message?.includes('503')
-            ? "The AI model is currently overloaded. Please try again later."
-            : error.message || 'Could not calculate loan eligibility. Please try again.',
-      });
+      handleOverloadedError(error);
     } finally {
       setIsCalculatingEligibility(false);
     }
@@ -533,6 +534,7 @@ export default function CreditWiseAIPage() {
     }
     setIsAssessingFinancialRisk(true);
     setFinancialRisk(null);
+    setIsModelOverloaded(false);
     try {
       const { output, usage } = await getFinancialRiskAssessment({
         estimatedIncome: parseFloat(estimatedIncome),
@@ -546,14 +548,7 @@ export default function CreditWiseAIPage() {
       });
     } catch (error: any) {
       console.error('Error assessing financial risk:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Financial Risk Assessment Failed',
-        description:
-          error.message?.includes('429') || error.message?.includes('503')
-            ? "The AI model is currently overloaded. Please try again later."
-            : error.message || 'Could not assess financial risk. Please try again.',
-      });
+      handleOverloadedError(error);
     } finally {
       setIsAssessingFinancialRisk(false);
     }
@@ -573,14 +568,7 @@ export default function CreditWiseAIPage() {
       });
     } catch (error: any) {
       console.error('Error during risk assessment:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Risk Assessment Failed',
-        description:
-          error.message?.includes('429') || error.message?.includes('503')
-            ? "The AI model is currently overloaded. Please try again later."
-            : error.message || 'Could not perform risk assessment.',
-      });
+      handleOverloadedError(error);
     } finally {
       setIsAssessingRisk(false);
     }
@@ -598,6 +586,7 @@ export default function CreditWiseAIPage() {
     }
     setIsUnderwriting(true);
     setUnderwritingResult(null);
+    setIsModelOverloaded(false);
 
     const userComments = activeLoanDetails
         .filter(loan => loan.comment.trim() !== '')
@@ -637,14 +626,7 @@ export default function CreditWiseAIPage() {
       });
     } catch (error: any) {
       console.error('Error getting underwriting:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Underwriting Failed',
-        description:
-          error.message?.includes('429') || error.message?.includes('503')
-            ? "The AI model is currently overloaded. Please try again later."
-            : error.message || 'Could not get underwriting analysis. Please try again.',
-      });
+      handleOverloadedError(error);
     } finally {
       setIsUnderwriting(false);
     }
@@ -679,6 +661,7 @@ export default function CreditWiseAIPage() {
     }
     setIsAnalyzingSalarySlips(true);
     setSalarySlipAnalysisResult(null);
+    setIsModelOverloaded(false);
 
     try {
       const salarySlipsWithData = await Promise.all(
@@ -700,14 +683,7 @@ export default function CreditWiseAIPage() {
 
     } catch (error: any) {
       console.error('Error analyzing salary slips:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Salary Slip Analysis Failed',
-        description:
-          error.message?.includes('429') || error.message?.includes('503')
-            ? "The AI model is currently overloaded. Please try again later."
-            : error.message || 'Could not analyze salary slips. Please try again.',
-      });
+      handleOverloadedError(error);
     } finally {
       setIsAnalyzingSalarySlips(false);
     }
@@ -1677,11 +1653,11 @@ export default function CreditWiseAIPage() {
               Income & Asset Verification
             </CardTitle>
             <CardDescription>
-              Verify your income and declare assets for a more comprehensive financial profile.
+              Upload documents to verify your income and declare assets for a more comprehensive financial profile.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="asset">
+            <Tabs defaultValue="salary">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="asset"><Landmark className="mr-2" />Asset Creation</TabsTrigger>
                 <TabsTrigger value="salary"><Receipt className="mr-2" />Salary Slip Analysis</TabsTrigger>
@@ -1693,7 +1669,6 @@ export default function CreditWiseAIPage() {
                       <CardDescription>Manually add details about your assets like property, vehicles, or investments.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {/* Placeholder for asset creation form */}
                     <div className="text-center py-10 text-muted-foreground border-2 border-dashed rounded-lg">
                       <Landmark className="mx-auto h-12 w-12 mb-4" />
                       <h3 className="text-lg font-semibold">Asset Creation Form</h3>
@@ -1933,6 +1908,15 @@ export default function CreditWiseAIPage() {
                       Start Full AI Analysis
                     </Button>
                   </div>
+                )}
+                {isModelOverloaded && (
+                  <Alert variant="destructive" className="mt-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>AI Model Overloaded</AlertTitle>
+                    <AlertDescription>
+                      The AI is currently experiencing high demand. Please wait a moment and try your request again.
+                    </AlertDescription>
+                  </Alert>
                 )}
               </CardContent>
             </Card>
