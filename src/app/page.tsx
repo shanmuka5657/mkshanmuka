@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -665,6 +666,7 @@ export default function CreditWiseAIPage() {
       writtenOff: 0,
       settled: 0,
       doubtful: 0,
+      activeAccounts: 0,
       closedAccounts: 0,
       totalMonthlyEMI: 0,
       maxSingleEMI: 0,
@@ -688,10 +690,13 @@ export default function CreditWiseAIPage() {
       const accType = acc.type || 'Other';
       accountDistribution[accType] = (accountDistribution[accType] || 0) + 1;
       
-      const isActive = !status.includes('closed') && !status.includes('written-off') && !status.includes('settled');
+      const isActive = !status.includes('closed') && !status.includes('written-off') && !status.includes('settled') && !status.includes('suit filed');
 
       if (isActive) {
+        summary.activeAccounts++;
         summary.totalMonthlyEMI += emi;
+      } else {
+        summary.closedAccounts++;
       }
       
       if (emi > summary.maxSingleEMI) {
@@ -701,7 +706,6 @@ export default function CreditWiseAIPage() {
       if (status.includes('written-off')) summary.writtenOff++;
       if (status.includes('settled')) summary.settled++;
       if (status.includes('doubtful')) summary.doubtful++;
-      if (status.includes('closed')) summary.closedAccounts++;
 
       if (acc.type.toLowerCase().includes('credit card')) {
           creditCardLimit += sanctioned;
@@ -736,7 +740,6 @@ export default function CreditWiseAIPage() {
     }
     
     const totalAccounts = allAccounts.length;
-    const activeAccounts = totalAccounts - summary.closedAccounts - summary.writtenOff - summary.settled;
     
     let creditUtilization: string;
     if (creditCardLimit === 0) {
@@ -763,7 +766,6 @@ export default function CreditWiseAIPage() {
     return {
       ...summary,
       totalAccounts,
-      activeAccounts,
       creditUtilization,
       debtToLimitRatio,
       creditCardPayments,
@@ -811,6 +813,15 @@ export default function CreditWiseAIPage() {
       default:
         return 'bg-muted border-border';
     }
+  };
+
+
+  const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
+    const s = status.toLowerCase();
+    if (s.includes('open') || s.includes('active')) return 'default'; // primary color
+    if (s.includes('closed')) return 'secondary';
+    if (s.includes('written-off') || s.includes('doubtful') || s.includes('loss')) return 'destructive';
+    return 'outline';
   };
 
 
@@ -1025,7 +1036,11 @@ export default function CreditWiseAIPage() {
                               <TableRow key={index}>
                                 <TableCell className="font-semibold">{account.type}</TableCell>
                                 <TableCell>{account.ownership}</TableCell>
-                                <TableCell>{account.status}</TableCell>
+                                <TableCell>
+                                  <Badge variant={getStatusBadgeVariant(account.status)}>
+                                    {account.status}
+                                  </Badge>
+                                </TableCell>
                                 <TableCell>{account.sanctioned}</TableCell>
                                 <TableCell>{account.outstanding}</TableCell>
                                 <TableCell>{account.overdue}</TableCell>
@@ -1936,3 +1951,4 @@ export default function CreditWiseAIPage() {
     </div>
   );
 }
+
