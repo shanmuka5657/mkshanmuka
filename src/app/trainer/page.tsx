@@ -103,10 +103,16 @@ export default function ModelTrainerPage() {
             </div>
             <nav className="flex items-center space-x-4 lg:space-x-6 text-sm font-medium">
               <Link
-                href="/"
+                href="/credit"
                 className="transition-colors hover:text-foreground/80 text-muted-foreground"
               >
-                Analyzer
+                Credit Analysis
+              </Link>
+              <Link
+                href="/verify"
+                className="transition-colors hover:text-foreground/80 text-muted-foreground"
+              >
+                Verify PDF
               </Link>
               <Link
                 href="/trainer"
@@ -143,7 +149,7 @@ export default function ModelTrainerPage() {
                 <div className="text-center py-12 text-muted-foreground">
                     <FileText className="mx-auto h-12 w-12 mb-4"/>
                     <h3 className="text-lg font-semibold">No Training Candidates Found</h3>
-                    <p>Use the "Analyzer" page to process a credit report. The results will automatically appear here for your review.</p>
+                    <p>Use the "Credit Analysis" page to process a credit report. The results will automatically appear here for your review.</p>
                 </div>
             ) : (
                 <Accordion type="multiple" className="w-full">
