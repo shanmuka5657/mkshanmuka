@@ -404,7 +404,8 @@ export default function CreditWiseAIPage() {
   };
   
   const handleStartFullAnalysis = () => {
-    setIsModelOverloaded(false);
+    setIsModelOverloaded(false); // Reset overload state on new attempt
+    // Run all three analyses in parallel
     handleAnalyze(rawText);
     handleCalculateTotalEmi(rawText);
     handleGetRiskAssessment(rawText);
@@ -1894,7 +1895,7 @@ export default function CreditWiseAIPage() {
                         </Button>
                     )}
                 </div>
-                {creditFile && !isLoading && !analysisResult && (
+                {creditFile && !isLoading && rawText && (
                   <div className="mt-4">
                     <Alert>
                       <AlertCircle className="h-4 w-4" />
