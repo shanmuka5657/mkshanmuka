@@ -14,10 +14,15 @@ import {
   ClipboardCheck,
   ShieldCheck,
   XCircle,
+  FileUp,
+  FileJson,
+  Eye,
+  Printer,
+  Share,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from "@/hooks/use-toast"
 import { verifyPdf, VerifyPdfInput, VerifyPdfOutput } from '@/ai/flows/verify-pdf';
@@ -27,26 +32,24 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import Link from 'next/link';
 import type { FlowUsage } from 'genkit/flow';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 
-const InfoItem = ({ label, value }: { label: string | React.ReactNode; value: string | number; }) => (
-     <div className="grid grid-cols-3 gap-4 py-2 border-b">
-        <div className="font-semibold text-sm text-muted-foreground flex items-center col-span-1">{label}</div>
-        <div className="font-semibold truncate col-span-2">{value}</div>
+const InfoItem = ({ label, value, valueClass }: { label: string | React.ReactNode; value: string | React.ReactNode; valueClass?: string }) => (
+     <div className="grid grid-cols-2 gap-4 py-3 border-b items-center">
+        <div className="font-semibold text-sm text-muted-foreground flex items-center">{label}</div>
+        <div className={cn("text-sm text-right", valueClass)}>{value}</div>
     </div>
 );
+
+const SummaryItem = ({ label, value, valueClassName }: { label: string; value: string | number; valueClassName?: string }) => (
+    <div className="flex flex-col items-center justify-center text-center p-2 rounded-lg bg-muted/50">
+      <div className="text-sm text-muted-foreground">{label}</div>
+      <div className={cn("text-xl font-bold", valueClassName)}>{value}</div>
+    </div>
+  );
+
 
 export default function VerifyPdfPage() {
   const [theme, setTheme] = useState('light');
@@ -57,6 +60,14 @@ export default function VerifyPdfPage() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // New state for token tracking and cost
+  const [tokenUsage, setTokenUsage] = useState({ inputTokens: 0, outputTokens: 0 });
+  const [estimatedCost, setEstimatedCost] = useState(0);
+
+  // Pricing for gemini-1.5-flash model per 1M tokens
+  const INPUT_PRICE_PER_MILLION_TOKENS = 0.35; 
+  const OUTPUT_PRICE_PER_MILLION_TOKENS = 1.05; // Adjusted for Flash 1.5 with new pricing structure
+
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedTheme = localStorage.getItem('theme') || 'light';
@@ -64,6 +75,13 @@ export default function VerifyPdfPage() {
       document.documentElement.classList.toggle('dark', savedTheme === 'dark');
     }
   }, []);
+
+  // Effect to recalculate cost whenever token usage changes
+  useEffect(() => {
+    const inputCost = (tokenUsage.inputTokens / 1_000_000) * INPUT_PRICE_PER_MILLION_TOKENS;
+    const outputCost = (tokenUsage.outputTokens / 1_000_000) * OUTPUT_PRICE_PER_MILLION_TOKENS;
+    setEstimatedCost(inputCost + outputCost);
+  }, [tokenUsage]);
   
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -88,6 +106,8 @@ export default function VerifyPdfPage() {
     setAnalysisResult(null);
     setIsAnalyzing(false);
     setIsModelOverloaded(false);
+    setTokenUsage({ inputTokens: 0, outputTokens: 0 });
+    setEstimatedCost(0);
     if (fileInputRef.current) {
         fileInputRef.current.value = '';
     }
@@ -114,6 +134,7 @@ export default function VerifyPdfPage() {
     setIsAnalyzing(true);
     setAnalysisResult(null);
     setIsModelOverloaded(false);
+    setTokenUsage({ inputTokens: 0, outputTokens: 0 });
 
     try {
       const filesWithData = await Promise.all(
@@ -124,9 +145,13 @@ export default function VerifyPdfPage() {
       );
 
       const input: VerifyPdfInput = { documents: filesWithData };
-      const { output } = await verifyPdf(input);
+      const { output, usage } = await verifyPdf(input);
 
       setAnalysisResult(output);
+      setTokenUsage(prev => ({
+        inputTokens: prev.inputTokens + (usage.inputTokens || 0),
+        outputTokens: prev.outputTokens + (usage.outputTokens || 0)
+      }));
       toast({
         title: 'PDF Analysis Complete',
         description: "The AI has performed a forensic analysis of your document(s).",
@@ -148,11 +173,29 @@ export default function VerifyPdfPage() {
       setIsAnalyzing(false);
     }
   };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const getAuthenticityColor = (score: number) => {
+    if (score > 90) return 'text-green-500';
+    if (score > 70) return 'text-yellow-500';
+    return 'text-red-500';
+  };
+
+  const getRecommendationColor = (recommendation: string) => {
+    const rec = recommendation.toLowerCase();
+    if (rec.includes('appears authentic')) return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-500/50';
+    if (rec.includes('manual review')) return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border-yellow-500/50';
+    if (rec.includes('high risk') || rec.includes('likely fraudulent')) return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-500/50';
+    return 'bg-muted';
+  };
   
 
   return (
     <div className={cn("min-h-screen bg-background font-body text-foreground", theme)}>
-       <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm">
+       <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm print:hidden">
          <div className="container flex h-16 items-center">
             <div className="mr-4 flex items-center">
               <Sparkles className="h-6 w-6 mr-2 text-primary" />
@@ -189,12 +232,12 @@ export default function VerifyPdfPage() {
       </header>
 
       <main className="container mx-auto p-4 md:p-8">
-        <div className="text-center mb-12">
+        <div className="text-center mb-12 print:hidden">
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">AI Document Verification</h1>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">Upload any document (e.g., salary slips, bank statements, invoices) for a forensic AI analysis to detect signs of fraud and tampering.</p>
         </div>
 
-        <Card className="max-w-4xl mx-auto mb-8">
+        <Card className="max-w-4xl mx-auto mb-8 print:hidden">
             <CardHeader>
                 <CardTitle className="flex items-center text-xl">
                     <UploadCloud className="mr-3 h-6 w-6 text-primary" />
@@ -211,16 +254,17 @@ export default function VerifyPdfPage() {
                     <Input ref={fileInputRef} type="file" accept=".pdf,image/*" onChange={handleFileChange} className="hidden" multiple />
 
                     {files.length > 0 && (
-                        <div className="w-full space-y-2">
-                          <p className="text-sm font-medium">Uploaded files:</p>
+                        <div className="w-full mt-4 p-4 border rounded-lg bg-muted/50">
+                          <p className="text-sm font-medium mb-2">Selected files:</p>
                           <div className="flex flex-wrap gap-2">
                             {files.map((file, i) => (
-                              <Badge key={i} variant="secondary" className="flex items-center gap-2">
+                              <div key={i} className="flex items-center gap-2 bg-background border p-1 px-2 rounded-md text-sm">
+                                <FileText className="h-4 w-4 text-muted-foreground" />
                                 <span>{file.name}</span>
-                                <button onClick={() => removeFile(i)} className="rounded-full hover:bg-muted-foreground/20 p-0.5">
-                                    <XCircle className="h-3 w-3"/>
+                                <button onClick={() => removeFile(i)} className="rounded-full hover:bg-destructive/10 p-0.5">
+                                    <XCircle className="h-4 w-4 text-destructive"/>
                                 </button>
-                              </Badge>
+                              </div>
                             ))}
                           </div>
                         </div>
@@ -243,9 +287,9 @@ export default function VerifyPdfPage() {
                 {isModelOverloaded && (
                     <Alert variant="destructive" className="mt-4">
                         <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>AI Model Overloaded</AlertTitle>
+                        <AlertTitle>API Rate Limit Exceeded</AlertTitle>
                         <AlertDescription>
-                        The AI is currently experiencing high demand. Please wait a moment and try your request again.
+                          You have exceeded the request limit for the free tier. Please check your plan or try again later.
                         </AlertDescription>
                     </Alert>
                 )}
@@ -257,77 +301,158 @@ export default function VerifyPdfPage() {
                 <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
                 <h3 className="text-xl font-semibold mt-4">AI is running forensic analysis...</h3>
                 <p className="text-muted-foreground">This may take a moment, especially for multiple documents.</p>
+                <Progress value={33} className="w-full max-w-sm mx-auto mt-4 animate-pulse" />
             </div>
         )}
         
         {analysisResult && (
-        <Card className="max-w-4xl mx-auto">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-3"><ClipboardCheck className="text-primary h-6 w-6"/>Forensic & Fraud Report</CardTitle>
-                <CardDescription>This report details the AI's findings after analyzing the provided documents.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6 mt-4">
-                <Alert className={cn(
-                    'border-2',
-                    analysisResult.fraudReport.authenticityConfidence > 90 ? 'border-green-500' :
-                    analysisResult.fraudReport.authenticityConfidence > 70 ? 'border-yellow-500' : 'border-red-500'
-                )}>
-                    <AlertTitle className="text-lg font-bold">Overall Assessment</AlertTitle>
-                    <AlertDescription className="space-y-2">
-                        <Progress value={analysisResult.fraudReport.authenticityConfidence} className="my-2 h-3" />
-                        <p className="text-base"><strong className="text-foreground">Authenticity Score: {analysisResult.fraudReport.authenticityConfidence}/100.</strong> {analysisResult.fraudReport.overallAssessment}</p>
-                    </AlertDescription>
-                </Alert>
+        <div className="print-this">
+            <Card className="max-w-4xl mx-auto a4-paper" id="report">
+                <CardHeader>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <CardTitle className="text-2xl flex items-center gap-3">
+                                <ClipboardCheck className="text-primary h-7 w-7"/>Forensic Analysis Report
+                            </CardTitle>
+                            <CardDescription>AI-generated analysis of document authenticity.</CardDescription>
+                        </div>
+                        <div className="flex gap-2 print:hidden">
+                            <Button variant="outline" size="icon"><Share className="h-4 w-4"/></Button>
+                            <Button variant="outline" size="icon" onClick={handlePrint}><Printer className="h-4 w-4"/></Button>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <Alert className={cn('border-2 p-4', getRecommendationColor(analysisResult.recommendation))}>
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <AlertTitle className="text-lg font-bold">Overall Recommendation</AlertTitle>
+                                <AlertDescription className="text-base">{analysisResult.recommendation}</AlertDescription>
+                            </div>
+                            <div className="text-center">
+                                <div className={cn("text-5xl font-bold", getAuthenticityColor(analysisResult.authenticityScore))}>
+                                    {analysisResult.authenticityScore}
+                                </div>
+                                <div className="text-sm font-medium text-muted-foreground">Authenticity Score</div>
+                            </div>
+                        </div>
+                    </Alert>
 
-                <Accordion type="multiple" className="w-full" defaultValue={['details', 'data']}>
-                    <AccordionItem value="details">
-                        <AccordionTrigger>
-                            <h4 className="font-semibold text-lg flex items-center">Detailed Findings</h4>
-                        </AccordionTrigger>
-                        <AccordionContent className="p-2 space-y-1">
-                            <InfoItem label="Consistency Check" value={analysisResult.fraudReport.consistencyCheck} />
-                            <InfoItem label="Pattern Analysis" value={analysisResult.fraudReport.patternAnalysis} />
-                            <InfoItem label="Formatting Anomalies" value={analysisResult.fraudReport.formattingAnomalies} />
-                            <InfoItem label="Tampering Indicators" value={analysisResult.fraudReport.tamperingIndicators} />
-                        </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="data">
-                        <AccordionTrigger>
-                            <h4 className="font-semibold text-lg flex items-center">Extracted Data</h4>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                            <Table>
-                                <TableHeader>
-                                <TableRow>
-                                    <TableHead>File Name</TableHead>
-                                    <TableHead>Document Type</TableHead>
-                                    <TableHead>Key Info</TableHead>
-                                    <TableHead>Primary Amount</TableHead>
-                                </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                {analysisResult.extractedDetails.map((slip, i) => (
-                                    <TableRow key={i}>
-                                    <TableCell className="font-medium">{slip.fileName}</TableCell>
-                                    <TableCell>{slip.documentType}</TableCell>
-                                    <TableCell>{slip.keyInfo}</TableCell>
-                                    <TableCell className="font-semibold">{slip.primaryAmount}</TableCell>
-                                    </TableRow>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg flex items-center gap-2"><FileUp className="h-5 w-5"/>Document Overview</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                {analysisResult.documentDetails.map((doc, i) => (
+                                    <div key={i} className="mb-4 last:mb-0">
+                                        <InfoItem label="File Name" value={doc.fileName} />
+                                        <InfoItem label="Detected Type" value={doc.documentType} />
+                                        <InfoItem label="Page Count" value={doc.pageCount} />
+                                    </div>
                                 ))}
-                                </TableBody>
-                            </Table>
-                        </AccordionContent>
-                    </AccordionItem>
-                </Accordion>
-            </CardContent>
-        </Card>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                             <CardHeader>
+                                <CardTitle className="text-lg flex items-center gap-2"><FileJson className="h-5 w-5"/>Metadata Analysis</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <InfoItem label="PDF Producer" value={analysisResult.metadataAnalysis.producer} />
+                                <InfoItem label="Creation Date" value={analysisResult.metadataAnalysis.creationDate} />
+                                <InfoItem label="Modified Date" value={analysisResult.metadataAnalysis.modificationDate} />
+                                <InfoItem label="AI Interpretation" value={analysisResult.metadataAnalysis.aiInterpretation} />
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg flex items-center gap-2"><Eye className="h-5 w-5"/>Visual & Textual Analysis</CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                            <InfoItem label="Text Selectable" value={analysisResult.textAnalysis.isTextSelectable ? 'Yes' : 'No'} valueClass={analysisResult.textAnalysis.isTextSelectable ? 'text-green-600' : 'text-red-600'}/>
+                            <InfoItem label="Font Consistency" value={analysisResult.textAnalysis.fontConsistency} />
+                            <InfoItem label="Spacing Anomalies" value={analysisResult.textAnalysis.spacingAnomalies} />
+                            <InfoItem label="Image Manipulation" value={analysisResult.visualAnalysis.imageManipulationSigns} />
+                            <InfoItem label="Logo/Header Consistency" value={analysisResult.visualAnalysis.logoHeaderConsistency} />
+                            <InfoItem label="Visible Edits/Blurring" value={analysisResult.visualAnalysis.visibleEditsOrBlurring} />
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg flex items-center gap-2"><ShieldAlert className="h-5 w-5 text-destructive"/>Suspicion Flags</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                             {analysisResult.suspicionFlags.length > 0 ? (
+                                <ul className="space-y-2">
+                                {analysisResult.suspicionFlags.map((flag, i) => (
+                                    <li key={i} className="flex items-start gap-2 text-sm">
+                                        <AlertCircle className="h-4 w-4 mt-0.5 text-destructive flex-shrink-0" />
+                                        <span>{flag}</span>
+                                    </li>
+                                ))}
+                                </ul>
+                            ) : (
+                                <p className="text-sm text-muted-foreground">No significant suspicion flags were automatically detected by the AI.</p>
+                            )}
+                        </CardContent>
+                    </Card>
+                </CardContent>
+                 <CardFooter className="flex-col items-start gap-4">
+                    <Card className="bg-muted/50 w-full">
+                        <CardHeader>
+                            <CardTitle className="text-base flex items-center"><Sparkles className="mr-2 text-primary h-4 w-4"/>Analysis Cost</CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-3 gap-4">
+                            <SummaryItem label="Input Tokens" value={tokenUsage.inputTokens.toLocaleString()} valueClassName="text-foreground text-base" />
+                            <SummaryItem label="Output Tokens" value={tokenUsage.outputTokens.toLocaleString()} valueClassName="text-foreground text-base" />
+                            <SummaryItem label="Estimated Cost (USD)" value={`$${estimatedCost.toFixed(5)}`} valueClassName="text-green-600 text-base" />
+                        </CardContent>
+                    </Card>
+                    <p className="text-xs text-muted-foreground pt-2">Disclaimer: This AI analysis is for informational purposes only and does not constitute a definitive judgment of fraud. Manual verification is always recommended for critical applications.</p>
+                </CardFooter>
+            </Card>
+        </div>
         )}
       </main>
-      <footer className="text-center py-6 text-sm text-muted-foreground">
+      <footer className="text-center py-6 text-sm text-muted-foreground print:hidden">
          <div>© {new Date().getFullYear()} CreditWise AI. Built with Firebase and Google AI.</div>
       </footer>
+      <style jsx global>{`
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .print-this, .print-this * {
+                visibility: visible;
+            }
+            .print-this {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+            .a4-paper {
+                width: 210mm;
+                min-height: 297mm;
+                margin: 0 auto;
+                color: #000 !important;
+                background: #fff !important;
+                box-shadow: none;
+                border: none;
+            }
+        }
+        .print-this {
+            display: none;
+        }
+        @media print {
+            .print-this {
+                display: block;
+            }
+        }
+      `}</style>
     </div>
   );
 }
-
-    
