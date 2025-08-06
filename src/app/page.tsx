@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -44,6 +43,8 @@ import {
   PieChart as PieChartIcon,
   BarChart as BarChartIcon,
   Landmark,
+  Building,
+  Briefcase,
   Receipt,
   ClipboardCheck,
 } from 'lucide-react';
