@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   UploadCloud,
   FileText,
@@ -68,7 +68,7 @@ export default function VerifyPdfPage() {
   const INPUT_PRICE_PER_MILLION_TOKENS = 0.35; 
   const OUTPUT_PRICE_PER_MILLION_TOKENS = 1.05; // Adjusted for Flash 1.5 with new pricing structure
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedTheme = localStorage.getItem('theme') || 'light';
       setTheme(savedTheme);
