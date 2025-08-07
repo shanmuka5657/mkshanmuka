@@ -18,6 +18,8 @@ import {
   Files,
   Sparkles,
   ChevronDown,
+  Printer,
+  Share2,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -51,18 +53,52 @@ type FileState = {
   status: 'pending' | 'processing' | 'done' | 'error';
 };
 
-const VerificationField = ({ field, label }: { field: CrossVerificationOutput['name'], label: string }) => {
-    const getStatusIcon = () => {
-        switch (field.status) {
-            case 'Match': return <CheckCircle2 className="text-green-500" />;
-            case 'Mismatch': return <XCircle className="text-red-500" />;
-            case 'Partial Match': return <AlertCircle className="text-yellow-500" />;
-            default: return <FileClock className="text-muted-foreground" />;
-        }
+const getStatusIcon = (status: string) => {
+    switch (status) {
+        case 'Match': return <CheckCircle2 className="text-green-500" />;
+        case 'Mismatch': return <XCircle className="text-red-500" />;
+        case 'Partial Match': return <AlertCircle className="text-yellow-500" />;
+        default: return <FileClock className="text-gray-500" />;
     }
+}
+
+const getStatusColor = (status: string) => {
+    switch (status) {
+        case 'Match': return 'border-green-500 bg-green-50';
+        case 'Mismatch': return 'border-red-500 bg-red-50';
+        case 'Partial Match': return 'border-yellow-500 bg-yellow-50';
+        default: return 'border-gray-300 bg-gray-50';
+    }
+}
+
+const VerificationField = ({ field, label, forPrint = false }: { field: CrossVerificationOutput['name'], label: string, forPrint?: boolean }) => {
+
+    if (forPrint) {
+        return (
+            <div className="p-3 border rounded-lg">
+                <h4 className="font-bold flex items-center gap-2 text-base">
+                    {getStatusIcon(field.status)} {label}
+                    <span className={`ml-auto text-sm font-semibold px-2 py-0.5 rounded-full text-white ${
+                        field.status === 'Match' ? 'bg-green-500' :
+                        field.status === 'Mismatch' ? 'bg-red-500' :
+                        field.status === 'Partial Match' ? 'bg-yellow-500' : 'bg-gray-400'
+                    }`}>
+                        {field.status}
+                    </span>
+                </h4>
+                 <p className="text-xs text-gray-600 mt-1 mb-2 pl-1">{field.details}</p>
+                <div className="text-sm space-y-1 bg-white p-2 rounded">
+                    <div className="flex justify-between"><strong>CIBIL:</strong> <span>{field.cibilValue}</span></div>
+                    <div className="flex justify-between"><strong>Bank Stmt:</strong> <span>{field.bankStatementValue}</span></div>
+                    <div className="flex justify-between"><strong>Salary Slip:</strong> <span>{field.salarySlipValue}</span></div>
+                </div>
+            </div>
+        );
+    }
+    
     return (
         <div className="border p-4 rounded-lg">
-            <h4 className="font-semibold flex items-center gap-2">{getStatusIcon()} {label} <span className="text-sm font-normal text-muted-foreground">({field.status})</span></h4>
+            <h4 className="font-semibold flex items-center gap-2">{getStatusIcon(field.status)} {label} <span className="text-sm font-normal text-muted-foreground">({field.status})</span></h4>
             <p className="text-xs text-muted-foreground mt-1 mb-3">{field.details}</p>
             <div className="text-xs space-y-1">
                 <div><strong>CIBIL:</strong> {field.cibilValue}</div>
@@ -195,12 +231,16 @@ export default function CrossVerifyPage() {
       if (bankInputRef.current) bankInputRef.current.value = '';
       if (salaryInputRef.current) salaryInputRef.current.value = '';
   };
+  
+  const handlePrint = () => {
+    window.print();
+  }
 
   const hasFiles = cibilFile.file || bankStatementFile.file || salarySlips.length > 0;
   
   return (
     <div className="min-h-screen bg-background font-body text-foreground">
-      <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm">
+      <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm print:hidden">
         <div className="container flex h-16 items-center">
           <div className="mr-4 flex items-center">
             <Logo />
@@ -222,13 +262,13 @@ export default function CrossVerifyPage() {
         </div>
       </header>
       
-      <main className="container mx-auto p-4 md:p-8">
-        <div className="text-center mb-12">
+      <main className="container mx-auto p-4 md:p-8 print:p-0">
+        <div className="text-center mb-12 print:hidden">
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">Document Cross-Verification</h1>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">Upload CIBIL, Bank Statement, and Salary Slips to have the AI cross-verify key information and detect discrepancies.</p>
         </div>
         
-        <Card className="mb-8">
+        <Card className="mb-8 print:hidden">
             <CardHeader>
                 <CardTitle className="flex items-center text-xl"><Files className="mr-3 h-6 w-6 text-primary" />Upload Documents</CardTitle>
                 <CardDescription>You can upload any combination of documents for verification.</CardDescription>
@@ -266,7 +306,7 @@ export default function CrossVerifyPage() {
         </Card>
 
         {isAnalyzing && (
-            <Card className="my-8">
+            <Card className="my-8 print:hidden">
                 <CardHeader>
                     <CardTitle>Analysis in Progress...</CardTitle>
                 </CardHeader>
@@ -300,10 +340,15 @@ export default function CrossVerifyPage() {
         
         {verificationResult && (
             <div className="space-y-8 mt-8">
-                <Card>
+                <Card className="print:hidden">
                     <CardHeader>
-                        <CardTitle className="text-2xl flex items-center gap-3"><FileCheck2 className="text-primary"/>Cross-Verification Report</CardTitle>
-                        <CardDescription>Summary of findings from comparing all provided documents.</CardDescription>
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <CardTitle className="text-2xl flex items-center gap-3"><FileCheck2 className="text-primary"/>Cross-Verification Report</CardTitle>
+                                <CardDescription>Summary of findings from comparing all provided documents.</CardDescription>
+                            </div>
+                            <Button onClick={handlePrint} variant="outline"><Printer className="mr-2 h-4 w-4" />Print / Share Report</Button>
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <Alert className="mb-6">
@@ -334,7 +379,7 @@ export default function CrossVerifyPage() {
                 </Card>
 
                  {(cibilFile.analysis || bankStatementFile.analysis || salarySlipAnalysis) && (
-                    <Card>
+                    <Card className="print:hidden">
                         <CardHeader>
                             <CardTitle>Detailed Analysis Results</CardTitle>
                             <CardDescription>Expand the sections below to see the full AI analysis for each uploaded document.</CardDescription>
@@ -378,12 +423,96 @@ export default function CrossVerifyPage() {
             </div>
         )}
 
+        {/* Printable Report Area */}
+        {verificationResult && (
+            <div className="print-this">
+                 <div className="p-8 bg-white shadow-lg a4-paper font-sans text-gray-800">
+                    <header className="flex justify-between items-center border-b-2 border-gray-800 pb-4">
+                        <div>
+                             <h1 className="text-4xl font-bold text-gray-900">Cross-Verification Report</h1>
+                             <p className="text-gray-600">Generated by CreditWise AI</p>
+                        </div>
+                        <Logo />
+                    </header>
+                    <section className="my-6">
+                        <h2 className="text-xl font-bold mb-3 text-gray-800 border-b pb-2">Overall Assessment</h2>
+                        <div className="p-4 bg-blue-50 border-l-4 border-blue-500 text-gray-700 rounded-r-lg">
+                            {verificationResult.overallAssessment}
+                        </div>
+                    </section>
+                    <section className="my-6">
+                        <h2 className="text-xl font-bold mb-3 text-gray-800 border-b pb-2">Verification Details</h2>
+                        <div className="grid grid-cols-2 gap-4">
+                            <VerificationField field={verificationResult.name} label="Applicant Name" forPrint={true}/>
+                            <VerificationField field={verificationResult.dob} label="Date of Birth" forPrint={true}/>
+                            <VerificationField field={verificationResult.pan} label="PAN Number" forPrint={true}/>
+                            <VerificationField field={verificationResult.mobile} label="Mobile Number" forPrint={true}/>
+                            <div className="col-span-2">
+                                <VerificationField field={verificationResult.address} label="Address" forPrint={true}/>
+                            </div>
+                            <div className="col-span-2">
+                                <div className={`p-3 border rounded-lg ${getStatusColor(verificationResult.income.status)}`}>
+                                    <h4 className="font-bold flex items-center gap-2 text-base">
+                                        {getStatusIcon(verificationResult.income.status)} Income Verification
+                                        <span className={`ml-auto text-sm font-semibold px-2 py-0.5 rounded-full text-white ${
+                                            verificationResult.income.status === 'Consistent' ? 'bg-green-500' : 'bg-red-500'
+                                        }`}>{verificationResult.income.status}</span>
+                                    </h4>
+                                    <p className="text-xs text-gray-600 mt-1 mb-2 pl-1">{verificationResult.income.details}</p>
+                                    <div className="text-sm space-y-1 bg-white p-2 rounded">
+                                        <div className="flex justify-between"><strong>Bank Statement Est. Income:</strong> <span>{verificationResult.income.bankStatementIncome}</span></div>
+                                        <div className="flex justify-between"><strong>Latest Salary Slip Net Income:</strong> <span>{verificationResult.income.salarySlipIncome}</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    <footer className="text-center pt-4 mt-8 border-t text-xs text-gray-500">
+                        <p>Report Date: {new Date().toLocaleDateString()}</p>
+                        <p>© {new Date().getFullYear()} MkCreditWise.com. This is an automated report and should be used for informational purposes only.</p>
+                    </footer>
+                </div>
+            </div>
+        )}
       </main>
-      <footer className="text-center py-6 text-sm text-muted-foreground">
+
+      <footer className="text-center py-6 text-sm text-muted-foreground print:hidden">
          <div>© {new Date().getFullYear()} MkCreditWise.com. Built with Firebase and Google AI.</div>
       </footer>
+
+      <style jsx global>{`
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .print-this, .print-this * {
+                visibility: visible;
+            }
+            .print-this {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+            .a4-paper {
+                width: 210mm;
+                min-height: 297mm;
+                margin: 0 auto;
+                color: #000 !important;
+                background: #fff !important;
+                box-shadow: none;
+                border: none;
+            }
+        }
+        .print-this {
+            display: none;
+        }
+        @media print {
+            .print-this {
+                display: block;
+            }
+        }
+      `}</style>
     </div>
   );
 }
-
-    
