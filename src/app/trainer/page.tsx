@@ -108,6 +108,12 @@ export default function ModelTrainerPage() {
               >
                 Credit Analysis
               </Link>
+               <Link
+                href="/verify"
+                className="transition-colors hover:text-foreground/80 text-muted-foreground"
+              >
+                VerityPDF
+              </Link>
               <Link
                 href="/trainer"
                 className="transition-colors hover:text-foreground/80 text-foreground"

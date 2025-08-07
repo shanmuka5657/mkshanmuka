@@ -1,5 +1,5 @@
 
-import { FileText, ShieldCheck } from "lucide-react";
+import { FileText, ShieldCheck, Fingerprint } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Logo } from "@/components/ui/logo";
@@ -20,6 +20,12 @@ export default function HomePage() {
                 Credit Analysis
               </Link>
               <Link
+                href="/verify"
+                className="transition-colors hover:text-foreground/80 text-muted-foreground"
+              >
+                VerityPDF
+              </Link>
+              <Link
                 href="/trainer"
                 className="transition-colors hover:text-foreground/80 text-muted-foreground"
               >
@@ -32,13 +38,13 @@ export default function HomePage() {
          <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">Welcome to CreditWise AI</h1>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-            Your powerful AI tool for financial document analysis. Click below to get started.
+            Your powerful AI tools for financial document analysis. Click a card below to get started.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-1 gap-8 max-w-2xl mx-auto">
-            <Link href="/credit">
-                <Card className="h-full hover:shadow-xl hover:border-primary transition-all">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            <Link href="/credit" className="flex">
+                <Card className="h-full hover:shadow-xl hover:border-primary transition-all flex flex-col">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-3 text-2xl">
                             <FileText className="h-8 w-8 text-primary" />
@@ -48,13 +54,35 @@ export default function HomePage() {
                             Upload a CIBIL report to perform a deep, AI-powered analysis of credit health, risk, and loan eligibility.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="flex-grow">
                         <p className="font-semibold">Features Include:</p>
                         <ul className="list-disc list-inside text-muted-foreground text-sm mt-2 space-y-1">
                             <li>Comprehensive Credit Summary</li>
                             <li>AI-Powered Risk Assessment</li>
                             <li>Loan Eligibility Simulation</li>
                             <li>Full Underwriting Decisioning</li>
+                        </ul>
+                    </CardContent>
+                </Card>
+            </Link>
+             <Link href="/verify" className="flex">
+                <Card className="h-full hover:shadow-xl hover:border-primary transition-all flex flex-col">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-3 text-2xl">
+                            <Fingerprint className="h-8 w-8 text-primary" />
+                            VerityPDF
+                        </CardTitle>
+                        <CardDescription>
+                            Upload any PDF to perform a forensic analysis, detecting signs of tampering or alteration.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-grow">
+                        <p className="font-semibold">Features Include:</p>
+                        <ul className="list-disc list-inside text-muted-foreground text-sm mt-2 space-y-1">
+                            <li>Metadata and Producer Analysis</li>
+                            <li>Font & Visual Inconsistency Checks</li>
+                            <li>Authenticity Confidence Score</li>
+                            <li>Detailed Forensic Report</li>
                         </ul>
                     </CardContent>
                 </Card>

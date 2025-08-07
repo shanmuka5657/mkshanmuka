@@ -35,6 +35,11 @@ const nextConfig: NextConfig = {
         destination: '/verify',
         permanent: true,
       },
+       {
+        source: '/creditwiseai',
+        destination: '/credit',
+        permanent: true,
+      },
     ]
   },
 };
