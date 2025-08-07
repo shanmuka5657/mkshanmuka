@@ -146,17 +146,21 @@ export default function VerifyPdfPage() {
       );
 
       const input: VerifyPdfInput = { documents: filesWithData };
-      const { output, usage } = await verifyPdf(input);
+      const result = await verifyPdf(input);
 
-      setAnalysisResult(output);
-      setTokenUsage(prev => ({
-        inputTokens: prev.inputTokens + (usage.inputTokens || 0),
-        outputTokens: prev.outputTokens + (usage.outputTokens || 0)
-      }));
-      toast({
-        title: 'PDF Analysis Complete',
-        description: "The AI has performed a forensic analysis of your document(s).",
-      });
+      if (result && result.output) {
+        setAnalysisResult(result.output);
+        setTokenUsage(prev => ({
+          inputTokens: prev.inputTokens + (result.usage.inputTokens || 0),
+          outputTokens: prev.outputTokens + (result.usage.outputTokens || 0)
+        }));
+        toast({
+          title: 'PDF Analysis Complete',
+          description: "The AI has performed a forensic analysis of your document(s).",
+        });
+      } else {
+        throw new Error("Analysis did not return the expected output.");
+      }
 
     } catch (error: any) {
       console.error('Error analyzing documents:', error);
