@@ -1,21 +1,21 @@
 {
   "name": "CreditWise AI",
   "short_name": "CreditWise",
-  "description": "Instant credit report analysis with AI — EMI tracker, DPD alerts, legal insights & more.",
+  "description": "Advanced AI Credit Score Analyzer & ML Model Trainer",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#4A90E2",
+  "theme_color": "#4361ee",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
-      "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "type": "image/png"
     },
     {
       "src": "/icons/icon-512x512.png",
-      "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "type": "image/png"
     }
   ]
 }
