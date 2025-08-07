@@ -30,8 +30,13 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
-        source: '/veritypdf',
+        source: '/verifypdf',
         destination: '/verify',
+        permanent: true,
+      },
+      {
+        source: '/creditwiseai',
+        destination: '/credit',
         permanent: true,
       },
     ]
