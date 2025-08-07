@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { getTrainingCandidates, approveCandidate, rejectCandidate, type TrainingCandidate } from '@/lib/training-store';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Input } from '@/components/ui/input';
+import { Logo } from '@/components/ui/logo';
 
 
 export default function ModelTrainerPage() {
@@ -98,8 +99,7 @@ export default function ModelTrainerPage() {
        <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm">
         <div className="container flex h-16 items-center">
             <div className="mr-4 flex items-center">
-              <Bot className="h-6 w-6 mr-2 text-primary" />
-              <span className="font-bold text-lg">CreditWise AI</span>
+              <Logo />
             </div>
             <nav className="flex items-center space-x-4 lg:space-x-6 text-sm font-medium">
               <Link

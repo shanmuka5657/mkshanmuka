@@ -35,6 +35,7 @@ import {
 import Link from 'next/link';
 import type { FlowUsage } from 'genkit/flow';
 import { Progress } from '@/components/ui/progress';
+import { Logo } from '@/components/ui/logo';
 
 const InfoItem = ({ label, value, valueClass }: { label: string | React.ReactNode; value: string | React.ReactNode; valueClass?: string }) => (
      <div className="grid grid-cols-2 gap-4 py-3 border-b items-center">
@@ -199,8 +200,7 @@ export default function VerifyPdfPage() {
        <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm print:hidden">
          <div className="container flex h-16 items-center">
             <div className="mr-4 flex items-center">
-              <Sparkles className="h-6 w-6 mr-2 text-primary" />
-              <span className="font-bold text-lg">CreditWise AI</span>
+              <Logo />
             </div>
             <nav className="flex items-center space-x-4 lg:space-x-6 text-sm font-medium">
               <Link

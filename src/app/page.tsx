@@ -2,6 +2,7 @@
 import { FileText, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Logo } from "@/components/ui/logo";
 
 export default function HomePage() {
   return (
@@ -9,7 +10,7 @@ export default function HomePage() {
       <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm">
         <div className="container flex h-16 items-center">
           <div className="mr-4 flex items-center">
-            <span className="font-bold text-lg">CreditWise AI</span>
+            <Logo />
           </div>
           <nav className="flex items-center space-x-4 lg:space-x-6 text-sm font-medium">
              <Link

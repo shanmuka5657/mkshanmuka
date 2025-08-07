@@ -86,6 +86,7 @@ import { Textarea } from '@/components/ui/textarea';
 import type { FlowUsage } from 'genkit/flow';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
+import { Logo } from '@/components/ui/logo';
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -1551,8 +1552,7 @@ export default function CreditWiseAIPage() {
        <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm print:hidden">
         <div className="container flex h-16 items-center">
             <div className="mr-4 flex items-center">
-              <Sparkles className="h-6 w-6 mr-2 text-primary" />
-              <span className="font-bold text-lg">CreditWise AI</span>
+              <Logo />
             </div>
             <nav className="flex items-center space-x-4 lg:space-x-6 text-sm font-medium">
               <Link
