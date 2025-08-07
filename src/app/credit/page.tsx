@@ -1561,12 +1561,6 @@ export default function CreditWiseAIPage() {
                 Credit Analysis
               </Link>
               <Link
-                href="/verify"
-                className="transition-colors hover:text-foreground/80 text-muted-foreground"
-              >
-                Verify PDF
-              </Link>
-              <Link
                 href="/trainer"
                 className="transition-colors hover:text-foreground/80 text-muted-foreground"
               >

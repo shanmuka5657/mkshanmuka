@@ -20,12 +20,6 @@ export default function HomePage() {
                 Credit Analysis
               </Link>
               <Link
-                href="/verify"
-                className="transition-colors hover:text-foreground/80 text-muted-foreground"
-              >
-                Verify PDF
-              </Link>
-              <Link
                 href="/trainer"
                 className="transition-colors hover:text-foreground/80 text-muted-foreground"
               >
@@ -38,11 +32,11 @@ export default function HomePage() {
          <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">Welcome to CreditWise AI</h1>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-            Your powerful suite of AI tools for financial document analysis. Choose a tool below to get started.
+            Your powerful AI tool for financial document analysis. Click below to get started.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-8 max-w-2xl mx-auto">
             <Link href="/credit">
                 <Card className="h-full hover:shadow-xl hover:border-primary transition-all">
                     <CardHeader>
@@ -61,28 +55,6 @@ export default function HomePage() {
                             <li>AI-Powered Risk Assessment</li>
                             <li>Loan Eligibility Simulation</li>
                             <li>Full Underwriting Decisioning</li>
-                        </ul>
-                    </CardContent>
-                </Card>
-            </Link>
-             <Link href="/verify">
-                <Card className="h-full hover:shadow-xl hover:border-primary transition-all">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-3 text-2xl">
-                           <ShieldCheck className="h-8 w-8 text-primary" />
-                           PDF Verification
-                        </CardTitle>
-                        <CardDescription>
-                           Upload any document (e.g., salary slips, bank statements) for a forensic AI analysis to detect fraud and tampering.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="font-semibold">Features Include:</p>
-                         <ul className="list-disc list-inside text-muted-foreground text-sm mt-2 space-y-1">
-                            <li>Multi-Document Consistency Checks</li>
-                            <li>Formatting & Layout Anomaly Detection</li>
-                            <li>Tampering Indicator Analysis</li>
-                            <li>Authenticity Confidence Scoring</li>
                         </ul>
                     </CardContent>
                 </Card>
