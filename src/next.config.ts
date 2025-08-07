@@ -4,9 +4,12 @@ import type {NextConfig} from 'next';
 import withPWA from 'next-pwa';
 
 const pwaConfig = withPWA({
+  dest: 'public',
   register: true,
   skipWaiting: true,
   disable: false, // Always enable the PWA
+  buildExcludes: [/middleware-manifest\.json$/],
+  publicExcludes: ['!manifest.json'], // Ensure manifest.json is not excluded
 });
 
 const nextConfig: NextConfig = {
@@ -39,7 +42,7 @@ const nextConfig: NextConfig = {
         destination: '/verify',
         permanent: true,
       },
-      {
+       {
         source: '/crossverify',
         destination: '/cross-verify',
         permanent: true,
@@ -49,5 +52,3 @@ const nextConfig: NextConfig = {
 };
 
 export default pwaConfig(nextConfig);
-
-    
