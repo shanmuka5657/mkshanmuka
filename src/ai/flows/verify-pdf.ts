@@ -104,5 +104,7 @@ const verifyPdfFlow = ai.defineFlow(
 export async function verifyPdf(
   input: VerifyPdfInput
 ): Promise<{ output: VerifyPdfOutput; usage: FlowUsage }> {
+  // This function is the server action called by the client.
+  // It directly calls the flow and returns its result.
   return await verifyPdfFlow(input);
 }
