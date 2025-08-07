@@ -44,13 +44,8 @@ const VerifyPdfOutputSchema = z.object({
 });
 export type VerifyPdfOutput = z.infer<typeof VerifyPdfOutputSchema>;
 
-export async function verifyPdf(
-  input: VerifyPdfInput
-): Promise<{ output: VerifyPdfOutput, usage: FlowUsage }> {
-  return verifyPdfFlow(input);
-}
 
-const prompt = ai.definePrompt({
+const verifyPdfPrompt = ai.definePrompt({
   name: 'verifyPdfPrompt',
   input: {schema: VerifyPdfInputSchema},
   output: {schema: VerifyPdfOutputSchema},
@@ -96,7 +91,7 @@ const verifyPdfFlow = ai.defineFlow(
     }),
   },
   async input => {
-    const result = await prompt(input);
+    const result = await verifyPdfPrompt(input);
     const output = result.output;
     if (!output) {
       throw new Error("AI failed to analyze the documents.");
@@ -104,3 +99,10 @@ const verifyPdfFlow = ai.defineFlow(
     return { output, usage: result.usage };
   }
 );
+
+
+export async function verifyPdf(
+  input: VerifyPdfInput
+): Promise<{ output: VerifyPdfOutput; usage: FlowUsage }> {
+  return await verifyPdfFlow(input);
+}

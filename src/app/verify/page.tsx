@@ -146,13 +146,13 @@ export default function VerifyPdfPage() {
       );
 
       const input: VerifyPdfInput = { documents: filesWithData };
-      const result = await verifyPdf(input);
+      const { output, usage } = await verifyPdf(input);
 
-      if (result && result.output) {
-        setAnalysisResult(result.output);
+      if (output) {
+        setAnalysisResult(output);
         setTokenUsage(prev => ({
-          inputTokens: prev.inputTokens + (result.usage.inputTokens || 0),
-          outputTokens: prev.outputTokens + (result.usage.outputTokens || 0)
+          inputTokens: prev.inputTokens + (usage.inputTokens || 0),
+          outputTokens: prev.outputTokens + (usage.outputTokens || 0)
         }));
         toast({
           title: 'PDF Analysis Complete',
