@@ -210,8 +210,7 @@ export default function CreditWiseAIPage() {
   const creditFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(setUser);
-    return () => unsubscribe();
+    // No-op for login, to make page public
   }, []);
 
   useEffect(() => {
@@ -1580,59 +1579,11 @@ export default function CreditWiseAIPage() {
                     <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
                     <span className="sr-only">Toggle theme</span>
                 </Button>
-                {user && (
-                  <Button variant="outline" size="sm" onClick={handleSignOut}>
-                    Sign Out
-                  </Button>
-                )}
             </div>
         </div>
       </header>
 
       <main className="container mx-auto p-4 md:p-8 print:p-0">
-        {!user ? (
-           <Card className="max-w-md mx-auto mt-16">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <LogIn/>
-                Welcome to CreditWise AI
-              </CardTitle>
-              <CardDescription>
-                Sign in or create an account to analyze your credit report.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleAuth} className="space-y-4">
-                <Input
-                  type="email"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full"
-                />
-                <Input
-                  type="password"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full"
-                />
-                {authError && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Authentication Failed</AlertTitle>
-                    <AlertDescription>{authError}</AlertDescription>
-                  </Alert>
-                )}
-                <Button type="submit" disabled={isSigningIn} className="w-full">
-                  {isSigningIn ? <Loader2 className="animate-spin" /> : 'Sign In / Sign Up'}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        ) : (
           <TooltipProvider>
             <div className="text-center mb-12 print:hidden">
               <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">Advanced AI Credit Score Analyzer</h1>
@@ -1869,10 +1820,9 @@ export default function CreditWiseAIPage() {
               onTokensUsed={updateTokenUsage}
             />
           </TooltipProvider>
-        )}
       </main>
       <footer className="text-center py-6 text-sm text-muted-foreground print:hidden">
-         <div>© {new Date().getFullYear()} CreditWise AI. Built with Firebase and Google AI.</div>
+         <div>© {new Date().getFullYear()} MkCreditWise.com. Built with Firebase and Google AI.</div>
       </footer>
 
       <style jsx global>{`

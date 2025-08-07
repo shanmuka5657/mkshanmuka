@@ -212,7 +212,7 @@ export default function ModelTrainerPage() {
 
       </main>
        <footer className="text-center py-6 text-sm text-muted-foreground">
-         <p>© {new Date().getFullYear()} CreditWise AI. Built with Firebase and Google AI.</p>
+         <p>© {new Date().getFullYear()} MkCreditWise.com. Built with Firebase and Google AI.</p>
       </footer>
     </div>
   );

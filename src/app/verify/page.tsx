@@ -398,7 +398,7 @@ export default function VerifyPdfPage() {
         )}
       </main>
       <footer className="text-center py-6 text-sm text-muted-foreground print:hidden">
-         <div>© {new Date().getFullYear()} CreditWise AI. Built with Firebase and Google AI.</div>
+         <div>© {new Date().getFullYear()} MkCreditWise.com. Built with Firebase and Google AI.</div>
       </footer>
       <style jsx global>{`
         @media print {
