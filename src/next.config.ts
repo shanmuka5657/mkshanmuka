@@ -29,9 +29,19 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
-      {
+       {
         source: '/creditwiseai',
         destination: '/credit',
+        permanent: true,
+      },
+       {
+        source: '/veritypdf',
+        destination: '/verify',
+        permanent: true,
+      },
+      {
+        source: '/crossverify',
+        destination: '/cross-verify',
         permanent: true,
       },
     ]
@@ -39,3 +49,5 @@ const nextConfig: NextConfig = {
 };
 
 export default pwaConfig(nextConfig);
+
+    

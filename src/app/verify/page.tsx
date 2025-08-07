@@ -177,6 +177,12 @@ export default function VerifyPdfPage() {
             <Link href="/verify" className="transition-colors hover:text-foreground/80 text-foreground">
               VerityPDF
             </Link>
+            <Link
+                href="/cross-verify"
+                className="transition-colors hover:text-foreground/80 text-muted-foreground"
+              >
+                Cross-Verification
+              </Link>
             <Link href="/trainer" className="transition-colors hover:text-foreground/80 text-muted-foreground">
               AI Model Trainer
             </Link>
@@ -360,3 +366,5 @@ export default function VerifyPdfPage() {
     </div>
   );
 }
+
+    

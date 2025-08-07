@@ -115,6 +115,12 @@ export default function ModelTrainerPage() {
                 VerityPDF
               </Link>
               <Link
+                href="/cross-verify"
+                className="transition-colors hover:text-foreground/80 text-muted-foreground"
+              >
+                Cross-Verification
+              </Link>
+              <Link
                 href="/trainer"
                 className="transition-colors hover:text-foreground/80 text-foreground"
               >
@@ -217,3 +223,5 @@ export default function ModelTrainerPage() {
     </div>
   );
 }
+
+    

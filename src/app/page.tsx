@@ -1,5 +1,5 @@
 
-import { FileText, ShieldCheck, Fingerprint } from "lucide-react";
+import { FileText, ShieldCheck, Fingerprint, FileCheck2 } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Logo } from "@/components/ui/logo";
@@ -26,6 +26,12 @@ export default function HomePage() {
                 VerityPDF
               </Link>
               <Link
+                href="/cross-verify"
+                className="transition-colors hover:text-foreground/80 text-muted-foreground"
+              >
+                Cross-Verification
+              </Link>
+              <Link
                 href="/trainer"
                 className="transition-colors hover:text-foreground/80 text-muted-foreground"
               >
@@ -42,7 +48,7 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             <Link href="/credit" className="flex">
                 <Card className="h-full hover:shadow-xl hover:border-primary transition-all flex flex-col">
                     <CardHeader>
@@ -87,6 +93,28 @@ export default function HomePage() {
                     </CardContent>
                 </Card>
             </Link>
+            <Link href="/cross-verify" className="flex">
+                <Card className="h-full hover:shadow-xl hover:border-primary transition-all flex flex-col">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-3 text-2xl">
+                            <FileCheck2 className="h-8 w-8 text-primary" />
+                            Cross-Verification
+                        </CardTitle>
+                        <CardDescription>
+                            Upload multiple documents (CIBIL, Bank Statement, Salary Slips) to check for consistency.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-grow">
+                        <p className="font-semibold">Features Include:</p>
+                        <ul className="list-disc list-inside text-muted-foreground text-sm mt-2 space-y-1">
+                            <li>Name, PAN, and DOB Matching</li>
+                            <li>Address & Mobile Comparison</li>
+                            <li>Income Verification</li>
+                            <li>Overall Consistency Assessment</li>
+                        </ul>
+                    </CardContent>
+                </Card>
+            </Link>
         </div>
       </main>
        <footer className="text-center py-6 text-sm text-muted-foreground">
@@ -95,3 +123,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    
