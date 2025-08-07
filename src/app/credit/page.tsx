@@ -76,9 +76,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { auth } from '@/lib/firebase';
-import type { User } from 'firebase/auth';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { saveTrainingCandidate } from '@/lib/training-store';
@@ -154,12 +151,6 @@ const parseCurrency = (currencyString: string): number => {
 
 
 export default function CreditWiseAIPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [isSigningIn, setIsSigningIn] = useState(false);
-
   const [creditFile, setCreditFile] = useState<File | null>(null);
   const [creditFileName, setCreditFileName] = useState('No CIBIL report chosen');
   const [rawText, setRawText] = useState('');
@@ -210,10 +201,6 @@ export default function CreditWiseAIPage() {
   const creditFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // No-op for login, to make page public
-  }, []);
-
-  useEffect(() => {
     if (typeof window !== 'undefined') {
       pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
       const savedTheme = localStorage.getItem('theme') || 'light';
@@ -236,33 +223,6 @@ export default function CreditWiseAIPage() {
     const outputCost = (tokenUsage.outputTokens / 1_000_000) * OUTPUT_PRICE_PER_MILLION_TOKENS;
     setEstimatedCost(inputCost + outputCost);
   }, [tokenUsage]);
-
-
-  const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSigningIn(true);
-    setAuthError(null);
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-    } catch (error: any) {
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-        try {
-          await createUserWithEmailAndPassword(auth, email, password);
-        } catch (createError: any) {
-          setAuthError(`Sign up failed: ${createError.message}`);
-        }
-      } else {
-        setAuthError(`Sign in failed: ${error.message}`);
-      }
-    } finally {
-      setIsSigningIn(false);
-    }
-  };
-
-  const handleSignOut = async () => {
-    await signOut(auth);
-    resetState();
-  };
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';

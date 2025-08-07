@@ -8,6 +8,8 @@ const pwaConfig = withPWA({
   register: true,
   skipWaiting: true,
   disable: false, // Always enable the PWA
+  buildExcludes: [/middleware-manifest\.json$/],
+  publicExcludes: ['!manifest.json'], // Ensure manifest.json is not excluded
 });
 
 const nextConfig: NextConfig = {
@@ -30,14 +32,14 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
-      {
-        source: '/veritypdf',
-        destination: '/verify',
-        permanent: true,
-      },
        {
         source: '/creditwiseai',
         destination: '/credit',
+        permanent: true,
+      },
+       {
+        source: '/veritypdf',
+        destination: '/verify',
         permanent: true,
       },
     ]
