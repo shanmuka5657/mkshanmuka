@@ -47,7 +47,8 @@ export type VerifyPdfOutput = z.infer<typeof VerifyPdfOutputSchema>;
 export async function verifyPdf(
   input: VerifyPdfInput
 ): Promise<{ output: VerifyPdfOutput, usage: FlowUsage }> {
-  return verifyPdfFlow(input);
+  const result = await verifyPdfFlow(input);
+  return result;
 }
 
 const prompt = ai.definePrompt({
