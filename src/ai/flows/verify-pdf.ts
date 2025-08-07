@@ -59,7 +59,11 @@ export type VerifyPdfOutput = z.infer<typeof VerifyPdfOutputSchema>;
 
 
 export async function verifyPdf(input: VerifyPdfInput): Promise<{ output: VerifyPdfOutput, usage: FlowUsage }> {
-  return verifyPdfFlow(input);
+  const {output, usage} = await verifyPdfFlow(input);
+  if (!output) {
+      throw new Error("AI failed to provide a forensic analysis.");
+  }
+  return { output, usage };
 }
 
 
@@ -79,7 +83,7 @@ const prompt = ai.definePrompt({
         *   Modification Date: '{{{metadata.ModDate}}}'
     *   If the modification date is missing or identical to the creation date, this is a strong indicator of authenticity.
     *   A different modification date is a strong indicator of alteration.
-    *   Note the PDF Producer Tool: '{{{metadata.Producer}}}'. Be suspicious of common online editors ('iLovePDF', 'Smallpdf', etc.) for official documents. Professional tools (Adobe, Microsoft Office, enterprise systems) are less suspicious.
+    *   Note the PDF Producer Tool: '{{{metadata.Producer}}}'. Be suspicious of common online editors ('iLovePDF', 'Smallpdf', 'PDFescape', 'Sejda', etc.) for official documents. Professional tools (Adobe, Microsoft Office, enterprise systems) are less suspicious.
     *   Provide a detailed and comprehensive summary of your metadata findings, explaining the implications of the dates and producer tool.
 3.  **Text, Font, and Visual Analysis:**
     *   **Text Layer:** Determine if text is selectable, purely image-based (like a scan), or a mix.
@@ -91,15 +95,17 @@ const prompt = ai.definePrompt({
     *   Start with a base score of 100.
     *   Use the following formula as a **strict guideline** to calculate the final confidence score. Subtract weights for each issue found.
         *   Missing Creation Date: -10
-        *   Suspicious PDF Tool (Online Editor): -15
+        *   Suspicious PDF Tool (Online Editor): -30
         *   Font Mismatch: -10
         *   Inconsistent Spacing: -10
         *   Scanned Image Detected: -20
         *   Text Inserted over Image: -25
         *   Different ModDate: -40
-    *   The final score must be a direct result of this calculation. Provide a comprehensive summary explaining the score (e.g., "The score started at 100. 15 points were deducted for the use of a suspicious PDF tool, resulting in a final score of 85.").
+    *   The final score must be a direct result of this calculation. Provide a comprehensive summary explaining the score (e.g., "The score started at 100. 30 points were deducted for the use of a suspicious PDF tool, resulting in a final score of 70.").
 6.  **Verdict and Recommendation:**
-    *   Assign a final verdict based on the score: 80-100 = "Authentic", 60-79 = "Suspicious", <60 = "Likely Altered".
+    *   Assign a final verdict based on the score and flags.
+    *   **CRITICAL RULE:** If the "Suspicious PDF Tool (Online Editor)" flag is present, the final 'verdict' MUST be "Suspicious".
+    *   Otherwise, use the score: 80-100 = "Authentic", 60-79 = "Suspicious", <60 = "Likely Altered".
     *   Provide a clear and detailed recommendation for the user, outlining specific next steps they can take.
 
 **Disclaimer:** The final section of the report should always contain the text: "This report is generated automatically using AI and forensic techniques. It is not a substitute for legal document authentication. Use for preliminary screening only."

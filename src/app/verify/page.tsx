@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import {
   UploadCloud,
@@ -47,16 +47,17 @@ import Link from 'next/link';
 import { Logo } from '@/components/ui/logo';
 
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+if (typeof window !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+}
 
 export default function VerifyPdfPage() {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState('No file chosen');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
   
   const [analysisResult, setAnalysisResult] = useState<VerifyPdfOutput | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -73,7 +74,6 @@ export default function VerifyPdfPage() {
   const resetState = () => {
     setPdfFile(null);
     setFileName('No file chosen');
-    setIsLoading(false);
     setProgress(0);
     setAnalysisResult(null);
     setIsAnalyzing(false);
@@ -101,11 +101,8 @@ export default function VerifyPdfPage() {
       
       reader.onload = async (e) => {
           const dataUri = e.target?.result as string;
-          const buffer = atob(dataUri.split(',')[1]);
-          const pdfData = new Uint8Array(buffer.length);
-          for (let i = 0; i < buffer.length; i++) {
-              pdfData[i] = buffer.charCodeAt(i);
-          }
+          // Use a Buffer-like approach to get PDF data
+          const pdfData = new Uint8Array(atob(dataUri.split(',')[1]).split("").map(c => c.charCodeAt(0)));
 
           setProgress(30);
           const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
@@ -145,25 +142,25 @@ export default function VerifyPdfPage() {
     }
   };
   
-  const getRiskBadgeVariant = (risk: string): "default" | "secondary" | "destructive" => {
-    const r = risk?.toLowerCase();
+  const getRiskBadgeVariant = (risk: string = 'Low'): "default" | "secondary" | "destructive" => {
+    const r = risk.toLowerCase();
     if (r === 'high') return 'destructive';
     if (r === 'medium') return 'secondary';
     return 'default';
   };
   
-  const getVerdictStyles = (verdict: string) => {
-    const v = verdict?.toLowerCase();
+  const getVerdictStyles = (verdict: string = '') => {
+    const v = verdict.toLowerCase();
     if (v === 'authentic') {
-      return { icon: <ShieldCheck className="text-green-500" />, color: 'text-green-500' };
+      return { icon: <ShieldCheck className="h-10 w-10 text-green-500" />, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/10', border: 'border-green-300 dark:border-green-800' };
     }
     if (v === 'suspicious') {
-      return { icon: <ShieldAlert className="text-yellow-500" />, color: 'text-yellow-500' };
+      return { icon: <ShieldAlert className="h-10 w-10 text-yellow-500" />, color: 'text-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-900/10', border: 'border-yellow-300 dark:border-yellow-800' };
     }
     if (v === 'likely altered') {
-      return { icon: <ShieldClose className="text-red-500" />, color: 'text-red-500' };
+      return { icon: <ShieldClose className="h-10 w-10 text-red-500" />, color: 'text-red-500', bg: 'bg-red-50 dark:bg-red-900/10', border: 'border-red-300 dark:border-red-800' };
     }
-    return { icon: <FileQuestion />, color: 'text-muted-foreground' };
+    return { icon: <FileQuestion className="h-10 w-10" />, color: 'text-muted-foreground', bg: 'bg-muted', border: 'border-border' };
   };
 
   return (
@@ -218,7 +215,7 @@ export default function VerifyPdfPage() {
           <CardFooter>
             <Button onClick={handleAnalyze} disabled={isAnalyzing || !pdfFile}>
               {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Fingerprint className="mr-2 h-4 w-4" />}
-              {isAnalyzing ? `Analyzing... (${progress}%)` : 'Run Forensic Analysis'}
+              {isAnalyzing ? `Analyzing...` : 'Run Forensic Analysis'}
             </Button>
           </CardFooter>
         </Card>
@@ -234,23 +231,27 @@ export default function VerifyPdfPage() {
 
         {analysisResult && (
           <div className="space-y-8">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center text-2xl gap-3">
+            <Card className={cn("border-2", getVerdictStyles(analysisResult.finalVerdict.verdict).border)}>
+                <CardHeader className={cn("p-6", getVerdictStyles(analysisResult.finalVerdict.verdict).bg)}>
+                     <div className="flex items-center gap-4">
                         {getVerdictStyles(analysisResult.finalVerdict.verdict).icon}
-                        Final Verdict: <span className={getVerdictStyles(analysisResult.finalVerdict.verdict).color}>{analysisResult.finalVerdict.verdict}</span>
-                    </CardTitle>
-                    <CardDescription>Document Type: {analysisResult.documentType}</CardDescription>
+                        <div>
+                            <CardDescription>Final Verdict</CardDescription>
+                            <CardTitle className={cn("text-3xl", getVerdictStyles(analysisResult.finalVerdict.verdict).color)}>
+                                {analysisResult.finalVerdict.verdict}
+                            </CardTitle>
+                        </div>
+                    </div>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="text-center p-6 bg-muted rounded-lg flex flex-col justify-center">
+                <CardContent className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="md:col-span-1 text-center p-6 bg-muted rounded-lg flex flex-col justify-center">
                         <div className="text-muted-foreground">Authenticity Confidence</div>
                         <div className={cn("text-7xl font-bold", getVerdictStyles(analysisResult.finalVerdict.verdict).color)}>
                             {analysisResult.confidenceScore.score}
                         </div>
                         <div className="text-sm text-muted-foreground">Score / 100</div>
                     </div>
-                    <div className="space-y-4">
+                    <div className="md:col-span-2 space-y-4 my-auto">
                         <div>
                             <h4 className="font-semibold text-lg">Score Explanation</h4>
                             <p className="text-sm text-muted-foreground">{analysisResult.confidenceScore.explanation}</p>
@@ -261,6 +262,9 @@ export default function VerifyPdfPage() {
                         </div>
                     </div>
                 </CardContent>
+                 <CardFooter>
+                    <p className="text-xs text-muted-foreground">Document Type Inferred as: <strong>{analysisResult.documentType}</strong></p>
+                </CardFooter>
             </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
