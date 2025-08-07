@@ -1,0 +1,21 @@
+{
+  "name": "CreditWise AI",
+  "short_name": "CreditWise",
+  "description": "Advanced AI Credit Score Analyzer & ML Model Trainer",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#4361ee",
+  "background_color": "#ffffff",
+  "start_url": "/",
+  "display": "standalone"
+}
