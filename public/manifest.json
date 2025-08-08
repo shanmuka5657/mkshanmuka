@@ -1,22 +1,7 @@
 {
-  "theme_color": "#4361ee",
-  "background_color": "#f5f7fa",
-  "display": "standalone",
-  "scope": "/",
-  "start_url": "/",
   "name": "CreditWise AI",
-  "short_name": "CreditWiseAI",
+  "short_name": "CreditWise",
   "description": "Advanced AI Credit Score Analyzer & ML Model Trainer",
-  "id": "/?source=pwa",
-  "lang": "en-US",
-  "dir": "auto",
-  "categories": [
-    "business",
-    "finance",
-    "utilities"
-  ],
-  "prefer_related_applications": false,
-  "iarc_rating_id": "12345",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
@@ -43,29 +28,22 @@
       "purpose": "maskable"
     }
   ],
-  "screenshots": [
-    {
-      "src": "/screenshots/screenshot-desktop-1.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Credit Analysis Dashboard"
-    },
-    {
-      "src": "/screenshots/screenshot-desktop-2.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "AI Underwriting"
-    },
-    {
-      "src": "/screenshots/screenshot-mobile-1.png",
-      "sizes": "720x1280",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Mobile Credit Score View"
-    }
+  "start_url": "/credit",
+  "display": "standalone",
+  "background_color": "#f5f7fa",
+  "theme_color": "#4361ee",
+  "display_override": [
+    "standalone",
+    "window-controls-overlay"
   ],
+  "scope": "/",
+  "id": "/?source=pwa",
+  "launch_handler": {
+    "client_mode": [
+      "navigate-existing",
+      "auto"
+    ]
+  },
   "shortcuts": [
     {
       "name": "Credit Analysis",
@@ -80,7 +58,7 @@
       ]
     },
     {
-      "name": "Verify Document",
+      "name": "Verify PDF",
       "short_name": "Verify",
       "description": "Run forensic analysis on a PDF",
       "url": "/verify",
@@ -92,11 +70,68 @@
       ]
     }
   ],
-  "display_override": [
-    "window-controls-overlay",
-    "standalone"
+  "share_target": {
+    "action": "/share-target",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "screenshots": [
+    {
+      "src": "/screenshots/screenshot1.png",
+      "sizes": "1080x2400",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Credit Analysis Dashboard"
+    },
+    {
+      "src": "/screenshots/screenshot2.png",
+      "sizes": "1080x2400",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "AI Chat Agent"
+    }
   ],
-  "launch_handler": {
-    "client_mode": "navigate-existing"
+  "categories": [
+    "finance",
+    "business"
+  ],
+  "dir": "auto",
+  "lang": "en-US",
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "iarc_rating_id": "12345",
+  "file_handlers": [
+    {
+      "action": "/credit",
+      "accept": {
+        "application/pdf": [
+          ".pdf"
+        ]
+      }
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+creditwise",
+      "url": "/?url=%s"
+    }
+  ],
+  "widgets": [
+    {
+      "name": "Quick Analysis",
+      "description": "Quickly start a new credit analysis.",
+      "tag": "analyze",
+      "template": "analyze-template",
+      "ms_ac_template": "widgets/analyze.json",
+      "data": "widgets/analyze-data.json",
+      "type": "application/json"
+    }
+  ],
+  "edge_side_panel": {
+    "preferred_width": 480
   }
 }
