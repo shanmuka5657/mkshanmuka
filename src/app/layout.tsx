@@ -3,6 +3,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import Script from 'next/script';
+import { Button } from '@/components/ui/button';
 
 export const metadata: Metadata = {
   title: 'CreditWise AI',
