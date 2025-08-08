@@ -166,7 +166,6 @@ export default function CreditWiseAIPage() {
   const [activeLoanDetails, setActiveLoanDetails] = useState<ActiveLoanDetail[]>([]);
   const [otherObligations, setOtherObligations] = useState('');
   const [estimatedIncome, setEstimatedIncome] = useState<string>('');
-  const [theme, setTheme] = useState('light');
   
   const [aiRating, setAiRating] = useState<AiRatingOutput | null>(null);
   const [isRating, setIsRating] = useState(false);
@@ -203,9 +202,6 @@ export default function CreditWiseAIPage() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-      const savedTheme = localStorage.getItem('theme') || 'light';
-      setTheme(savedTheme);
-      document.documentElement.classList.toggle('dark', savedTheme === 'dark');
     }
   }, []);
 
@@ -224,13 +220,6 @@ export default function CreditWiseAIPage() {
     setEstimatedCost(inputCost + outputCost);
   }, [tokenUsage]);
 
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
-  };
-  
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = event.target.files;
     if (!selectedFiles || selectedFiles.length === 0) return;
@@ -1298,7 +1287,7 @@ export default function CreditWiseAIPage() {
 
                <div className="mt-8 space-y-6">
                 <h4 className="text-xl font-semibold border-b pb-2">Advanced Risk Metrics</h4>
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                    <div className="flex flex-col items-center text-center p-4 bg-muted rounded-lg">
                      <div className="text-sm text-muted-foreground">Probability of Default (PD)</div>
                      <div className="text-3xl font-bold text-destructive">{underwritingResult.probabilityOfDefault}%</div>
@@ -1507,44 +1496,11 @@ export default function CreditWiseAIPage() {
   const { customerDetails, reportSummary } = analysisResult || initialAnalysis;
 
   return (
-    <div className={cn("min-h-screen bg-background font-body text-foreground", theme)}>
+    <div className="bg-background font-body text-foreground">
        <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm print:hidden">
         <div className="container flex h-16 items-center">
             <div className="mr-4 flex items-center">
               <Logo />
-            </div>
-            <nav className="flex items-center space-x-4 lg:space-x-6 text-sm font-medium">
-              <Link
-                href="/credit"
-                className="transition-colors hover:text-foreground/80 text-foreground"
-              >
-                Credit Analysis
-              </Link>
-               <Link
-                href="/verify"
-                className="transition-colors hover:text-foreground/80 text-muted-foreground"
-              >
-                VerityPDF
-              </Link>
-              <Link
-                href="/cross-verify"
-                className="transition-colors hover:text-foreground/80 text-muted-foreground"
-              >
-                Cross-Verification
-              </Link>
-              <Link
-                href="/trainer"
-                className="transition-colors hover:text-foreground/80 text-muted-foreground"
-              >
-                AI Model Trainer
-              </Link>
-            </nav>
-            <div className="flex flex-1 items-center justify-end space-x-2">
-                <Button variant="ghost" size="icon" onClick={toggleTheme}>
-                    <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                    <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                    <span className="sr-only">Toggle theme</span>
-                </Button>
             </div>
         </div>
       </header>
@@ -1552,7 +1508,7 @@ export default function CreditWiseAIPage() {
       <main className="container mx-auto p-4 md:p-8 print:p-0">
           <TooltipProvider>
             <div className="text-center mb-12 print:hidden">
-              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">Advanced AI Credit Score Analyzer</h1>
+              <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">Credit Analysis</h1>
               <div className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">Upload your CIBIL report PDF to unlock instant AI-powered insights, personalized scoring, and actionable advice.</div>
             </div>
 
@@ -1827,5 +1783,3 @@ export default function CreditWiseAIPage() {
     </div>
   );
 }
-
-    

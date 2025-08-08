@@ -164,35 +164,18 @@ export default function VerifyPdfPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background font-body text-foreground">
+    <div className="bg-background font-body text-foreground">
       <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm">
         <div className="container flex h-16 items-center">
           <div className="mr-4 flex items-center">
             <Logo />
           </div>
-          <nav className="flex items-center space-x-4 lg:space-x-6 text-sm font-medium">
-            <Link href="/credit" className="transition-colors hover:text-foreground/80 text-muted-foreground">
-              Credit Analysis
-            </Link>
-            <Link href="/verify" className="transition-colors hover:text-foreground/80 text-foreground">
-              VerityPDF
-            </Link>
-            <Link
-                href="/cross-verify"
-                className="transition-colors hover:text-foreground/80 text-muted-foreground"
-              >
-                Cross-Verification
-              </Link>
-            <Link href="/trainer" className="transition-colors hover:text-foreground/80 text-muted-foreground">
-              AI Model Trainer
-            </Link>
-          </nav>
         </div>
       </header>
 
       <main className="container mx-auto p-4 md:p-8">
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">VerityPDF Forensic Analysis</h1>
+          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">VerityPDF Forensic Analysis</h1>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">Upload any PDF to uncover signs of tampering. Our AI performs a deep forensic analysis of metadata, fonts, and visual elements.</p>
         </div>
 
@@ -360,11 +343,6 @@ export default function VerifyPdfPage() {
           </div>
         )}
       </main>
-      <footer className="text-center py-6 text-sm text-muted-foreground">
-        <div>© {new Date().getFullYear()} MkCreditWise.com. Built with Firebase and Google AI.</div>
-      </footer>
     </div>
   );
 }
-
-    

@@ -2,9 +2,7 @@
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
-import { Sparkles } from 'lucide-react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { BottomNavbar } from '@/components/BottomNavbar';
 
 export const metadata: Metadata = {
   title: 'CreditWise AI',
@@ -26,7 +24,12 @@ export default function RootLayout({
         <meta name="theme-color" content="#4361ee" />
       </head>
       <body className="font-body antialiased">
-        {children}
+        <div className="relative flex flex-col min-h-screen">
+          <main className="flex-1 pb-20">
+            {children}
+          </main>
+          <BottomNavbar />
+        </div>
         <Toaster />
       </body>
     </html>

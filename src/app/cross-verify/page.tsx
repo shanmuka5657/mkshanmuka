@@ -64,10 +64,10 @@ const getStatusIcon = (status: string) => {
 
 const getStatusColor = (status: string) => {
     switch (status) {
-        case 'Match': return 'border-green-500 bg-green-50';
-        case 'Mismatch': return 'border-red-500 bg-red-50';
-        case 'Partial Match': return 'border-yellow-500 bg-yellow-50';
-        default: return 'border-gray-300 bg-gray-50';
+        case 'Match': return 'border-green-500 bg-green-50 dark:bg-green-900/10';
+        case 'Mismatch': return 'border-red-500 bg-red-50 dark:bg-red-900/10';
+        case 'Partial Match': return 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/10';
+        default: return 'border-gray-300 bg-gray-50 dark:bg-muted/20';
     }
 }
 
@@ -97,7 +97,7 @@ const VerificationField = ({ field, label, forPrint = false }: { field: CrossVer
     }
     
     return (
-        <div className="border p-4 rounded-lg">
+        <div className={cn("border p-4 rounded-lg", getStatusColor(field.status))}>
             <h4 className="font-semibold flex items-center gap-2">{getStatusIcon(field.status)} {label} <span className="text-sm font-normal text-muted-foreground">({field.status})</span></h4>
             <p className="text-xs text-muted-foreground mt-1 mb-3">{field.details}</p>
             <div className="text-xs space-y-1">
@@ -239,32 +239,18 @@ export default function CrossVerifyPage() {
   const hasFiles = cibilFile.file || bankStatementFile.file || salarySlips.length > 0;
   
   return (
-    <div className="min-h-screen bg-background font-body text-foreground">
+    <div className="bg-background font-body text-foreground">
       <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm print:hidden">
         <div className="container flex h-16 items-center">
           <div className="mr-4 flex items-center">
             <Logo />
           </div>
-          <nav className="flex items-center space-x-4 lg:space-x-6 text-sm font-medium">
-            <Link href="/credit" className="transition-colors hover:text-foreground/80 text-muted-foreground">
-              Credit Analysis
-            </Link>
-             <Link href="/verify" className="transition-colors hover:text-foreground/80 text-muted-foreground">
-              VerityPDF
-            </Link>
-            <Link href="/cross-verify" className="transition-colors hover:text-foreground/80 text-foreground">
-              Cross-Verification
-            </Link>
-            <Link href="/trainer" className="transition-colors hover:text-foreground/80 text-muted-foreground">
-              AI Model Trainer
-            </Link>
-          </nav>
         </div>
       </header>
       
       <main className="container mx-auto p-4 md:p-8 print:p-0">
         <div className="text-center mb-12 print:hidden">
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">Document Cross-Verification</h1>
+          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">Document Cross-Verification</h1>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">Upload CIBIL, Bank Statement, and Salary Slips to have the AI cross-verify key information and detect discrepancies.</p>
         </div>
         
@@ -363,7 +349,7 @@ export default function CrossVerifyPage() {
                             <VerificationField field={verificationResult.pan} label="PAN Number" />
                             <VerificationField field={verificationResult.mobile} label="Mobile Number" />
                             <VerificationField field={verificationResult.address} label="Address" />
-                             <div className="border p-4 rounded-lg">
+                             <div className={cn("border p-4 rounded-lg", getStatusColor(verificationResult.income.status))}>
                                 <h4 className="font-semibold flex items-center gap-2">
                                      {verificationResult.income.status === 'Consistent' ? <CheckCircle2 className="text-green-500" /> : <XCircle className="text-red-500" />}
                                      Income Verification <span className="text-sm font-normal text-muted-foreground">({verificationResult.income.status})</span>
@@ -475,10 +461,6 @@ export default function CrossVerifyPage() {
             </div>
         )}
       </main>
-
-      <footer className="text-center py-6 text-sm text-muted-foreground print:hidden">
-         <div>© {new Date().getFullYear()} MkCreditWise.com. Built with Firebase and Google AI.</div>
-      </footer>
 
       <style jsx global>{`
         @media print {
