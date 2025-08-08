@@ -5,11 +5,9 @@ import withPWA from 'next-pwa';
 
 const pwaConfig = withPWA({
   dest: 'public',
-  register: true,
+  register: false, // We are doing our own registration in register-sw.js
   skipWaiting: true,
-  disable: false, // Always enable the PWA
-  buildExcludes: [/middleware-manifest\.json$/],
-  publicExcludes: ['!manifest.json'], // Ensure manifest.json is not excluded
+  sw: 'service-worker.js', // Use our custom service worker
 });
 
 const nextConfig: NextConfig = {
@@ -40,6 +38,11 @@ const nextConfig: NextConfig = {
        {
         source: '/veritypdf',
         destination: '/verify',
+        permanent: true,
+      },
+       {
+        source: '/crossverify',
+        destination: '/cross-verify',
         permanent: true,
       },
     ]

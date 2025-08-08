@@ -2,7 +2,6 @@
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
-import { BottomNavbar } from '@/components/BottomNavbar';
 import Script from 'next/script';
 
 export const metadata: Metadata = {
@@ -29,7 +28,7 @@ export default function RootLayout({
           <main className="flex-1">
             {children}
             <div id="install-button" style={{ display: 'none', position: 'fixed', bottom: '80px', right: '20px', zIndex: 1000 }}>
-              <button className="bg-primary text-primary-foreground font-bold py-2 px-4 rounded-lg shadow-lg">Install App</button>
+              <Button className="bg-primary text-primary-foreground font-bold py-2 px-4 rounded-lg shadow-lg">Install App</Button>
             </div>
           </main>
         </div>

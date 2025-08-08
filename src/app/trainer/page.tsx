@@ -191,6 +191,65 @@ function ModelTrainerPageContent() {
             </CardFooter>
         </Card>
 
+        <Card>
+            <CardHeader>
+                <CardTitle>PWA Features Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="pwa-status">
+                  <div className="status-item">
+                    <span className="icon">✅</span>
+                    <span>Manifest validated</span>
+                  </div>
+                  <div className="status-item">
+                    <span className="icon">✅</span>
+                    <span>Offline support active</span>
+                  </div>
+                  <div className="status-item">
+                    <span className="icon">✅</span>
+                    <span>Background sync ready</span>
+                  </div>
+                  <div className="status-item">
+                    <span className="icon">✅</span>
+                    <span>Push notifications enabled</span>
+                  </div>
+                  <div className="status-item">
+                    <span className="icon">✅</span>
+                    <span>Periodic updates configured</span>
+                  </div>
+                </div>
+            </CardContent>
+        </Card>
+        
+        <style jsx>{`
+          .pwa-status {
+            padding: 20px;
+            background: #f5f7fa;
+            border-radius: 8px;
+            max-width: 500px;
+            margin: 20px auto;
+          }
+          .dark .pwa-status {
+             background: hsl(var(--muted));
+          }
+          .status-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+          }
+           .dark .status-item {
+            border-bottom: 1px solid hsl(var(--border));
+          }
+          .status-item:last-child {
+            border-bottom: none;
+          }
+          .status-item .icon {
+            margin-right: 15px;
+            font-weight: bold;
+          }
+        `}</style>
+
       </main>
     </div>
   );

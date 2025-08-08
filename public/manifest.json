@@ -1,34 +1,17 @@
 
 {
+  "id": "creditwise-ai-pwa",
   "name": "CreditWise AI",
   "short_name": "CreditWiseAI",
-  "id": "/?utm_source=pwa",
-  "description": "Advanced AI Credit Score Analyzer & ML Model Trainer",
-  "start_url": "/?source=pwa",
-  "scope": "/",
-  "display": "standalone",
-  "background_color": "#f5f7fa",
-  "theme_color": "#4361ee",
   "orientation": "portrait",
-  "dir": "ltr",
-  "lang": "en-US",
-  "categories": ["finance", "business", "productivity"],
-  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
-
-  "icons": [
-    {
-      "src": "/icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
+  "categories": [
+    "finance",
+    "business",
+    "productivity"
   ],
-
+  "dir": "ltr",
+  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
+  "lang": "en-US",
   "related_applications": [
     {
       "platform": "play",
@@ -36,12 +19,11 @@
       "id": "com.creditwise.ai"
     },
     {
-      "platform": "webapp",
-      "url": "https://creditwise.ai/manifest.json"
+      "platform": "web",
+      "url": "https://creditwise.ai"
     }
   ],
   "prefer_related_applications": false,
-
   "share_target": {
     "action": "/share-score",
     "method": "POST",
@@ -51,5 +33,23 @@
       "text": "description",
       "url": "link"
     }
-  }
+  },
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f7fa",
+  "theme_color": "#4361ee",
+  "description": "Advanced AI Credit Score Analyzer & ML Model Trainer",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }

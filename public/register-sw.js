@@ -18,16 +18,17 @@ if ('serviceWorker' in navigator) {
         });
       }
 
-      // Register Background Sync - Note: This requires a UI element with id 'sync-button' to trigger.
-      // Since it's not present in the current layout, this part will not throw an error,
-      // but the event listener will not be attached to anything.
-      const syncButton = document.getElementById('sync-button');
-      if ('SyncManager' in window && syncButton) {
-        syncButton.addEventListener('click', () => {
-          registration.sync.register('sync-credit-data')
-            .then(() => console.log('Background sync registered'))
-            .catch(err => console.error('Sync registration failed:', err));
-        });
+      // Example of how background sync could be triggered.
+      // In a real app, a button with id 'sync-button' would trigger this.
+      if ('SyncManager' in window) {
+        const syncButton = document.getElementById('sync-button');
+        if (syncButton) {
+          syncButton.addEventListener('click', () => {
+            registration.sync.register('sync-actions')
+              .then(() => console.log('Background sync registered'))
+              .catch(err => console.error('Sync registration failed:', err));
+          });
+        }
       }
 
     } catch (err) {
@@ -39,19 +40,28 @@ if ('serviceWorker' in navigator) {
 // Install PWA prompt
 let deferredPrompt;
 window.addEventListener('beforeinstallprompt', (e) => {
+  // Prevent the mini-infobar from appearing on mobile
   e.preventDefault();
+  // Stash the event so it can be triggered later.
   deferredPrompt = e;
+  // Update UI to notify the user they can install the PWA
   const installButton = document.getElementById('install-button');
   if (installButton) {
     installButton.style.display = 'block';
 
     installButton.addEventListener('click', () => {
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            deferredPrompt.userChoice.then(() => {
-                deferredPrompt = null;
-            });
+      // Show the install prompt
+      deferredPrompt.prompt();
+      // Wait for the user to respond to the prompt
+      deferredPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('User accepted the install prompt');
+        } else {
+          console.log('User dismissed the install prompt');
         }
+        deferredPrompt = null;
+        installButton.style.display = 'none';
+      });
     });
   }
 });
