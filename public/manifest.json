@@ -1,105 +1,44 @@
-
 {
   "name": "CreditWise AI",
   "short_name": "CreditWise",
   "description": "Advanced AI Credit Score Analyzer & ML Model Trainer",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#f5f7fa",
   "theme_color": "#4361ee",
+  "orientation": "portrait",
   "icons": [
     {
-      "src": "icons/icon-192x192.png",
+      "src": "/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
+      "type": "image/png"
     },
     {
-      "src": "icons/icon-512x512.png",
+      "src": "/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/maskable_icon.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Analyze Credit Report",
-      "url": "/credit",
-      "description": "Go to the credit analysis page"
-    },
-    {
-      "name": "Verify Document",
-      "url": "/verify",
-      "description": "Go to the document verification page"
+      "type": "image/png"
     }
   ],
   "screenshots": [
     {
-      "src": "screenshots/screenshot1.png",
-      "sizes": "1080x1920",
+      "src": "/screenshots/screenshot-desktop.png",
+      "sizes": "1280x720",
       "type": "image/png",
-      "form_factor": "narrow"
+      "form_factor": "wide",
+      "label": "Credit Analysis Dashboard"
     },
     {
-      "src": "screenshots/screenshot2.png",
-      "sizes": "1080x1920",
+      "src": "/screenshots/screenshot-mobile.png",
+      "sizes": "720x1280",
       "type": "image/png",
-      "form_factor": "narrow"
+      "form_factor": "narrow",
+      "label": "AI Chat Agent"
     }
   ],
-  "share_target": {
-    "action": "/share-target",
-    "method": "POST",
-    "enctype": "multipart/form-data",
-    "params": {
-      "files": [
-        {
-          "name": "files",
-          "accept": [
-            "application/pdf"
-          ]
-        }
-      ]
-    }
-  },
-  "file_handlers": [
-    {
-      "action": "/share-target",
-      "accept": {
-        "application/pdf": [
-          ".pdf"
-        ]
-      }
-    }
-  ],
-  "protocol_handlers": [
-    {
-      "protocol": "web+creditwise",
-      "url": "/credit?launch_query=%s"
-    }
-  ],
-  "widgets": [
-    {
-      "name": "Credit Analysis",
-      "description": "Quickly access your credit insights.",
-      "tag": "credit-widget",
-      "template": "credit_widget",
-      "ms_ac_template": "credit_widget",
-      "data": "{}"
-    }
-  ],
-  "edge_side_panel": {},
-  "handle_links": "auto",
+  "id": "/?v=1",
   "launch_handler": {
     "client_mode": "navigate-existing"
   },
-  "id": "/?utm_source=pwa",
   "categories": [
     "finance",
     "business"
@@ -108,7 +47,6 @@
   "lang": "en-US",
   "prefer_related_applications": false,
   "iarc_rating_id": "12345",
-  "orientation": "portrait",
   "display_override": [
     "window-controls-overlay"
   ]
