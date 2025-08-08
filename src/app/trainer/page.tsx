@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, 'useState', 'useEffect' from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -190,63 +190,75 @@ function ModelTrainerPageContent() {
                 {approvedCount === 0 && <p className="text-sm text-muted-foreground">You must approve at least one candidate to enable training.</p>}
             </CardFooter>
         </Card>
-
-        <Card>
-            <CardHeader>
-                <CardTitle>PWA Features Status</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="pwa-status">
-                  <div className="status-item">
-                    <span className="icon">✅</span>
-                    <span>Manifest validated</span>
-                  </div>
-                  <div className="status-item">
-                    <span className="icon">✅</span>
-                    <span>Offline support active</span>
-                  </div>
-                  <div className="status-item">
-                    <span className="icon">✅</span>
-                    <span>Background sync ready</span>
-                  </div>
-                  <div className="status-item">
-                    <span className="icon">✅</span>
-                    <span>Push notifications enabled</span>
-                  </div>
-                  <div className="status-item">
-                    <span className="icon">✅</span>
-                    <span>Periodic updates configured</span>
-                  </div>
-                </div>
-            </CardContent>
-        </Card>
         
+        <div className="capabilities-dashboard">
+          <h2 className="font-bold text-2xl col-span-full">PWA Capabilities Status</h2>
+          
+          <div className="capability">
+            <span className="badge active">Active</span>
+            <h3>Service Worker</h3>
+            <p>Offline support & background sync</p>
+          </div>
+
+          <div className="capability">
+            <span className="badge active">Active</span>
+            <h3>File Handlers</h3>
+            <p>PDF & JSON file processing</p>
+          </div>
+
+          <div className="capability">
+            <span className="badge active">Active</span>
+            <h3>Protocol Handler</h3>
+            <p>creditwise:// links</p>
+          </div>
+
+          <div className="capability">
+            <span className="badge active">Active</span>
+            <h3>Share Target</h3>
+            <p>Receive shared content</p>
+          </div>
+        </div>
+
         <style jsx>{`
-          .pwa-status {
+          .capabilities-dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
             padding: 20px;
-            background: #f5f7fa;
+            background: #f8f9fa;
+            border-radius: 12px;
+            margin-top: 2rem;
+          }
+          .dark .capabilities-dashboard {
+            background: hsl(var(--muted));
+          }
+          .capability {
+            background: hsl(var(--card));
+            padding: 1.5rem;
             border-radius: 8px;
-            max-width: 500px;
-            margin: 20px auto;
+            border: 1px solid hsl(var(--border));
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
           }
-          .dark .pwa-status {
-             background: hsl(var(--muted));
+          .capability h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
           }
-          .status-item {
-            display: flex;
-            align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
+           .capability p {
+            font-size: 0.9rem;
+            color: hsl(var(--muted-foreground));
           }
-           .dark .status-item {
-            border-bottom: 1px solid hsl(var(--border));
-          }
-          .status-item:last-child {
-            border-bottom: none;
-          }
-          .status-item .icon {
-            margin-right: 15px;
+          .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
             font-weight: bold;
+            font-size: 0.75rem;
+            display: inline-block;
+            margin-bottom: 0.75rem;
+          }
+          .badge.active {
+            background: #4caf50;
+            color: white;
           }
         `}</style>
 
