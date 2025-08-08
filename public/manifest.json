@@ -1,73 +1,28 @@
-
 {
-  "name": "MkCreditWise.com",
+  "name": "MkCreditWise.com - AI Credit Analysis",
   "short_name": "CreditWiseAI",
-  "id": "/?utm_source=pwa",
   "description": "Advanced AI Credit Score Analyzer & ML Model Trainer by MkCreditWise.com",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f5f7fa",
   "theme_color": "#4361ee",
-  "orientation": "portrait",
-  "dir": "ltr",
-  "lang": "en-US",
-  "categories": [
-    "finance",
-    "business",
-    "productivity"
-  ],
-  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
   "icons": [
     {
-      "src": "/icon-192x192.png",
+      "src": "icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-512x512.png",
+      "src": "icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ],
-  "related_applications": [
-    {
-      "platform": "play",
-      "url": "https://play.google.com/store/apps/details?id=com.mkcreditwise.ai",
-      "id": "com.mkcreditwise.ai"
-    },
-    {
-      "platform": "webapp",
-      "url": "https://mkcreditwise.com/manifest.json"
-    }
-  ],
-  "prefer_related_applications": false,
-  "share_target": {
-    "action": "/share-target",
-    "params": {
-      "title": "name",
-      "text": "description",
-      "url": "link"
-    }
+  "launch_handler": {
+    "client_mode": "focus-existing"
   },
-  "display_override": [
-    "window-controls-overlay"
-  ],
-  "shortcuts": [
-    {
-      "name": "Start New Analysis",
-      "short_name": "Analyze",
-      "description": "Upload a new CIBIL report for analysis",
-      "url": "/credit?action=new-analysis",
-      "icons": [
-        {
-          "src": "/icons/shortcut-icon.png",
-          "sizes": "96x96",
-          "type": "image/png"
-        }
-      ]
-    }
-  ]
+  "id": "com.mkcreditwise.ai"
 }
