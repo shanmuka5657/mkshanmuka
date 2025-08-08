@@ -7,77 +7,50 @@
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#4361ee",
-  "orientation": "portrait",
-  "id": "/?source=pwa",
-  "dir": "auto",
-  "lang": "en-US",
-  "prefer_related_applications": false,
-  "categories": [
-    "finance",
-    "business"
-  ],
-  "iarc_rating_id": "12345",
   "icons": [
     {
-      "src": "/icons/icon-192x192.png",
+      "src": "icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-512x512.png",
+      "src": "icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/screenshots/screenshot-desktop.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "CreditWise AI Desktop View"
+      "purpose": "any"
     },
     {
-      "src": "/screenshots/screenshot-mobile.png",
-      "sizes": "540x720",
+      "src": "icons/maskable_icon.png",
+      "sizes": "512x512",
       "type": "image/png",
-      "form_factor": "narrow",
-      "label": "CreditWise AI Mobile View"
+      "purpose": "maskable"
     }
-  ],
-  "launch_handler": {
-    "client_mode": "navigate-existing"
-  },
-  "display_override": [
-    "window-controls-overlay",
-    "standalone"
   ],
   "shortcuts": [
     {
       "name": "Analyze Credit Report",
-      "short_name": "Analyze",
-      "description": "Jump directly to the credit analysis page",
       "url": "/credit",
-      "icons": [
-        {
-          "src": "/icons/shortcut-icon-96.png",
-          "sizes": "96x96"
-        }
-      ]
+      "description": "Go to the credit analysis page"
     },
     {
       "name": "Verify Document",
-      "short_name": "Verify",
-      "description": "Forensically analyze a PDF document for tampering",
       "url": "/verify",
-      "icons": [
-        {
-          "src": "/icons/shortcut-icon-96.png",
-          "sizes": "96x96"
-        }
-      ]
+      "description": "Go to the document verification page"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/screenshot1.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "screenshots/screenshot2.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow"
     }
   ],
   "share_target": {
@@ -89,27 +62,15 @@
         {
           "name": "files",
           "accept": [
-            "application/pdf",
-            "image/jpeg",
-            "image/png"
+            "application/pdf"
           ]
         }
       ]
     }
   },
-  "protocol_handlers": [
-    {
-      "protocol": "web+creditwise",
-      "url": "/credit?utm_source=protocol"
-    }
-  ],
-  "edge_side_panel": {
-    "preferred_width": 480
-  },
-  "handle_links": "preferred",
   "file_handlers": [
     {
-      "action": "/open-pdf",
+      "action": "/share-target",
       "accept": {
         "application/pdf": [
           ".pdf"
@@ -117,34 +78,38 @@
       }
     }
   ],
-  "widgets": [
+  "protocol_handlers": [
     {
-      "name": "CreditWise AI Shortcuts",
-      "description": "Quickly access CreditWise AI features",
-      "tag": "shortcuts",
-      "template": "shortcuts",
-      "ms_ac_template": "shortcuts",
-      "data": {
-        "items": [
-          {
-            "name": "Analyze Credit Report",
-            "url": "/credit"
-          },
-          {
-            "name": "Verify Document",
-            "url": "/verify"
-          }
-        ]
-      },
-      "icons": [
-        {
-          "src": "/icons/icon-192x192.png",
-          "sizes": "192x192"
-        }
-      ]
+      "protocol": "web+creditwise",
+      "url": "/credit?launch_query=%s"
     }
   ],
-  "background_sync": {
-    "periodic": true
-  }
+  "widgets": [
+    {
+      "name": "Credit Analysis",
+      "description": "Quickly access your credit insights.",
+      "tag": "credit-widget",
+      "template": "credit_widget",
+      "ms_ac_template": "credit_widget",
+      "data": "{}"
+    }
+  ],
+  "edge_side_panel": {},
+  "handle_links": "auto",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "id": "/?utm_source=pwa",
+  "categories": [
+    "finance",
+    "business"
+  ],
+  "dir": "auto",
+  "lang": "en-US",
+  "prefer_related_applications": false,
+  "iarc_rating_id": "12345",
+  "orientation": "portrait",
+  "display_override": [
+    "window-controls-overlay"
+  ]
 }
