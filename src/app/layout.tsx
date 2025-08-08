@@ -4,6 +4,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import Script from 'next/script';
 import { Button } from '@/components/ui/button';
+import { Download } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'MkCreditWise.com - AI Credit Analysis',
@@ -28,9 +29,6 @@ export default function RootLayout({
         <div className="relative flex flex-col min-h-screen">
           <main className="flex-1">
             {children}
-            <div id="install-button" style={{ display: 'none', position: 'fixed', bottom: '80px', right: '20px', zIndex: 1000 }}>
-              <Button className="bg-primary text-primary-foreground font-bold py-2 px-4 rounded-lg shadow-lg">Install App</Button>
-            </div>
           </main>
         </div>
         <Toaster />

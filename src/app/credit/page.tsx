@@ -46,6 +46,7 @@ import {
   Receipt,
   ClipboardCheck,
   LogOut,
+  Download,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -1513,10 +1514,18 @@ function CreditWiseAIPageContent() {
             <div className="mr-4 flex items-center">
               <Logo />
             </div>
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Logout
-            </Button>
+            <div className="flex items-center gap-2">
+                <div id="install-button" style={{ display: 'none' }}>
+                    <Button variant="outline" size="sm">
+                        <Download className="mr-2 h-4 w-4" />
+                        Install App
+                    </Button>
+                </div>
+                <Button variant="ghost" size="sm" onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                </Button>
+            </div>
         </div>
       </header>
 

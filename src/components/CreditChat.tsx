@@ -141,7 +141,7 @@ export function AiAgentChat({
   if (!isOpen) {
     return (
       <Button
-        className="fixed bottom-4 right-4 z-50 h-16 w-16 rounded-full shadow-2xl print:hidden"
+        className="fixed bottom-24 right-4 z-50 h-16 w-16 rounded-full shadow-2xl print:hidden"
         onClick={() => setIsOpen(true)}
       >
         <MessageSquare size={32} />
@@ -151,7 +151,7 @@ export function AiAgentChat({
 
   return (
     <Card className={cn(
-        "fixed bottom-4 right-4 z-50 w-full max-w-md shadow-2xl print:hidden transition-all",
+        "fixed bottom-24 right-4 z-50 w-full max-w-md shadow-2xl print:hidden transition-all",
         isMinimized ? "h-16 overflow-hidden" : "h-[600px] flex flex-col"
       )}>
       <CardHeader className="flex flex-row items-center justify-between p-4 border-b">
