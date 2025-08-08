@@ -18,18 +18,16 @@ if ('serviceWorker' in navigator) {
         });
       }
 
-      // Register Background Sync
-      if ('SyncManager' in window) {
-        // This is a placeholder for a button that would trigger a sync.
-        // You would need a button with id="sync-button" in your UI for this to work.
-        const syncButton = document.getElementById('sync-button');
-        if (syncButton) {
-            syncButton.addEventListener('click', () => {
-              registration.sync.register('sync-credit-data')
-                .then(() => console.log('Background sync registered'))
-                .catch(err => console.error('Sync registration failed:', err));
-            });
-        }
+      // Register Background Sync - Note: This requires a UI element with id 'sync-button' to trigger.
+      // Since it's not present in the current layout, this part will not throw an error,
+      // but the event listener will not be attached to anything.
+      const syncButton = document.getElementById('sync-button');
+      if ('SyncManager' in window && syncButton) {
+        syncButton.addEventListener('click', () => {
+          registration.sync.register('sync-credit-data')
+            .then(() => console.log('Background sync registered'))
+            .catch(err => console.error('Sync registration failed:', err));
+        });
       }
 
     } catch (err) {
@@ -45,12 +43,15 @@ window.addEventListener('beforeinstallprompt', (e) => {
   deferredPrompt = e;
   const installButton = document.getElementById('install-button');
   if (installButton) {
-      installButton.style.display = 'block';
-      installButton.addEventListener('click', () => {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then(() => {
-            deferredPrompt = null;
-        });
-      });
+    installButton.style.display = 'block';
+
+    installButton.addEventListener('click', () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then(() => {
+                deferredPrompt = null;
+            });
+        }
+    });
   }
 });

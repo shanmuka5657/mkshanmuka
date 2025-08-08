@@ -6,11 +6,7 @@ const RUNTIME_CACHE = 'runtime-v1';
 // Pre-cache critical resources
 const PRECACHE_URLS = [
   '/',
-  '/index.html',
-  '/styles/main.css',
-  '/scripts/app.js',
-  '/icon-192x192.png',
-  OFFLINE_URL
+  '/offline.html'
 ];
 
 // Install phase
@@ -57,6 +53,12 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(handleShare(event));
     return;
   }
+  
+  // Exclude API requests from this caching strategy
+  if (event.request.url.includes('/api/')) {
+    return;
+  }
+
 
   // Network-first strategy
   event.respondWith(
@@ -144,26 +146,43 @@ async function handleShare(event) {
   // Store share data in IndexedDB
   await storeShareData(sharedData);
 
-  return Response.redirect('/shared?success=1', 303);
+  return Response.redirect('/share-target?success=1', 303);
 }
 
 async function storeShareData(data) {
   // Implement IndexedDB storage
-  const db = await indexedDB.open('CreditWiseShareDB', 1);
-  
-  db.onupgradeneeded = (event) => {
-    const db = event.target.result;
-    db.createObjectStore('shares', { keyPath: 'id', autoIncrement: true });
+  const openRequest = indexedDB.open('CreditWiseShareDB', 1);
+
+  openRequest.onupgradeneeded = (event) => {
+    const db = openRequest.result;
+    if (!db.objectStoreNames.contains('shares')) {
+       db.createObjectStore('shares', { keyPath: 'id', autoIncrement: true });
+    }
   };
 
-  return new Promise((resolve) => {
-    db.onsuccess = () => {
-      const tx = db.result.transaction('shares', 'readwrite');
-      tx.objectStore('shares').add({
+  return new Promise((resolve, reject) => {
+    openRequest.onerror = () => {
+      console.error("Error opening DB:", openRequest.error);
+      reject(openRequest.error);
+    };
+
+    openRequest.onsuccess = () => {
+      const db = openRequest.result;
+      const transaction = db.transaction('shares', 'readwrite');
+      const sharesStore = transaction.objectStore('shares');
+      const addRequest = sharesStore.add({
         ...data,
         timestamp: Date.now()
       });
-      resolve();
+      
+      addRequest.onsuccess = () => {
+        resolve();
+      };
+      
+      addRequest.onerror = () => {
+        console.error("Error adding data:", addRequest.error);
+        reject(addRequest.error);
+      };
     };
   });
 }
