@@ -1,13 +1,5 @@
 
 import type {NextConfig} from 'next';
-// @ts-expect-error - no types for next-pwa
-import withPWA from 'next-pwa';
-
-const pwaConfig = withPWA({
-  dest: 'public',
-  register: true,
-  skipWaiting: true,
-});
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -37,15 +29,15 @@ const nextConfig: NextConfig = {
        {
         source: '/veritypdf',
         destination: '/verify',
-        permanent: true,
+        permanent: true
       },
        {
         source: '/crossverify',
         destination: '/cross-verify',
-        permanent: true,
+        permanent: true
       },
     ]
   },
 };
 
-export default pwaConfig(nextConfig);
+export default nextConfig;
