@@ -1,84 +1,52 @@
 {
-  "theme_color": "#4361ee",
-  "background_color": "#ffffff",
-  "display": "standalone",
-  "scope": "/",
-  "start_url": "/",
   "name": "CreditWise AI",
   "short_name": "CreditWise",
   "description": "Advanced AI Credit Score Analyzer & ML Model Trainer",
-  "id": "/?source=pwa",
+  "start_url": "/",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay"
+  ],
+  "background_color": "#ffffff",
+  "theme_color": "#4361ee",
   "icons": [
     {
-      "src": "/icon-192x192.png",
+      "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icon-256x256.png",
-      "sizes": "256x256",
-      "type": "image/png"
-    },
-    {
-      "src": "/icon-384x384.png",
-      "sizes": "384x384",
-      "type": "image/png"
-    },
-    {
-      "src": "/icon-512x512.png",
+      "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/screenshot1.png",
-      "type": "image/png",
-      "sizes": "1080x2340",
-      "form_factor": "narrow"
     },
     {
-      "src": "/screenshot2.png",
+      "src": "/icons/maskable_icon.png",
+      "sizes": "192x192",
       "type": "image/png",
-      "sizes": "1920x1080",
-      "form_factor": "wide"
+      "purpose": "maskable"
     }
   ],
-  "orientation": "portrait",
+  "id": "/?source=pwa",
   "launch_handler": {
     "client_mode": [
       "navigate-existing",
       "auto"
     ]
   },
-  "display_override": [
-    "window-controls-overlay"
-  ],
-  "edge_side_panel": {
-    "preferred_width": 480
-  },
-  "file_handlers": [
+  "orientation": "portrait",
+  "screenshots": [
     {
-      "action": "/share-target",
-      "name": "Credit Report",
-      "accept": {
-        "application/pdf": [
-          ".pdf"
-        ]
-      }
-    }
-  ],
-  "handle_links": "auto",
-  "protocol_handlers": [
+      "src": "/screenshots/screenshot1.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "label": "Analyze your credit report with AI"
+    },
     {
-      "protocol": "web+creditwise",
-      "action": "/credit?url=%s"
-    }
-  ],
-  "related_applications": [],
-  "scope_extensions": [
-    {
-      "origin": "*.creditwise-ai-nd7s0.us-central1.hosted.app"
+      "src": "/screenshots/screenshot2.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "label": "Get detailed risk assessments and loan eligibility"
     }
   ],
   "categories": [
@@ -87,5 +55,67 @@
   ],
   "dir": "ltr",
   "lang": "en-US",
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "scope": "/",
+  "scope_extensions": [
+    { "origin": "*.firebaseapp.com" },
+    { "origin": "*.web.app" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Credit Analysis",
+      "short_name": "Credit",
+      "description": "Analyze a CIBIL credit report",
+      "url": "/credit",
+      "icons": [{ "src": "/icons/shortcut-credit.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Verify PDF",
+      "short_name": "Verify",
+      "description": "Run forensic analysis on a PDF",
+      "url": "/verify",
+      "icons": [{ "src": "/icons/shortcut-verify.png", "sizes": "96x96" }]
+    }
+  ],
+  "share_target": {
+    "action": "/share-target",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "widgets": [
+    {
+      "name": "CreditWise AI Quick Actions",
+      "description": "Access key features of CreditWise AI from your home screen.",
+      "tag": "actions",
+      "template": "actions",
+      "ms_ac_template": "actions",
+      "data": {
+        "items": [
+          {
+            "tag": "credit",
+            "label": "Analyze Report",
+            "icon": "/icons/widget-credit.png",
+            "action": {
+              "type": "open-page",
+              "page": "/credit"
+            }
+          },
+          {
+            "tag": "verify",
+            "label": "Verify Document",
+            "icon": "/icons/widget-verify.png",
+            "action": {
+              "type": "open-page",
+              "page": "/verify"
+            }
+          }
+        ]
+      }
+    }
+  ]
 }
