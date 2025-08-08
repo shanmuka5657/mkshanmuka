@@ -2,93 +2,22 @@
   "name": "CreditWise AI",
   "short_name": "CreditWiseAI",
   "description": "Advanced AI Credit Score Analyzer & ML Model Trainer",
-  "start_url": "/",
+  "start_url": ".",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#4361ee",
-  "display_override": [
-    "standalone",
-    "window-controls-overlay"
-  ],
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
-    },
-    {
-      "src": "/icons/icon-maskable-192x192.png",
-      "sizes": "192x192",
       "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/icons/icon-maskable-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
-  ],
-  "id": "/",
-  "launch_handler": {
-    "client_mode": [
-      "navigate-existing",
-      "auto"
-    ]
-  },
-  "orientation": "portrait",
-  "screenshots": [
-    {
-      "src": "/screenshots/screenshot1.png",
-      "type": "image/png",
-      "sizes": "1080x1920",
-      "form_factor": "narrow"
-    },
-    {
-      "src": "/screenshots/screenshot2.png",
-      "type": "image/png",
-      "sizes": "1080x1920",
-      "form_factor": "narrow"
-    }
-  ],
-  "categories": [
-    "finance",
-    "business",
-    "utilities"
-  ],
-  "dir": "ltr",
-  "lang": "en-US",
-  "scope": "/",
-  "prefer_related_applications": false,
-  "related_applications": [],
-  "scope_extensions": [
-    {
-      "origin": "*.creditwiseai.com"
-    }
-  ],
-  "edge_side_panel": {
-    "preferred_width": 480
-  },
-  "file_handlers": [
-    {
-      "action": "/verify",
-      "accept": {
-        "application/pdf": [
-          ".pdf"
-        ]
-      }
-    }
-  ],
-  "handle_links": "auto",
-  "protocol_handlers": [
-    {
-      "protocol": "web+creditwiseai",
-      "url": "/credit?url=%s"
+      "purpose": "any"
     }
   ],
   "share_target": {
@@ -104,50 +33,96 @@
     {
       "name": "Credit Analysis",
       "short_name": "Credit",
-      "description": "Analyze a new credit report",
+      "description": "Analyze a CIBIL credit report",
       "url": "/credit",
-      "icons": [
-        {
-          "src": "/icons/shortcut-credit.png",
-          "sizes": "192x192"
-        }
-      ]
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "Verify PDF",
       "short_name": "Verify",
       "description": "Run forensic analysis on a PDF",
       "url": "/verify",
-      "icons": [
-        {
-          "src": "/icons/shortcut-verify.png",
-          "sizes": "192x192"
-        }
-      ]
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     }
   ],
   "widgets": [
     {
-      "name": "CreditWise AI Actions",
-      "description": "Quick actions for your credit analysis.",
-      "tag": "actions",
-      "template": "actions",
-      "ms_ac_template": "actions",
+      "name": "CreditWise AI Shortcuts",
+      "description": "Quick actions for CreditWise AI",
+      "tag": "shortcuts",
+      "template": "shortcuts",
+      "ms_ac_template": "shortcuts",
       "data": {
         "items": [
           {
-            "title": "New Credit Analysis",
-            "action": "analyze",
-            "icon": "/icons/icon-192x192.png"
+            "name": "Analyze CIBIL Report",
+            "url": "/credit"
           },
           {
-            "title": "Verify a Document",
-            "action": "verify",
-            "icon": "/icons/shortcut-verify.png"
+            "name": "Verify Document",
+            "url": "/verify"
           }
         ]
       },
-      "type": "application/json"
+      "icons": [
+        { "src": "/icons/icon-192x192.png", "sizes": "192x192" }
+      ]
     }
+  ],
+  "display_override": [
+    "standalone",
+    "window-controls-overlay"
+  ],
+  "file_handlers": [
+    {
+      "action": "/credit",
+      "accept": {
+        "application/pdf": [".pdf"]
+      }
+    }
+  ],
+  "handle_links": "auto",
+  "protocol_handlers": [
+    {
+      "protocol": "web+creditwiseai",
+      "url": "/credit?launch_from_protocol=%s"
+    }
+  ],
+  "edge_side_panel": {
+    "preferred_width": 480
+  },
+  "id": "/",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "orientation": "portrait",
+  "screenshots": [
+    {
+      "src": "https://placehold.co/1080x2340.png",
+      "sizes": "1080x2340",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Credit Analysis Screen"
+    },
+    {
+      "src": "https://placehold.co/1920x1080.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Desktop view of the app"
+    }
+  ],
+  "scope": "/",
+  "categories": [
+    "finance",
+    "productivity",
+    "utilities"
+  ],
+  "dir": "ltr",
+  "lang": "en-US",
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "scope_extensions": [
+    { "origin": "*.mkcreditwise.com" }
   ]
 }
