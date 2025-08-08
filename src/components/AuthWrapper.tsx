@@ -12,7 +12,38 @@ const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Since localStorage is not available on the server, we need to check on the client
+    // Service Worker Registration Logic
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(registration => {
+            console.log('ServiceWorker registration successful');
+            
+            // Request Notification Permission
+            Notification.requestPermission().then(permission => {
+              if (permission === 'granted') {
+                console.log('Notification permission granted');
+              }
+            });
+            
+            // Register Periodic Sync
+            if ('periodicSync' in registration) {
+              registration.periodicSync.register('update-credit-scores', {
+                minInterval: 24 * 60 * 60 * 1000 // 1 day
+              }).then(() => {
+                console.log('Periodic sync registered');
+              }).catch(err => {
+                console.log('Periodic sync registration failed: ', err);
+              });
+            }
+          })
+          .catch(err => {
+            console.log('ServiceWorker registration failed: ', err);
+          });
+      });
+    }
+
+    // Auth logic
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     
     if (!isLoggedIn) {

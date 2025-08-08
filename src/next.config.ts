@@ -10,6 +10,7 @@ const pwaConfig = withPWA({
   disable: false, // Always enable the PWA
   buildExcludes: [/middleware-manifest\.json$/],
   publicExcludes: ['!manifest.json'], // Ensure manifest.json is not excluded
+  swSrc: 'public/service-worker.js', // Use our custom service worker
 });
 
 const nextConfig: NextConfig = {
