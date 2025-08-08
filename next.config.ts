@@ -5,9 +5,8 @@ import withPWA from 'next-pwa';
 
 const pwaConfig = withPWA({
   dest: 'public',
-  register: false, // We are doing our own registration in register-sw.js
+  register: true,
   skipWaiting: true,
-  sw: 'service-worker.js', // Use our custom service worker
 });
 
 const nextConfig: NextConfig = {

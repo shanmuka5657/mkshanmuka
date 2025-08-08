@@ -6,7 +6,7 @@ import Script from 'next/script';
 import { Button } from '@/components/ui/button';
 
 export const metadata: Metadata = {
-  title: 'MkCreditWise - AI Credit Analysis',
+  title: 'MkCreditWise.com - AI Credit Analysis',
   description: 'Advanced AI Credit Score Analyzer & ML Model Trainer by MkCreditWise.com',
   manifest: '/manifest.json',
 };
@@ -28,13 +28,9 @@ export default function RootLayout({
         <div className="relative flex flex-col min-h-screen">
           <main className="flex-1">
             {children}
-            <div id="install-button" style={{ display: 'none', position: 'fixed', bottom: '80px', right: '20px', zIndex: 1000 }}>
-              <Button className="bg-primary text-primary-foreground font-bold py-2 px-4 rounded-lg shadow-lg">Install App</Button>
-            </div>
           </main>
         </div>
         <Toaster />
-        <Script src="/register-sw.js" defer />
       </body>
     </html>
   );
