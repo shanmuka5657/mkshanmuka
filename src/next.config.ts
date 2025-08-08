@@ -9,7 +9,6 @@ const pwaConfig = withPWA({
   skipWaiting: true,
   disable: false, // Ensure PWA is never disabled
   buildExcludes: [/middleware-manifest\.json$/],
-  swSrc: 'public/sw.js', // Point to the custom service worker
 });
 
 const nextConfig: NextConfig = {
