@@ -6,8 +6,8 @@ import Script from 'next/script';
 import { Button } from '@/components/ui/button';
 
 export const metadata: Metadata = {
-  title: 'CreditWise AI',
-  description: 'Advanced AI Credit Score Analyzer & ML Model Trainer',
+  title: 'MkCreditWise - AI Credit Analysis',
+  description: 'Advanced AI Credit Score Analyzer & ML Model Trainer by MkCreditWise.com',
   manifest: '/manifest.json',
 };
 
