@@ -4,20 +4,70 @@
   "description": "Advanced AI Credit Score Analyzer & ML Model Trainer",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#f5f7fa",
   "theme_color": "#4361ee",
+  "orientation": "portrait",
+  "id": "/?utm_source=pwa",
+  "scope": "/",
+  "lang": "en-US",
+  "dir": "auto",
+  "iarc_rating_id": "12345",
+  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/icon-192x192.png",
+      "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-512x512.png",
+      "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable_icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/screenshot1.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Credit Analysis Dashboard"
+    },
+    {
+      "src": "/screenshots/screenshot2.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "AI Underwriting"
+    }
+  ],
+  "categories": [
+    "business",
+    "finance",
+    "utilities"
+  ],
+  "shortcuts": [
+    {
+      "name": "Analyze Credit Report",
+      "short_name": "Analyze",
+      "description": "Jump directly to the credit analysis page",
+      "url": "/credit",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Verify Document",
+      "short_name": "Verify",
+      "description": "Forensically analyze a PDF document",
+      "url": "/verify",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     }
   ]
 }
