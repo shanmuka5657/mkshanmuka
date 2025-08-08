@@ -1,18 +1,22 @@
 {
+  "theme_color": "#4361ee",
+  "background_color": "#f5f7fa",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
   "name": "CreditWise AI",
   "short_name": "CreditWise",
   "description": "Advanced AI Credit Score Analyzer & ML Model Trainer",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#f5f7fa",
-  "theme_color": "#4361ee",
-  "orientation": "portrait",
-  "id": "/?utm_source=pwa",
-  "scope": "/",
-  "lang": "en-US",
+  "id": "com.creditwise.ai",
   "dir": "auto",
-  "iarc_rating_id": "12345",
+  "lang": "en-US",
+  "orientation": "portrait",
   "prefer_related_applications": false,
+  "iarc_rating_id": "12345",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
@@ -33,20 +37,53 @@
       "purpose": "maskable"
     }
   ],
+  "shortcuts": [
+    {
+      "name": "Analyze Credit Report",
+      "short_name": "Analyze",
+      "description": "Upload and analyze a new credit report",
+      "url": "/credit?action=analyze",
+      "icons": [{ "src": "/icons/shortcut-analyze.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Verify Document",
+      "short_name": "Verify",
+      "description": "Run forensic analysis on a PDF document",
+      "url": "/verify",
+      "icons": [{ "src": "/icons/shortcut-verify.png", "sizes": "192x192" }]
+    }
+  ],
+  "share_target": {
+    "action": "/share-target/",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [
+        {
+          "name": "files",
+          "accept": ["application/pdf", "image/*"]
+        }
+      ]
+    }
+  },
   "screenshots": [
     {
       "src": "/screenshots/screenshot1.png",
-      "sizes": "1080x1920",
       "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Credit Analysis Dashboard"
+      "sizes": "1080x2340",
+      "form_factor": "narrow"
     },
     {
       "src": "/screenshots/screenshot2.png",
-      "sizes": "1080x1920",
       "type": "image/png",
-      "form_factor": "narrow",
-      "label": "AI Underwriting"
+      "sizes": "1080x2340",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/screenshots/screenshot-wide.png",
+      "type": "image/png",
+      "sizes": "1920x1080",
+      "form_factor": "wide"
     }
   ],
   "categories": [
@@ -54,20 +91,35 @@
     "finance",
     "utilities"
   ],
-  "shortcuts": [
+  "edge_side_panel": {
+    "preferred_width": 480
+  },
+  "file_handlers": [
     {
-      "name": "Analyze Credit Report",
-      "short_name": "Analyze",
-      "description": "Jump directly to the credit analysis page",
-      "url": "/credit",
-      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
-    },
+      "action": "/credit",
+      "accept": {
+        "application/pdf": [".pdf"]
+      }
+    }
+  ],
+  "handle_links": "auto",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "protocol_handlers": [
     {
-      "name": "Verify Document",
-      "short_name": "Verify",
-      "description": "Forensically analyze a PDF document",
-      "url": "/verify",
-      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+      "protocol": "web+creditwise",
+      "url": "/credit?id=%s"
+    }
+  ],
+  "widgets": [
+    {
+      "name": "Quick Credit Analysis",
+      "description": "Analyze your latest credit report.",
+      "tag": "analyzer",
+      "template": "analyzer_template",
+      "ms_ac_template": "widgets/analyzer_template.json",
+      "data": "widgets/analyzer_data.json"
     }
   ]
 }
