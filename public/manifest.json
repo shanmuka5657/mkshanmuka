@@ -1,154 +1,55 @@
+
 {
   "name": "CreditWise AI",
   "short_name": "CreditWiseAI",
+  "id": "/?utm_source=pwa",
   "description": "Advanced AI Credit Score Analyzer & ML Model Trainer",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f5f7fa",
   "theme_color": "#4361ee",
+  "orientation": "portrait",
+  "dir": "ltr",
+  "lang": "en-US",
+  "categories": ["finance", "business", "productivity"],
+  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
+
   "icons": [
     {
       "src": "/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
       "src": "/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
+      "type": "image/png"
+    }
+  ],
+
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.creditwise.ai",
+      "id": "com.creditwise.ai"
     },
     {
-      "src": "/maskable_icon.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
+      "platform": "webapp",
+      "url": "https://creditwise.ai/manifest.json"
     }
   ],
-  "screenshots": [
-    {
-      "src": "/screenshots/widget-preview.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "CreditWise AI Dashboard"
-    },
-    {
-      "src": "/screenshots/widget-preview.png",
-      "sizes": "720x1280",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Credit Analysis on Mobile"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "New Analysis",
-      "short_name": "Analyze",
-      "description": "Start a new credit report analysis",
-      "url": "/credit?action=analyze",
-      "icons": [
-        {
-          "src": "/icon-192x192.png",
-          "sizes": "192x192"
-        }
-      ]
-    }
-  ],
+  "prefer_related_applications": false,
+
   "share_target": {
-    "action": "/share-target/",
+    "action": "/share-score",
     "method": "POST",
     "enctype": "multipart/form-data",
     "params": {
-      "title": "title",
-      "text": "text",
-      "url": "url",
-      "files": [
-        {
-          "name": "files",
-          "accept": [
-            "application/pdf",
-            "image/*"
-          ]
-        }
-      ]
+      "title": "name",
+      "text": "description",
+      "url": "link"
     }
-  },
-  "display_override": [
-    "window-controls-overlay"
-  ],
-  "prefer_related_applications": false,
-  "background": {
-    "service_worker": "/service-worker.js"
-  },
-  "scope_extensions": [
-    {
-      "origin": "*.creditwise.ai"
-    },
-    {
-      "origin": "creditwise.ai"
-    }
-  ],
-  "edge_side_panel": {
-    "preferred_width": 400
-  },
-  "file_handlers": [
-    {
-      "action": "/credit",
-      "accept": {
-        "application/pdf": [
-          ".pdf"
-        ]
-      },
-      "icons": [
-        {
-          "src": "/icon-192x192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ],
-      "launch_type": "single-client"
-    }
-  ],
-  "handle_links": "auto",
-  "launch_handler": {
-    "client_mode": "focus-existing"
-  },
-  "protocol_handlers": [
-    {
-      "protocol": "web+creditwise",
-      "url": "/handle-protocol?url=%s"
-    }
-  ],
-  "widgets": [
-    {
-      "name": "Credit Score Summary",
-      "short_name": "Credit Score",
-      "description": "Your current credit score and changes",
-      "tag": "credit-score-widget",
-      "template": "default",
-      "ms_ac_template": "widgets/credit-score.html",
-      "data": "widgets/credit-score.json",
-      "screenshots": [
-        {
-          "src": "/screenshots/widget-preview.png",
-          "sizes": "600x400",
-          "type": "image/png",
-          "label": "Credit Score Widget Preview"
-        }
-      ],
-      "icons": [
-        {
-          "src": "/icon-192x192.png",
-          "sizes": "192x192",
-          "type": "image/png",
-          "label": "Credit Score Widget Icon"
-        }
-      ],
-      "auth": false,
-      "update": 86400
-    }
-  ]
+  }
 }

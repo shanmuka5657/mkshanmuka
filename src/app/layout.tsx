@@ -3,6 +3,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { BottomNavbar } from '@/components/BottomNavbar';
+import Script from 'next/script';
 
 export const metadata: Metadata = {
   title: 'CreditWise AI',
@@ -27,9 +28,13 @@ export default function RootLayout({
         <div className="relative flex flex-col min-h-screen">
           <main className="flex-1">
             {children}
+            <div id="install-button" style={{ display: 'none', position: 'fixed', bottom: '80px', right: '20px', zIndex: 1000 }}>
+              <button className="bg-primary text-primary-foreground font-bold py-2 px-4 rounded-lg shadow-lg">Install App</button>
+            </div>
           </main>
         </div>
         <Toaster />
+        <Script src="/register-sw.js" defer />
       </body>
     </html>
   );

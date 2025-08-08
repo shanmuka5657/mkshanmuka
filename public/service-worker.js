@@ -1,178 +1,169 @@
-// service-worker.js
 
-const CACHE_NAME = 'creditwise-ai-v2';
+const CACHE_NAME = 'creditwise-v3';
 const OFFLINE_URL = '/offline.html';
-const RUNTIME_CACHE = 'runtime-cache';
+const RUNTIME_CACHE = 'runtime-v1';
 
-const ASSETS_TO_CACHE = [
+// Pre-cache critical resources
+const PRECACHE_URLS = [
   '/',
-  '/offline.html',
+  '/index.html',
+  '/styles/main.css',
+  '/scripts/app.js',
   '/icon-192x192.png',
-  '/icon-512x512.png',
-  '/maskable_icon.png'
+  OFFLINE_URL
 ];
 
-// Install Service Worker and cache essential assets
+// Install phase
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('Opened cache');
-        return cache.addAll(ASSETS_TO_CACHE);
-      })
+      .then(cache => cache.addAll(PRECACHE_URLS))
       .then(() => self.skipWaiting())
-      .catch(err => console.error('Cache addAll failed:', err))
   );
 });
 
-// Activate Service Worker and clean old caches
+// Activate phase
 self.addEventListener('activate', (event) => {
+  // Clean old caches
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then(cacheNames => {
       return Promise.all(
-        cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME && cache !== RUNTIME_CACHE) {
-            console.log('Deleting old cache:', cache);
-            return caches.delete(cache);
+        cacheNames.map(cacheName => {
+          if (cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE) {
+            return caches.delete(cacheName);
           }
         })
       );
     }).then(() => self.clients.claim())
   );
+
+  // Enable periodic sync if supported
+  if (self.registration.periodicSync) {
+    self.registration.periodicSync.register('credit-updates', {
+      minInterval: 24 * 60 * 60 * 1000 // 24 hours
+    }).catch(err => {
+      console.log('Periodic sync registration failed:', err);
+    });
+  }
 });
 
-// Fetch event listener
+// Fetch handler with network-first strategy
 self.addEventListener('fetch', (event) => {
-  // Handle file_handlers launch
-  if (event.request.url.endsWith('/credit') && event.request.method === 'POST') {
-    return event.respondWith(handleFileLaunch(event));
-  }
+  // Skip non-GET requests
+  if (event.request.method !== 'GET') return;
 
-  // Handle protocol_handlers requests
-  if (event.request.url.includes('/handle-protocol')) {
-    return event.respondWith(handleProtocol(event));
-  }
-  
-  // Network-first strategy for navigation
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-      .catch(() => {
-        return caches.match(OFFLINE_URL);
-      })
-    );
+  // Handle share target
+  if (event.request.url.includes('/share-score')) {
+    event.respondWith(handleShare(event));
     return;
   }
 
-  // Stale-while-revalidate for other requests
+  // Network-first strategy
   event.respondWith(
-    caches.open(RUNTIME_CACHE).then((cache) => {
-      return cache.match(event.request).then((cachedResponse) => {
-        const fetchPromise = fetch(event.request).then((networkResponse) => {
-          cache.put(event.request, networkResponse.clone());
-          return networkResponse;
-        });
-        return cachedResponse || fetchPromise;
-      });
-    })
+    fetch(event.request)
+      .then(response => {
+        // Cache dynamic responses
+        const responseClone = response.clone();
+        caches.open(RUNTIME_CACHE)
+          .then(cache => cache.put(event.request, responseClone));
+        return response;
+      })
+      .catch(() => {
+        // Offline fallback
+        if (event.request.mode === 'navigate') {
+          return caches.match(OFFLINE_URL);
+        }
+        return caches.match(event.request);
+      })
   );
 });
-
-
-// File Handler Logic - Redirects to the main app to handle the file
-async function handleFileLaunch(event) {
-    if (!self.launchQueue) {
-        return new Response("File handling not supported.", { status: 400 });
-    }
-
-    return new Promise(resolve => {
-        const channel = new MessageChannel();
-        let redirectUrl = '/credit'; // Default redirect
-
-        channel.port1.onmessage = (e) => {
-            if (e.data.redirectUrl) {
-                resolve(Response.redirect(e.data.redirectUrl, 303));
-            }
-        };
-
-        self.launchQueue.setConsumer(async (launchParams) => {
-            if (launchParams.files && launchParams.files.length) {
-                const fileHandle = launchParams.files[0];
-                const file = await fileHandle.getFile();
-
-                // Send file to the main client to get a URL/token
-                const clients = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
-                if (clients[0]) {
-                    clients[0].postMessage({ file: file }, [channel.port2]);
-                } else {
-                    // No client open, can't handle file directly, just redirect
-                    resolve(Response.redirect(redirectUrl, 303));
-                }
-            } else {
-                 resolve(Response.redirect(redirectUrl, 303));
-            }
-        });
-    });
-}
-
-
-// Protocol Handler Logic
-async function handleProtocol(event) {
-  const url = new URL(event.request.url);
-  const creditwiseUrl = url.searchParams.get('url');
-  
-  // Handle web+creditwise:// protocol URLs
-  if (creditwiseUrl) {
-      const route = creditwiseUrl.split('://')[1];
-      return Response.redirect(`/${route}`, 303);
-  }
-  return Response.redirect('/', 303);
-}
-
-// Widget Update Logic
-self.addEventListener('periodicsync', (event) => {
-  if (event.tag === 'update-widget-data') {
-    event.waitUntil(updateWidgetData());
-  }
-});
-
-async function updateWidgetData() {
-  try {
-    const response = await fetch('/api/widget-data'); // This needs to be a real endpoint
-    const data = await response.json();
-    
-    // Update widget data
-    await self.widgets.updateByTag('credit-score-widget', {
-        data: JSON.stringify(data),
-    });
-
-  } catch (error) {
-    console.error('Failed to update widget data:', error);
-  }
-}
 
 // Background Sync
 self.addEventListener('sync', (event) => {
   if (event.tag === 'sync-credit-data') {
-    event.waitUntil(Promise.resolve()); // Placeholder for sync logic
+    event.waitUntil(syncPendingData());
   }
 });
 
+async function syncPendingData() {
+  const cache = await caches.open(RUNTIME_CACHE);
+  const requests = await cache.keys();
+  
+  // Process pending requests
+  for (const request of requests) {
+    if (request.url.includes('/api/')) {
+      try {
+        await fetch(request);
+        await cache.delete(request);
+      } catch (err) {
+        console.error('Sync failed for:', request.url, err);
+      }
+    }
+  }
+}
+
 // Push Notifications
 self.addEventListener('push', (event) => {
-  const data = event.data ? event.data.json() : { title: 'CreditWise AI', body: 'New update available.', url: '/' };
-  const options = {
-    body: data.body,
-    icon: '/icon-192x192.png',
-    badge: '/icon-192x192.png',
-    data: {
-      url: data.url
-    }
+  const data = event.data?.json() || {
+    title: 'CreditWise Update',
+    body: 'Your credit score has been updated',
+    icon: '/icon-192x192.png'
   };
-  event.waitUntil(self.registration.showNotification(data.title, options));
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: data.icon,
+      data: { url: data.url || '/' }
+    })
+  );
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  event.waitUntil(clients.openWindow(event.notification.data.url));
+  event.waitUntil(
+    clients.matchAll({ type: 'window' })
+      .then(clientList => {
+        if (clientList.length > 0) {
+          return clientList[0].focus();
+        }
+        return clients.openWindow(event.notification.data.url);
+      })
+  );
 });
+
+// Share Target Handler
+async function handleShare(event) {
+  const formData = await event.request.formData();
+  const sharedData = {
+    title: formData.get('title'),
+    text: formData.get('text'),
+    url: formData.get('url')
+  };
+
+  // Store share data in IndexedDB
+  await storeShareData(sharedData);
+
+  return Response.redirect('/shared?success=1', 303);
+}
+
+async function storeShareData(data) {
+  // Implement IndexedDB storage
+  const db = await indexedDB.open('CreditWiseShareDB', 1);
+  
+  db.onupgradeneeded = (event) => {
+    const db = event.target.result;
+    db.createObjectStore('shares', { keyPath: 'id', autoIncrement: true });
+  };
+
+  return new Promise((resolve) => {
+    db.onsuccess = () => {
+      const tx = db.result.transaction('shares', 'readwrite');
+      tx.objectStore('shares').add({
+        ...data,
+        timestamp: Date.now()
+      });
+      resolve();
+    };
+  });
+}
