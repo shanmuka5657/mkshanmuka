@@ -13,6 +13,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Input } from '@/components/ui/input';
 import { Logo } from '@/components/ui/logo';
 import AuthWrapper from '@/components/AuthWrapper';
+import Image from 'next/image';
 
 
 function ModelTrainerPageContent() {
@@ -114,6 +115,24 @@ function ModelTrainerPageContent() {
             The app automatically captures analysis results as "training candidates." Review them here to teach the AI. Your feedback creates a high-quality dataset for building smarter, custom AI models.
           </p>
         </div>
+
+        <Card className="mb-8 overflow-hidden">
+          <CardHeader>
+            <CardTitle>Example Analysis Result</CardTitle>
+            <CardDescription>This is an example of the kind of detailed analysis you will review and approve for training.</CardDescription>
+          </CardHeader>
+          <CardContent>
+             <Image
+              src="https://placehold.co/1080x2340.png"
+              alt="CreditWise AI App Screenshot"
+              width={1080}
+              height={2340}
+              className="rounded-lg border shadow-md"
+              data-ai-hint="mobile app screenshot"
+            />
+          </CardContent>
+        </Card>
+
 
         <Card className="mb-8">
           <CardHeader>
