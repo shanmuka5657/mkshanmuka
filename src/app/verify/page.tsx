@@ -45,13 +45,14 @@ import {
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Logo } from '@/components/ui/logo';
+import AuthWrapper from '@/components/AuthWrapper';
 
 
 if (typeof window !== 'undefined') {
   pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 }
 
-export default function VerifyPdfPage() {
+function VerifyPdfPageContent() {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState('No file chosen');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -345,4 +346,13 @@ export default function VerifyPdfPage() {
       </main>
     </div>
   );
+}
+
+
+export default function VerifyPdfPage() {
+    return (
+        <AuthWrapper>
+            <VerifyPdfPageContent />
+        </AuthWrapper>
+    );
 }

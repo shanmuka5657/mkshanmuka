@@ -45,6 +45,7 @@ import {
   Landmark,
   Receipt,
   ClipboardCheck,
+  LogOut,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -84,6 +85,8 @@ import type { FlowUsage } from 'genkit/flow';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Logo } from '@/components/ui/logo';
+import AuthWrapper from '@/components/AuthWrapper';
+import { useRouter } from 'next/navigation';
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -150,7 +153,7 @@ const parseCurrency = (currencyString: string): number => {
 }
 
 
-export default function CreditWiseAIPage() {
+function CreditWiseAIPageContent() {
   const [creditFile, setCreditFile] = useState<File | null>(null);
   const [creditFileName, setCreditFileName] = useState('No CIBIL report chosen');
   const [rawText, setRawText] = useState('');
@@ -198,6 +201,7 @@ export default function CreditWiseAIPage() {
 
   const { toast } = useToast()
   const creditFileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -740,6 +744,13 @@ export default function CreditWiseAIPage() {
   const handlePrint = () => {
     window.print();
   }
+
+  const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+        localStorage.removeItem('isLoggedIn');
+        router.push('/login');
+    }
+  };
 
   const NavButton = ({
     view,
@@ -1498,10 +1509,14 @@ export default function CreditWiseAIPage() {
   return (
     <div className="bg-background font-body text-foreground">
        <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm print:hidden">
-        <div className="container flex h-16 items-center">
+        <div className="container flex h-16 items-center justify-between">
             <div className="mr-4 flex items-center">
               <Logo />
             </div>
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
+            </Button>
         </div>
       </header>
 
@@ -1782,4 +1797,12 @@ export default function CreditWiseAIPage() {
       `}</style>
     </div>
   );
+}
+
+export default function CreditPage() {
+    return (
+        <AuthWrapper>
+            <CreditWiseAIPageContent />
+        </AuthWrapper>
+    );
 }

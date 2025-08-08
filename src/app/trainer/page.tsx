@@ -12,9 +12,10 @@ import { getTrainingCandidates, approveCandidate, rejectCandidate, type Training
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Input } from '@/components/ui/input';
 import { Logo } from '@/components/ui/logo';
+import AuthWrapper from '@/components/AuthWrapper';
 
 
-export default function ModelTrainerPage() {
+function ModelTrainerPageContent() {
   const [modelName, setModelName] = useState('CreditUnderwritingModel-v1');
   const [candidates, setCandidates] = useState<TrainingCandidate[]>([]);
   const [isTraining, setIsTraining] = useState(false);
@@ -193,4 +194,13 @@ export default function ModelTrainerPage() {
       </main>
     </div>
   );
+}
+
+
+export default function ModelTrainerPage() {
+    return (
+        <AuthWrapper>
+            <ModelTrainerPageContent />
+        </AuthWrapper>
+    );
 }

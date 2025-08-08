@@ -39,6 +39,7 @@ import { analyzeBankStatement, BankStatementAnalysisOutput } from '@/ai/flows/ba
 import { analyzeSalarySlips, SalarySlipAnalysisOutput } from '@/ai/flows/salary-slip-analysis';
 import { crossVerifyDocuments, CrossVerificationInput, CrossVerificationOutput } from '@/ai/flows/cross-verification';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import AuthWrapper from '@/components/AuthWrapper';
 
 // PDFJS worker setup
 if (typeof window !== 'undefined') {
@@ -109,7 +110,7 @@ const VerificationField = ({ field, label, forPrint = false }: { field: CrossVer
     );
 };
 
-export default function CrossVerifyPage() {
+function CrossVerifyPageContent() {
   const [cibilFile, setCibilFile] = useState<FileState>({ file: null, text: '', dataUri: '', status: 'pending' });
   const [bankStatementFile, setBankStatementFile] = useState<FileState>({ file: null, text: '', dataUri: '', status: 'pending' });
   const [salarySlips, setSalarySlips] = useState<File[]>([]);
@@ -497,4 +498,13 @@ export default function CrossVerifyPage() {
       `}</style>
     </div>
   );
+}
+
+
+export default function CrossVerifyPage() {
+    return (
+        <AuthWrapper>
+            <CrossVerifyPageContent />
+        </AuthWrapper>
+    );
 }
