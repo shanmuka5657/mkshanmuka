@@ -28,6 +28,14 @@ export default function LoginPage() {
       });
       // Set a flag in localStorage to indicate the user is logged in
       localStorage.setItem('isLoggedIn', 'true');
+
+      // --- Assign user role based on email ---
+      if (email.toLowerCase() === 'admin@mkcreditwise.com') {
+        localStorage.setItem('userRole', 'admin');
+      } else {
+        localStorage.setItem('userRole', 'user');
+      }
+
       router.push('/credit');
     } else {
       toast({
@@ -46,7 +54,7 @@ export default function LoginPage() {
              <Logo />
           </div>
           <CardTitle className="text-2xl">Welcome Back</CardTitle>
-          <CardDescription>Enter your credentials to access your account.</CardDescription>
+          <CardDescription>Enter your credentials to access your account. (Hint: use admin@mkcreditwise.com for admin access)</CardDescription>
         </CardHeader>
         <form onSubmit={handleLogin}>
           <CardContent className="space-y-4">
