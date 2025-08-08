@@ -1,13 +1,16 @@
-
 {
-  "theme_color": "#4361ee",
-  "background_color": "#f5f7fa",
-  "display": "standalone",
-  "scope": "/",
-  "start_url": "/",
   "name": "CreditWise AI",
-  "short_name": "CreditWiseAI",
+  "short_name": "CreditWise",
   "description": "Advanced AI Credit Score Analyzer & ML Model Trainer",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F0F2F5",
+  "theme_color": "#3F51B5",
+  "orientation": "portrait",
+  "display_override": [
+    "standalone"
+  ],
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
@@ -28,87 +31,12 @@
       "purpose": "any"
     }
   ],
-  "shortcuts": [
-    {
-      "name": "Credit Analysis",
-      "short_name": "Credit",
-      "description": "Analyze a new CIBIL report",
-      "url": "/credit",
-      "icons": [
-        {
-          "src": "/icons/icon-192x192.png",
-          "sizes": "192x192"
-        }
-      ]
-    },
-    {
-      "name": "Verify PDF",
-      "short_name": "Verify",
-      "description": "Run forensic analysis on a PDF",
-      "url": "/verify",
-      "icons": [
-        {
-          "src": "/icons/icon-192x192.png",
-          "sizes": "192x192"
-        }
-      ]
-    }
-  ],
-  "share_target": {
-    "action": "/share-target",
-    "method": "POST",
-    "enctype": "multipart/form-data",
-    "params": {
-      "files": [
-        {
-          "name": "files",
-          "accept": [
-            "application/pdf",
-            "image/jpeg",
-            "image/png"
-          ]
-        }
-      ]
-    }
-  },
-  "id": "/?utm_source=pwa",
-  "launch_handler": {
-    "client_mode": [
-      "navigate-existing",
-      "auto"
-    ]
-  },
-  "screenshots": [
-    {
-      "src": "/screenshots/screenshot-1.png",
-      "type": "image/png",
-      "sizes": "1280x720",
-      "form_factor": "wide"
-    },
-    {
-      "src": "/screenshots/screenshot-2.png",
-      "type": "image/png",
-      "sizes": "720x1280"
-    }
-  ],
-  "categories": [
-    "business",
-    "finance",
-    "utilities"
-  ],
-  "dir": "auto",
-  "lang": "en-US",
-  "prefer_related_applications": true,
+  "background_sync": {},
+  "periodic_background_sync": {},
+  "push_notifications": {},
   "related_applications": [],
-  "iarc_rating_id": "12345",
-  "orientation": "portrait",
-  "background_sync": {
-    "disabled": false
-  },
-  "periodic_background_sync": {
-    "disabled": false
-  },
-  "push_notifications": {
-    "disabled": false
-  }
+  "prefer_related_applications": false,
+  "scope_extensions": [
+    { "origin": "*.creditwise.ai" }
+  ]
 }
