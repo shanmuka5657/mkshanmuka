@@ -7,8 +7,9 @@ const pwaConfig = withPWA({
   dest: 'public',
   register: true,
   skipWaiting: true,
-  disable: false, // Ensure PWA is never disabled
+  disable: false, // Always enable the PWA
   buildExcludes: [/middleware-manifest\.json$/],
+  publicExcludes: ['!manifest.json'], // Ensure manifest.json is not excluded
 });
 
 const nextConfig: NextConfig = {
