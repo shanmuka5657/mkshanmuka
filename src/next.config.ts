@@ -7,7 +7,7 @@ const pwaConfig = withPWA({
   dest: 'public',
   register: true,
   skipWaiting: true,
-  disable: false, // Always enable the PWA
+  disable: process.env.NODE_ENV === 'development', // Disable PWA in dev mode for a better development experience
   buildExcludes: [/middleware-manifest\.json$/],
   publicExcludes: ['!manifest.json'], // Ensure manifest.json is not excluded
 });
