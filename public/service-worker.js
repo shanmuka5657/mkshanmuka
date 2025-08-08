@@ -1,13 +1,18 @@
 // service-worker.js
 
-const CACHE_NAME = 'creditwise-ai-v1';
+const CACHE_NAME = 'creditwise-ai-v2';
 const OFFLINE_URL = '/offline.html';
+const RUNTIME_CACHE = 'runtime-cache';
+
 const ASSETS_TO_CACHE = [
   '/',
-  '/offline.html'
+  '/offline.html',
+  '/icon-192x192.png',
+  '/icon-512x512.png',
+  '/maskable_icon.png'
 ];
 
-// Install Service Worker and cache assets
+// Install Service Worker and cache essential assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -16,6 +21,7 @@ self.addEventListener('install', (event) => {
         return cache.addAll(ASSETS_TO_CACHE);
       })
       .then(() => self.skipWaiting())
+      .catch(err => console.error('Cache addAll failed:', err))
   );
 });
 
@@ -25,7 +31,8 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
+          if (cache !== CACHE_NAME && cache !== RUNTIME_CACHE) {
+            console.log('Deleting old cache:', cache);
             return caches.delete(cache);
           }
         })
@@ -34,96 +41,138 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Network-first strategy with offline fallback
+// Fetch event listener
 self.addEventListener('fetch', (event) => {
+  // Handle file_handlers launch
+  if (event.request.url.endsWith('/credit') && event.request.method === 'POST') {
+    return event.respondWith(handleFileLaunch(event));
+  }
+
+  // Handle protocol_handlers requests
+  if (event.request.url.includes('/handle-protocol')) {
+    return event.respondWith(handleProtocol(event));
+  }
+  
+  // Network-first strategy for navigation
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      (async () => {
-        try {
-          const networkResponse = await fetch(event.request);
+      fetch(event.request)
+      .catch(() => {
+        return caches.match(OFFLINE_URL);
+      })
+    );
+    return;
+  }
+
+  // Stale-while-revalidate for other requests
+  event.respondWith(
+    caches.open(RUNTIME_CACHE).then((cache) => {
+      return cache.match(event.request).then((cachedResponse) => {
+        const fetchPromise = fetch(event.request).then((networkResponse) => {
+          cache.put(event.request, networkResponse.clone());
           return networkResponse;
-        } catch (error) {
-          console.log('Fetch failed; returning offline page instead.', error);
-          const cache = await caches.open(CACHE_NAME);
-          const cachedResponse = await cache.match(OFFLINE_URL);
-          return cachedResponse;
-        }
-      })()
-    );
-  } else {
-    event.respondWith(
-      caches.match(event.request)
-        .then((response) => {
-          return response || fetch(event.request);
-        })
-    );
+        });
+        return cachedResponse || fetchPromise;
+      });
+    })
+  );
+});
+
+
+// File Handler Logic - Redirects to the main app to handle the file
+async function handleFileLaunch(event) {
+    if (!self.launchQueue) {
+        return new Response("File handling not supported.", { status: 400 });
+    }
+
+    return new Promise(resolve => {
+        const channel = new MessageChannel();
+        let redirectUrl = '/credit'; // Default redirect
+
+        channel.port1.onmessage = (e) => {
+            if (e.data.redirectUrl) {
+                resolve(Response.redirect(e.data.redirectUrl, 303));
+            }
+        };
+
+        self.launchQueue.setConsumer(async (launchParams) => {
+            if (launchParams.files && launchParams.files.length) {
+                const fileHandle = launchParams.files[0];
+                const file = await fileHandle.getFile();
+
+                // Send file to the main client to get a URL/token
+                const clients = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
+                if (clients[0]) {
+                    clients[0].postMessage({ file: file }, [channel.port2]);
+                } else {
+                    // No client open, can't handle file directly, just redirect
+                    resolve(Response.redirect(redirectUrl, 303));
+                }
+            } else {
+                 resolve(Response.redirect(redirectUrl, 303));
+            }
+        });
+    });
+}
+
+
+// Protocol Handler Logic
+async function handleProtocol(event) {
+  const url = new URL(event.request.url);
+  const creditwiseUrl = url.searchParams.get('url');
+  
+  // Handle web+creditwise:// protocol URLs
+  if (creditwiseUrl) {
+      const route = creditwiseUrl.split('://')[1];
+      return Response.redirect(`/${route}`, 303);
+  }
+  return Response.redirect('/', 303);
+}
+
+// Widget Update Logic
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'update-widget-data') {
+    event.waitUntil(updateWidgetData());
   }
 });
 
+async function updateWidgetData() {
+  try {
+    const response = await fetch('/api/widget-data'); // This needs to be a real endpoint
+    const data = await response.json();
+    
+    // Update widget data
+    await self.widgets.updateByTag('credit-score-widget', {
+        data: JSON.stringify(data),
+    });
+
+  } catch (error) {
+    console.error('Failed to update widget data:', error);
+  }
+}
 
 // Background Sync
 self.addEventListener('sync', (event) => {
   if (event.tag === 'sync-credit-data') {
-    event.waitUntil(syncCreditData());
+    event.waitUntil(Promise.resolve()); // Placeholder for sync logic
   }
 });
-
-async function syncCreditData() {
-  // Implement your background sync logic here
-  console.log('Background sync event for sync-credit-data triggered.');
-  // Example: You might try to re-send failed API requests.
-}
-
-// Periodic Sync (requires permission)
-self.addEventListener('periodicsync', (event) => {
-  if (event.tag === 'update-credit-scores') {
-    event.waitUntil(updateCreditScores());
-  }
-});
-
-async function updateCreditScores() {
-  // Fetch fresh credit data periodically
-  console.log('Periodic sync event for update-credit-scores triggered.');
-  // const response = await fetch('/api/credit-scores');
-  // const data = await response.json();
-  
-  // Broadcast update to all clients
-  const clients = await self.clients.matchAll();
-  clients.forEach(client => {
-    client.postMessage({
-      type: 'CREDIT_SCORE_UPDATE',
-      data: { message: 'New scores available!' } // Mock data
-    });
-  });
-}
 
 // Push Notifications
 self.addEventListener('push', (event) => {
-  const data = event.data.json();
+  const data = event.data ? event.data.json() : { title: 'CreditWise AI', body: 'New update available.', url: '/' };
   const options = {
-    body: data.body || 'New credit score update available',
+    body: data.body,
     icon: '/icon-192x192.png',
     badge: '/icon-192x192.png',
     data: {
-      url: data.url || '/'
+      url: data.url
     }
   };
-
-  event.waitUntil(
-    self.registration.showNotification(data.title || 'CreditWise AI', options)
-  );
+  event.waitUntil(self.registration.showNotification(data.title, options));
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  event.waitUntil(
-    clients.matchAll({ type: 'window' }).then((clientList) => {
-      if (clientList.length > 0 && 'focus' in clientList[0]) {
-        return clientList[0].focus();
-      }
-      if (clients.openWindow) {
-        return clients.openWindow(event.notification.data.url);
-      }
-    })
-  );
+  event.waitUntil(clients.openWindow(event.notification.data.url));
 });

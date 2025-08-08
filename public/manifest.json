@@ -1,52 +1,54 @@
 {
-  "theme_color": "#4361ee",
-  "background_color": "#f5f7fa",
-  "display": "standalone",
-  "scope": "/",
-  "start_url": "/",
   "name": "CreditWise AI",
   "short_name": "CreditWiseAI",
   "description": "Advanced AI Credit Score Analyzer & ML Model Trainer",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f7fa",
+  "theme_color": "#4361ee",
   "icons": [
     {
       "src": "/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "/icon-256x256.png",
-      "sizes": "256x256",
-      "type": "image/png"
-    },
-    {
-      "src": "/icon-384x384.png",
-      "sizes": "384x384",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/maskable_icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/widget-preview.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "CreditWise AI Dashboard"
+    },
+    {
+      "src": "/screenshots/widget-preview.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Credit Analysis on Mobile"
     }
   ],
   "shortcuts": [
     {
-      "name": "Analyze Credit Report",
+      "name": "New Analysis",
       "short_name": "Analyze",
-      "description": "Go directly to the credit analysis page",
-      "url": "/credit",
-      "icons": [
-        {
-          "src": "/icon-192x192.png",
-          "sizes": "192x192"
-        }
-      ]
-    },
-    {
-      "name": "Verify Document",
-      "short_name": "Verify",
-      "description": "Go directly to the document verification page",
-      "url": "/verify",
+      "description": "Start a new credit report analysis",
+      "url": "/credit?action=analyze",
       "icons": [
         {
           "src": "/icon-192x192.png",
@@ -56,60 +58,93 @@
     }
   ],
   "share_target": {
-    "action": "/share-target",
-    "method": "GET",
+    "action": "/share-target/",
+    "method": "POST",
+    "enctype": "multipart/form-data",
     "params": {
       "title": "title",
       "text": "text",
-      "url": "url"
+      "url": "url",
+      "files": [
+        {
+          "name": "files",
+          "accept": [
+            "application/pdf",
+            "image/*"
+          ]
+        }
+      ]
     }
   },
-  "id": "/?utm_source=pwa",
-  "screenshots": [
-    {
-      "src": "/screenshots/screenshot1.png",
-      "type": "image/png",
-      "sizes": "1080x2340",
-      "form_factor": "narrow"
-    },
-    {
-      "src": "/screenshots/screenshot2.png",
-      "type": "image/png",
-      "sizes": "1920x1080",
-      "form_factor": "wide"
-    }
-  ],
-  "related_applications": [],
-  "prefer_related_applications": false,
-  "categories": ["finance", "business"],
-  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
-  "dir": "auto",
-  "lang": "en-US",
-  "orientation": "portrait",
   "display_override": [
     "window-controls-overlay"
   ],
+  "prefer_related_applications": false,
+  "background": {
+    "service_worker": "/service-worker.js"
+  },
+  "scope_extensions": [
+    {
+      "origin": "*.creditwise.ai"
+    },
+    {
+      "origin": "creditwise.ai"
+    }
+  ],
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "file_handlers": [
+    {
+      "action": "/credit",
+      "accept": {
+        "application/pdf": [
+          ".pdf"
+        ]
+      },
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ],
+      "launch_type": "single-client"
+    }
+  ],
+  "handle_links": "auto",
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+creditwise",
+      "url": "/handle-protocol?url=%s"
+    }
+  ],
   "widgets": [
     {
-      "name": "CreditWise AI Summary",
-      "description": "Quickly access your credit analysis insights.",
-      "tag": "summary",
-      "template": "summary_widget",
-      "ms_ac_template": "widgets/summary_widget.json",
-      "data": "widgets/summary_data.json",
-      "type": "application/json",
+      "name": "Credit Score Summary",
+      "short_name": "Credit Score",
+      "description": "Your current credit score and changes",
+      "tag": "credit-score-widget",
+      "template": "default",
+      "ms_ac_template": "widgets/credit-score.html",
+      "data": "widgets/credit-score.json",
       "screenshots": [
         {
-          "src": "/screenshots/widget_preview.png",
-          "sizes": "320x180",
-          "type": "image/png"
+          "src": "/screenshots/widget-preview.png",
+          "sizes": "600x400",
+          "type": "image/png",
+          "label": "Credit Score Widget Preview"
         }
       ],
       "icons": [
         {
           "src": "/icon-192x192.png",
           "sizes": "192x192",
-          "type": "image/png"
+          "type": "image/png",
+          "label": "Credit Score Widget Icon"
         }
       ],
       "auth": false,

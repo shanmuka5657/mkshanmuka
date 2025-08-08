@@ -26,12 +26,12 @@ const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
               }
             });
             
-            // Register Periodic Sync
+            // Register Periodic Sync for widgets
             if ('periodicSync' in registration) {
-              registration.periodicSync.register('update-credit-scores', {
-                minInterval: 24 * 60 * 60 * 1000 // 1 day
+              registration.periodicSync.register('update-widget-data', {
+                minInterval: 24 * 60 * 60 * 1000 // Daily updates
               }).then(() => {
-                console.log('Periodic sync registered');
+                console.log('Periodic sync for widgets registered');
               }).catch(err => {
                 console.log('Periodic sync registration failed: ', err);
               });
@@ -41,6 +41,35 @@ const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
             console.log('ServiceWorker registration failed: ', err);
           });
       });
+    }
+
+    // File Handler Registration
+    if ('launchQueue' in window) {
+      (window as any).launchQueue.setConsumer(async (launchParams: { files: any[]; }) => {
+        if (launchParams.files && launchParams.files.length > 0) {
+          const fileHandle = launchParams.files[0];
+          // You would typically pass the file handle to the component that can process it
+          // For now, we'll just log it and redirect to the credit page.
+          console.log('App launched with file:', fileHandle.name);
+          router.push('/credit');
+        }
+      });
+    }
+
+    // Protocol Handler Registration - note: may require user interaction to activate
+    if ('registerProtocolHandler' in navigator) {
+      try {
+        (navigator as any).registerProtocolHandler('web+creditwise', '/handle-protocol?url=%s', 'CreditWise AI Handler');
+        console.log('Protocol handler registration attempted.');
+      } catch (e) {
+        console.error('Protocol handler registration failed:', e);
+      }
+    }
+
+    // Edge Side Panel Integration
+    if ('sidePanel' in window) {
+      console.log('Side Panel API is available.');
+      // You can programmatically control the side panel here if needed
     }
 
     // Auth logic

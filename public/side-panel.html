@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CreditWise Side Panel</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 15px; margin: 0; background-color: #f8f9fa; }
+    .quick-action { 
+      margin: 10px 0; 
+      padding: 12px; 
+      background: #ffffff;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      text-align: center;
+      transition: background-color 0.2s;
+    }
+    .quick-action:hover {
+      background-color: #f1f3f5;
+    }
+    h3 {
+      font-size: 16px;
+      color: #343a40;
+      margin-top: 0;
+    }
+  </style>
+</head>
+<body>
+  <h3>Quick Actions</h3>
+  <div class="quick-action" onclick="analyzeNew()">Analyze New Report</div>
+  <div class="quick-action" onclick="viewHistory()">View History</div>
+  
+  <script>
+    // These functions communicate back to the main PWA window.
+    // This requires logic in the main app to listen for these messages.
+    function analyzeNew() {
+      if (window.opener) {
+        window.opener.postMessage({ action: 'analyzeNew' }, '*');
+      } else {
+        // Fallback if panel is opened standalone
+        window.location.href = '/credit';
+      }
+    }
+    function viewHistory() {
+       if (window.opener) {
+        window.opener.postMessage({ action: 'viewHistory' }, '*');
+      }
+    }
+  </script>
+</body>
+</html>
