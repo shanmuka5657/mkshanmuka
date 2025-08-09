@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import {
   UploadCloud,
@@ -39,7 +39,7 @@ import { analyzeBankStatement, BankStatementAnalysisOutput } from '@/ai/flows/ba
 import { analyzeSalarySlips, SalarySlipAnalysisOutput } from '@/ai/flows/salary-slip-analysis';
 import { crossVerifyDocuments, CrossVerificationInput, CrossVerificationOutput } from '@/ai/flows/cross-verification';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import AuthWrapper from '@/components/AuthWrapper';
+import { useRouter } from 'next/navigation';
 
 // PDFJS worker setup
 if (typeof window !== 'undefined') {
@@ -110,7 +110,7 @@ const VerificationField = ({ field, label, forPrint = false }: { field: CrossVer
     );
 };
 
-function CrossVerifyPageContent() {
+export default function CrossVerifyPage() {
   const [cibilFile, setCibilFile] = useState<FileState>({ file: null, text: '', dataUri: '', status: 'pending' });
   const [bankStatementFile, setBankStatementFile] = useState<FileState>({ file: null, text: '', dataUri: '', status: 'pending' });
   const [salarySlips, setSalarySlips] = useState<File[]>([]);
@@ -118,12 +118,22 @@ function CrossVerifyPageContent() {
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [verificationResult, setVerificationResult] = useState<CrossVerificationOutput | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
   const cibilInputRef = useRef<HTMLInputElement>(null);
   const bankInputRef = useRef<HTMLInputElement>(null);
   const salaryInputRef = useRef<HTMLInputElement>(null);
   
   const { toast } = useToast();
+  const router = useRouter();
+  
+  useEffect(() => {
+      setIsClient(true);
+      const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+      if (!isLoggedIn) {
+          router.replace('/login');
+      }
+  }, [router]);
 
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -239,6 +249,14 @@ function CrossVerifyPageContent() {
 
   const hasFiles = cibilFile.file || bankStatementFile.file || salarySlips.length > 0;
   
+  if (!isClient) {
+    return (
+        <div className="flex items-center justify-center min-h-screen">
+            <Loader2 className="h-12 w-12 animate-spin text-primary"/>
+        </div>
+    );
+  }
+
   return (
     <div className="bg-background font-body text-foreground">
       <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm print:hidden">
@@ -498,13 +516,4 @@ function CrossVerifyPageContent() {
       `}</style>
     </div>
   );
-}
-
-
-export default function CrossVerifyPage() {
-    return (
-        <AuthWrapper>
-            <CrossVerifyPageContent />
-        </AuthWrapper>
-    );
 }

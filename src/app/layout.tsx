@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster"
 import Script from 'next/script';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
+import { BottomNavbar } from '@/components/BottomNavbar';
 
 export const metadata: Metadata = {
   title: 'MkCreditWise.com - AI Credit Analysis',
@@ -27,9 +28,10 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <div className="relative flex flex-col min-h-screen">
-          <main className="flex-1">
+          <main className="flex-1 pb-20">
             {children}
           </main>
+          <BottomNavbar />
         </div>
         <Toaster />
         <Script src="/register-sw.js" defer />

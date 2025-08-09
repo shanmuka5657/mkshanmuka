@@ -12,22 +12,32 @@ import { getTrainingCandidates, approveCandidate, rejectCandidate, type Training
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Input } from '@/components/ui/input';
 import { Logo } from '@/components/ui/logo';
-import AuthWrapper from '@/components/AuthWrapper';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
-
-function ModelTrainerPageContent() {
+export default function ModelTrainerPage() {
   const [modelName, setModelName] = useState('CreditUnderwritingModel-v1');
   const [candidates, setCandidates] = useState<TrainingCandidate[]>([]);
   const [isTraining, setIsTraining] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     // Ensure this runs only on the client
     setIsClient(true);
+    const userRole = localStorage.getItem('userRole');
+    if (userRole !== 'admin') {
+        toast({
+            variant: 'destructive',
+            title: 'Access Denied',
+            description: 'You do not have permission to view this page.',
+        });
+        router.replace('/credit');
+        return;
+    }
     // Load candidates from our simulated store
     setCandidates(getTrainingCandidates());
-  }, []);
+  }, [router]);
   
   const handleApprove = (id: string) => {
     approveCandidate(id);
@@ -284,13 +294,4 @@ function ModelTrainerPageContent() {
       </main>
     </div>
   );
-}
-
-
-export default function ModelTrainerPage() {
-    return (
-        <AuthWrapper>
-            <ModelTrainerPageContent />
-        </AuthWrapper>
-    );
 }

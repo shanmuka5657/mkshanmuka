@@ -86,7 +86,6 @@ import type { FlowUsage } from 'genkit/flow';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Logo } from '@/components/ui/logo';
-import AuthWrapper from '@/components/AuthWrapper';
 import { useRouter } from 'next/navigation';
 
 
@@ -154,7 +153,7 @@ const parseCurrency = (currencyString: string): number => {
 }
 
 
-function CreditWiseAIPageContent() {
+export default function CreditPage() {
   const [creditFile, setCreditFile] = useState<File | null>(null);
   const [creditFileName, setCreditFileName] = useState('No CIBIL report chosen');
   const [rawText, setRawText] = useState('');
@@ -199,10 +198,19 @@ function CreditWiseAIPageContent() {
 
   // New state for overload error
   const [isModelOverloaded, setIsModelOverloaded] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   const { toast } = useToast()
   const creditFileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  
+  useEffect(() => {
+      setIsClient(true);
+      const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+      if (!isLoggedIn) {
+          router.replace('/login');
+      }
+  }, [router]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1506,6 +1514,14 @@ function CreditWiseAIPageContent() {
   };
   
   const { customerDetails, reportSummary } = analysisResult || initialAnalysis;
+  
+  if (!isClient) {
+    return (
+        <div className="flex items-center justify-center min-h-screen">
+            <Loader2 className="h-12 w-12 animate-spin text-primary"/>
+        </div>
+    );
+  }
 
   return (
     <div className="bg-background font-body text-foreground">
@@ -1806,12 +1822,4 @@ function CreditWiseAIPageContent() {
       `}</style>
     </div>
   );
-}
-
-export default function CreditPage() {
-    return (
-        <AuthWrapper>
-            <CreditWiseAIPageContent />
-        </AuthWrapper>
-    );
 }

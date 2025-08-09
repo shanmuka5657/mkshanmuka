@@ -45,23 +45,33 @@ import {
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Logo } from '@/components/ui/logo';
-import AuthWrapper from '@/components/AuthWrapper';
+import { useRouter } from 'next/navigation';
 
 
 if (typeof window !== 'undefined') {
   pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 }
 
-function VerifyPdfPageContent() {
+export default function VerifyPdfPage() {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState('No file chosen');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
-  
   const [analysisResult, setAnalysisResult] = useState<VerifyPdfOutput | null>(null);
+  const [isClient, setIsClient] = useState(false);
   
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+      setIsClient(true);
+      const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+      if (!isLoggedIn) {
+          router.replace('/login');
+      }
+  }, [router]);
+
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -163,6 +173,14 @@ function VerifyPdfPageContent() {
     }
     return { icon: <FileQuestion className="h-10 w-10" />, color: 'text-muted-foreground', bg: 'bg-muted', border: 'border-border' };
   };
+
+  if (!isClient) {
+    return (
+        <div className="flex items-center justify-center min-h-screen">
+            <Loader2 className="h-12 w-12 animate-spin text-primary"/>
+        </div>
+    );
+  }
 
   return (
     <div className="bg-background font-body text-foreground">
@@ -346,13 +364,4 @@ function VerifyPdfPageContent() {
       </main>
     </div>
   );
-}
-
-
-export default function VerifyPdfPage() {
-    return (
-        <AuthWrapper>
-            <VerifyPdfPageContent />
-        </AuthWrapper>
-    );
 }
