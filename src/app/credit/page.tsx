@@ -711,6 +711,7 @@ export default function CreditPage() {
         'medium': { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-800 dark:text-yellow-300', border: 'border-yellow-500' },
         'high': { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-800 dark:text-orange-300', border: 'border-orange-500' },
         'high risk': { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-800 dark:text-orange-300', border: 'border-orange-500' },
+        'very high': { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-800 dark:text-red-300', border: 'border-red-500' },
         'very high risk': { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-800 dark:text-red-300', border: 'border-red-500' },
     };
     return mapping[level.toLowerCase()]?.[type] || 'bg-muted border-border';
@@ -1020,8 +1021,8 @@ export default function CreditPage() {
           </CardContent>
            {analysisResult && (
               <CardFooter className="justify-end gap-2">
-                <Button variant="outline" onClick={handlePrint}><Download className="mr-2" />Download PDF</Button>
-                <Button onClick={() => handleShare('My Credit Summary', `Here is my AI-powered credit summary. Total Accounts: ${calculatedSummary.totalAccounts}, Total Outstanding: ₹${calculatedSummary.totalOutstanding.toLocaleString('en-IN')}`)}><Share2 className="mr-2" />Share</Button>
+                <Button variant="outline" onClick={handlePrint}><Download className="mr-2 h-4 w-4" />Download PDF</Button>
+                <Button onClick={() => handleShare('My Credit Summary', `Here is my AI-powered credit summary. Total Accounts: ${calculatedSummary.totalAccounts}, Total Outstanding: ₹${calculatedSummary.totalOutstanding.toLocaleString('en-IN')}`)}><Share2 className="mr-2 h-4 w-4" />Share</Button>
               </CardFooter>
             )}
         </Card>
@@ -1029,7 +1030,7 @@ export default function CreditPage() {
       aiMeter: (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center text-xl font-bold"><Bot className="mr-3 h-6 w-6 text-primary" />AI Credit Analysis Meter</CardTitle>
+            <CardTitle className="flex items-center text-xl font-bold"><Bot className="mr-3 h-6 w-6 text-primary" />AI Credit Meter</CardTitle>
             <CardDescription>This AI acts as a holistic credit advisor. It provides a comprehensive score of your overall credit health by balancing both the positive and negative factors in your report.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -1048,7 +1049,7 @@ export default function CreditPage() {
                     <div className={cn("text-2xl font-semibold", getRatingColorClass(aiRating.rating))}>
                       {aiRating.rating}
                     </div>
-                    <div className="text-sm text-muted-foreground mt-1">AI Score / 100</div>
+                    <div className="text-sm text-muted-foreground mt-1">AI Score (300-900)</div>
                   </div>
                   <div className="md:col-span-2">
                     <div className="text-sm text-muted-foreground">{aiRating.summary}</div>
@@ -1060,7 +1061,7 @@ export default function CreditPage() {
                           </ul>
                         </div>
                         <div>
-                          <h4 className="font-semibold flex items-center mb-2"><ThumbsDown className="h-5 w-5 mr-2 text-red-500" />Negative Factors</h4>
+                          <h4 className="font-semibold flex items-center mb-2"><ThumbsDown className="h-5 w-5 mr-2 text-red-500" />Areas for Improvement</h4>
                           <ul className="list-disc list-inside space-y-1 text-sm">
                             {aiRating.negativeFactors.map((factor, i) => <li key={i}>{factor}</li>)}
                           </ul>
@@ -1077,8 +1078,8 @@ export default function CreditPage() {
           </CardContent>
           {aiRating && (
               <CardFooter className="justify-end gap-2">
-                <Button variant="outline" onClick={handlePrint}><Download className="mr-2" />Download PDF</Button>
-                <Button onClick={() => handleShare('My AI Credit Rating', `My AI Score is ${aiRating.aiScore}/100 (${aiRating.rating}).\nSummary: ${aiRating.summary}`)}><Share2 className="mr-2" />Share</Button>
+                <Button variant="outline" onClick={handlePrint}><Download className="mr-2 h-4 w-4" />Download PDF</Button>
+                <Button onClick={() => handleShare('My AI Credit Rating', `My AI Score is ${aiRating.aiScore}/900 (${aiRating.rating}).\nSummary: ${aiRating.summary}`)}><Share2 className="mr-2 h-4 w-4" />Share</Button>
               </CardFooter>
             )}
         </Card>
@@ -1150,8 +1151,8 @@ export default function CreditPage() {
           </CardContent>
           {loanEligibility && (
               <CardFooter className="justify-end gap-2">
-                <Button variant="outline" onClick={handlePrint}><Download className="mr-2" />Download PDF</Button>
-                <Button onClick={() => handleShare('My Loan Eligibility', `I could be eligible for a loan of ₹${loanEligibility.eligibleLoanAmount.toLocaleString('en-IN')} with a repayment capacity of ₹${loanEligibility.repaymentCapacity.toLocaleString('en-IN')}/month.`)}><Share2 className="mr-2" />Share</Button>
+                <Button variant="outline" onClick={handlePrint}><Download className="mr-2 h-4 w-4" />Download PDF</Button>
+                <Button onClick={() => handleShare('My Loan Eligibility', `I could be eligible for a loan of ₹${loanEligibility.eligibleLoanAmount.toLocaleString('en-IN')} with a repayment capacity of ₹${loanEligibility.repaymentCapacity.toLocaleString('en-IN')}/month.`)}><Share2 className="mr-2 h-4 w-4" />Share</Button>
               </CardFooter>
             )}
         </Card>
@@ -1159,8 +1160,8 @@ export default function CreditPage() {
       aiAnalysis: (
         <Card>
             <CardHeader>
-                <CardTitle className="flex items-center text-xl font-bold"><BrainCircuit className="mr-3 h-6 w-6 text-primary" />AI Risk Assessment</CardTitle>
-                <CardDescription>A detailed risk analysis performed by the AI based on your credit report.</CardDescription>
+                <CardTitle className="flex items-center text-xl font-bold"><BrainCircuit className="mr-3 h-6 w-6 text-primary" />AI Technical Risk Assessment</CardTitle>
+                <CardDescription>A detailed technical risk analysis performed by the AI based on your credit report, focusing on metrics used by lenders.</CardDescription>
             </CardHeader>
              <CardContent>
                 {isAssessingRisk ? (
@@ -1170,8 +1171,8 @@ export default function CreditPage() {
                     </div>
                 ): riskAssessment ? (
                   <div className="space-y-6">
-                    <div className={cn('p-4 rounded-lg border-l-4 font-semibold text-lg', getRiskColorClass(riskAssessment.level.toLowerCase(), 'bg'), getRiskColorClass(riskAssessment.level.toLowerCase(), 'text'), getRiskColorClass(riskAssessment.level.toLowerCase(), 'border'))}>
-                        Overall Risk Level: {riskAssessment.level} (Score: {riskAssessment.score}/100)
+                    <div className={cn('p-4 rounded-lg border-l-4 font-semibold text-lg', getRiskColorClass(riskAssessment.riskLevel.toLowerCase(), 'bg'), getRiskColorClass(riskAssessment.riskLevel.toLowerCase(), 'text'), getRiskColorClass(riskAssessment.riskLevel.toLowerCase(), 'border'))}>
+                        Overall Risk Level: {riskAssessment.riskLevel} (Score: {riskAssessment.riskScore}/100)
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1192,10 +1193,10 @@ export default function CreditPage() {
                       <div>
                         <h4 className="font-semibold text-lg mb-2">Key Risk Factors</h4>
                         <div className="space-y-2">
-                           {riskAssessment.factors.map((factor, i) => (
+                           {riskAssessment.riskFactors.map((factor, i) => (
                             <Alert key={i} variant="destructive" className="bg-red-50 dark:bg-red-900/10">
                               <AlertCircle className="h-4 w-4" />
-                              <AlertTitle>{factor.factor} <span className="font-normal text-muted-foreground">({factor.severity})</span></AlertTitle>
+                              <AlertTitle>{factor.factor} <span className="font-normal text-muted-foreground">({factor.severity} Severity)</span></AlertTitle>
                               <AlertDescription>{factor.details}</AlertDescription>
                             </Alert>
                           ))}
@@ -1204,7 +1205,7 @@ export default function CreditPage() {
                       <div>
                          <h4 className="font-semibold text-lg mb-2">Suggested Mitigations</h4>
                          <div className="space-y-2">
-                          {riskAssessment.mitigations.map((mit, i) => (
+                          {riskAssessment.suggestedMitigations.map((mit, i) => (
                               <div key={i} className="p-3 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-800">
                                 <div className="font-semibold text-sm text-green-800 dark:text-green-300">{mit.factor}</div>
                                 <div className="text-sm text-muted-foreground">{mit.action}</div>
@@ -1220,8 +1221,8 @@ export default function CreditPage() {
             </CardContent>
             {riskAssessment && (
               <CardFooter className="justify-end gap-2">
-                <Button variant="outline" onClick={handlePrint}><Download className="mr-2" />Download PDF</Button>
-                <Button onClick={() => handleShare('My AI Risk Assessment', `Overall Risk: ${riskAssessment.level} (Score: ${riskAssessment.score}/100). Expected Loss: ₹${riskAssessment.expectedLoss.toLocaleString('en-IN')}`)}><Share2 className="mr-2" />Share</Button>
+                <Button variant="outline" onClick={handlePrint}><Download className="mr-2 h-4 w-4" />Download PDF</Button>
+                <Button onClick={() => handleShare('My AI Risk Assessment', `Overall Risk: ${riskAssessment.riskLevel} (Score: ${riskAssessment.riskScore}/100). Expected Loss: ₹${riskAssessment.expectedLoss.toLocaleString('en-IN')}`)}><Share2 className="mr-2 h-4 w-4" />Share</Button>
               </CardFooter>
             )}
         </Card>
@@ -1393,8 +1394,8 @@ export default function CreditPage() {
 
             </CardContent>
             <CardFooter className="justify-end gap-2">
-                <Button variant="outline" onClick={handlePrint}><Download className="mr-2" />Download PDF</Button>
-                <Button onClick={() => handleShare('My Underwriting Decision', `Final Decision: ${underwritingResult.underwritingDecision}. Approved Amount: ₹${underwritingResult.approvedLoanAmount.toLocaleString('en-IN')}`)}><Share2 className="mr-2" />Share</Button>
+                <Button variant="outline" onClick={handlePrint}><Download className="mr-2 h-4 w-4" />Download PDF</Button>
+                <Button onClick={() => handleShare('My Underwriting Decision', `Final Decision: ${underwritingResult.underwritingDecision}. Approved Amount: ₹${underwritingResult.approvedLoanAmount.toLocaleString('en-IN')}`)}><Share2 className="mr-2 h-4 w-4" />Share</Button>
             </CardFooter>
             </>
           )}
@@ -1558,8 +1559,8 @@ export default function CreditPage() {
             </CardContent>
             {financialRisk && (
               <CardFooter className="justify-end gap-2">
-                <Button variant="outline" onClick={handlePrint}><Download className="mr-2" />Download PDF</Button>
-                <Button onClick={() => handleShare('My Financial Risk Assessment', `Overall Risk: ${financialRisk.financialRiskRating}. DTI: ${financialRisk.dtiAnalysis.dtiPercentage}%`)}><Share2 className="mr-2" />Share</Button>
+                <Button variant="outline" onClick={handlePrint}><Download className="mr-2 h-4 w-4" />Download PDF</Button>
+                <Button onClick={() => handleShare('My Financial Risk Assessment', `Overall Risk: ${financialRisk.financialRiskRating}. DTI: ${financialRisk.dtiAnalysis.dtiPercentage}%`)}><Share2 className="mr-2 h-4 w-4" />Share</Button>
               </CardFooter>
             )}
          </Card>
@@ -1683,7 +1684,7 @@ export default function CreditPage() {
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                           <SummaryItem label="CIBIL Score" value={creditScore || 'N/A'} valueClassName="text-primary" />
                           <SummaryItem label="AI Credit Score" value={aiRating?.aiScore || 'N/A'} valueClassName={getRatingColorClass(aiRating?.rating || '')} />
-                          <SummaryItem label="Risk Score" value={riskAssessment?.score || 'N/A'} valueClassName={riskAssessment ? getRiskColorClass(riskAssessment.level.toLowerCase(), 'text') : ''} isLoading={isAssessingRisk} />
+                          <SummaryItem label="Risk Score" value={riskAssessment?.riskScore || 'N/A'} valueClassName={riskAssessment ? getRiskColorClass(riskAssessment.riskLevel.toLowerCase(), 'text') : ''} isLoading={isAssessingRisk} />
                           <SummaryItem label="Approved Amount" value={`₹${underwritingResult.approvedLoanAmount.toLocaleString('en-IN')}`} />
                           <SummaryItem label="Interest Rate" value={`${underwritingResult.recommendedInterestRate}`} />
                           <SummaryItem label="Tenure" value={`${underwritingResult.recommendedTenure} months`} />

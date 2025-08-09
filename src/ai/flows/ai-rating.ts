@@ -3,6 +3,7 @@
 
 /**
  * @fileOverview An AI agent that provides a comprehensive credit rating based on a report.
+ * This is a high-level, user-friendly assessment of credit health.
  *
  * - getAiRating - A function that returns a detailed credit rating.
  * - AiRatingInput - The input type for the getAiRating function.
@@ -21,7 +22,8 @@ const AiRatingInputSchema = z.object({
     .describe('The full, structured analysis from the initial credit report parsing flow.'),
   riskAssessment: z
     .any()
-    .describe('A client-side pre-calculated risk assessment.'),
+
+    .describe('A detailed, pre-calculated risk assessment including PD, LGD, etc.'),
 });
 export type AiRatingInput = {
   analysisResult: AnalyzeCreditReportOutput;
@@ -31,8 +33,10 @@ export type AiRatingInput = {
 const AiRatingOutputSchema = z.object({
   aiScore: z
     .number()
+    .min(300)
+    .max(900)
     .describe(
-      'A holistic score from 0 to 100, based on all available data.'
+      'A holistic score from 300 to 900, similar to a standard credit score, based on all available data.'
     ),
   rating: z
     .string()
@@ -42,14 +46,14 @@ const AiRatingOutputSchema = z.object({
   summary: z
     .string()
     .describe(
-      'A brief, one-paragraph summary of the overall credit health.'
+      'A brief, one-paragraph summary of the overall credit health, written in encouraging and easy-to-understand language.'
     ),
   positiveFactors: z
     .array(z.string())
-    .describe('A list of key strengths and positive factors.'),
+    .describe('A list of 2-3 key strengths and positive factors that are helping the score.'),
   negativeFactors: z
     .array(z.string())
-    .describe('A list of key weaknesses and areas for improvement.'),
+    .describe('A list of 2-3 key weaknesses and areas for improvement that are hurting the score.'),
 });
 export type AiRatingOutput = z.infer<typeof AiRatingOutputSchema>;
 
@@ -64,23 +68,26 @@ const prompt = ai.definePrompt({
   input: {schema: AiRatingInputSchema},
   output: {schema: AiRatingOutputSchema},
   model: 'googleai/gemini-1.5-flash',
-  prompt: `You are an expert credit analyst. Your task is to provide a holistic AI-powered credit rating based on the provided structured credit report data and a pre-calculated risk assessment. Do NOT use the raw text.
+  prompt: `You are an expert credit analyst. Your task is to provide a holistic AI-powered credit rating based on the provided structured credit report data and a pre-calculated risk assessment. Do NOT simply repeat the risk assessment. Your output should be a high-level, user-friendly summary.
 
 Analyze the user's structured credit data and the pre-calculated risk factors. Then, generate a comprehensive score, a final rating, a summary, and lists of the most important positive and negative factors.
 
-The final aiScore should be a number between 0 and 100, where 100 is a perfect score.
+**CRITICAL RULES:**
+- The final 'aiScore' MUST be a number between 300 and 900, where 900 is a perfect score. This should feel like a real-world credit score.
+- The 'summary' should be easy to understand for a non-expert.
+- The 'positiveFactors' and 'negativeFactors' lists should be distinct from each other and highlight the MOST impactful items. Do not just list every negative item.
 
 **Structured Credit Report Data:**
 \`\`\`json
 {{{json analysisResult}}}
 \`\`\`
 
-**Pre-Calculated Risk Assessment:**
+**Pre-Calculated Risk Assessment Data (for context):**
 \`\`\`json
 {{{json riskAssessment}}}
 \`\`\`
 
-Based on your complete analysis of all the provided structured information, generate the final output.
+Based on your complete analysis of all the provided structured information, generate the final, user-friendly output.
 `,
 });
 
