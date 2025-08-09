@@ -1,6 +1,5 @@
 
 import type {NextConfig} from 'next';
-// @ts-expect-error - no types for next-pwa
 import withPWA from 'next-pwa';
 
 const pwaConfig = withPWA({
@@ -38,12 +37,12 @@ const nextConfig: NextConfig = {
        {
         source: '/veritypdf',
         destination: '/verify',
-        permanent: true,
+        permanent: true
       },
        {
         source: '/crossverify',
         destination: '/cross-verify',
-        permanent: true,
+        permanent: true
       },
     ]
   },
