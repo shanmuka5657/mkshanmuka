@@ -566,7 +566,6 @@ export default function CreditPage() {
       );
   };
 
-  // Perform calculations on the client-side for accuracy
   const calculatedSummary = useMemo(() => {
     const allAccounts = analysisResult?.allAccounts || [];
     const enquirySummary = analysisResult?.reportSummary.enquirySummary;
@@ -633,7 +632,7 @@ export default function CreditPage() {
         summary.maxSingleEMI = emi;
       }
 
-      if (status.includes('written-off')) summary.writtenOff++;
+      if (status.includes('written-off') || status.includes('write-off')) summary.writtenOff++;
       if (status.includes('settled')) summary.settled++;
       if (status.includes('doubtful')) summary.doubtful++;
 
@@ -647,22 +646,22 @@ export default function CreditPage() {
       if (acc.paymentHistory && acc.paymentHistory !== 'NA') {
         const paymentMonths = acc.paymentHistory.split('|');
         for (const monthStatus of paymentMonths) {
-          const status = monthStatus.trim().toUpperCase();
-          if (status === 'STD' || status === '000' || status === 'XXX') {
+          const s = monthStatus.trim().toUpperCase();
+          if (s === 'STD' || s === '000' || s === 'XXX') {
             summary.dpd.onTime++;
-          } else if (status === 'SUB') {
+          } else if (s === 'SUB') {
             summary.dpd.late90Plus++;
-          } else if (status === 'DBT') {
+          } else if (s === 'DBT') {
             summary.dpd.default++;
-          } else if (status === 'LSS') {
+          } else if (s === 'LSS') {
             summary.dpd.default++;
           } else {
-            const daysLate = parseInt(status, 10);
+            const daysLate = parseInt(s, 10);
             if (!isNaN(daysLate)) {
-              if (daysLate > 90) summary.dpd.late90Plus++;
-              else if (daysLate >= 61 && daysLate <= 90) summary.dpd.late90++;
+              if (daysLate >= 1 && daysLate <= 30) summary.dpd.late30++;
               else if (daysLate >= 31 && daysLate <= 60) summary.dpd.late60++;
-              else if (daysLate >= 1 && daysLate <= 30) summary.dpd.late30++;
+              else if (daysLate >= 61 && daysLate <= 90) summary.dpd.late90++;
+              else if (daysLate > 90) summary.dpd.late90Plus++;
             }
           }
         }
