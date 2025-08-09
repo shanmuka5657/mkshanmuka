@@ -1,11 +1,11 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
-export default function HandleProtocolPage() {
+function ProtocolHandler() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -41,10 +41,19 @@ export default function HandleProtocolPage() {
     }
   }, [searchParams, router]);
 
+  // This component will be replaced by the redirect, so it doesn't need to return anything complex.
+  return null;
+}
+
+
+export default function HandleProtocolPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background">
       <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
       <p className="text-muted-foreground">Redirecting you to the app...</p>
+      <Suspense fallback={null}>
+        <ProtocolHandler />
+      </Suspense>
     </div>
   );
 }
