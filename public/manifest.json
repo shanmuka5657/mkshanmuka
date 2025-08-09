@@ -7,6 +7,13 @@
   "theme_color": "#4361ee",
   "orientation": "portrait",
   "description": "Advanced AI Credit Score Analyzer & ML Model Trainer",
+  "id": "/?id=creditwiseai_pwa_1",
+  "dir": "ltr",
+  "lang": "en-US",
+  "categories": [
+    "finance",
+    "business"
+  ],
   "icons": [
     {
       "src": "/icon-192x192.png",
@@ -18,7 +25,19 @@
       "src": "/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "screenshots": [
@@ -39,30 +58,23 @@
     "window-controls-overlay",
     "minimal-ui"
   ],
-  "edge_side_panel": {
-    "preferred_width": 400
-  },
   "file_handlers": [
     {
-      "action": "/process-file",
+      "action": "/credit",
       "accept": {
         "application/pdf": [
           ".pdf"
-        ],
-        "application/json": [
-          ".json"
         ]
       }
     }
   ],
-  "handle_links": "preferred",
   "launch_handler": {
     "client_mode": "focus-existing"
   },
   "protocol_handlers": [
     {
       "protocol": "web+creditwise",
-      "url": "/handle-protocol?url=%s"
+      "url": "/credit?url=%s"
     }
   ],
   "share_target": {
@@ -85,15 +97,6 @@
           "sizes": "192x192"
         }
       ]
-    }
-  ],
-  "widgets": [
-    {
-      "name": "Credit Score Summary",
-      "tag": "credit-score",
-      "template": "credit-widget",
-      "ms_ac_template": "/widgets/score.html",
-      "data": "/widgets/score.json"
     }
   ]
 }
