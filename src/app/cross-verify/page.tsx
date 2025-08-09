@@ -20,6 +20,7 @@ import {
   ChevronDown,
   Printer,
   Share2,
+  Download,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -247,6 +248,23 @@ export default function CrossVerifyPage() {
     window.print();
   }
 
+  const handleShare = async () => {
+    if (navigator.share && verificationResult) {
+        try {
+            await navigator.share({
+                title: 'Cross-Verification Report',
+                text: verificationResult.overallAssessment,
+                url: window.location.href,
+            });
+            toast({ title: "Shared successfully!" });
+        } catch (error) {
+            toast({ variant: "destructive", title: "Share failed", description: "Could not share the report." });
+        }
+    } else {
+        toast({ variant: "destructive", title: "Not supported", description: "Web Share API is not supported in your browser or no report is available to share." });
+    }
+  };
+
   const hasFiles = cibilFile.file || bankStatementFile.file || salarySlips.length > 0;
   
   if (!isClient) {
@@ -352,7 +370,10 @@ export default function CrossVerifyPage() {
                                 <CardTitle className="text-2xl flex items-center gap-3"><FileCheck2 className="text-primary"/>Cross-Verification Report</CardTitle>
                                 <CardDescription>Summary of findings from comparing all provided documents.</CardDescription>
                             </div>
-                            <Button onClick={handlePrint} variant="outline"><Printer className="mr-2 h-4 w-4" />Print / Share Report</Button>
+                            <div className="flex gap-2">
+                                <Button onClick={handlePrint} variant="outline"><Download className="mr-2 h-4 w-4" />Download</Button>
+                                <Button onClick={handleShare}><Share2 className="mr-2 h-4 w-4" />Share</Button>
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent>

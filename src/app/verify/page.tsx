@@ -20,6 +20,8 @@ import {
   ShieldAlert,
   ShieldClose,
   FileQuestion,
+  Download,
+  Share2,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -174,6 +176,27 @@ export default function VerifyPdfPage() {
     return { icon: <FileQuestion className="h-10 w-10" />, color: 'text-muted-foreground', bg: 'bg-muted', border: 'border-border' };
   };
 
+  const handleShare = async () => {
+    if (navigator.share && analysisResult) {
+        try {
+            await navigator.share({
+                title: `VerityPDF Report: ${analysisResult.finalVerdict.verdict}`,
+                text: `VerityPDF analysis complete. Final Verdict: ${analysisResult.finalVerdict.verdict}. Confidence: ${analysisResult.confidenceScore.score}/100.`,
+                url: window.location.href,
+            });
+            toast({ title: "Shared successfully!" });
+        } catch (error) {
+            toast({ variant: "destructive", title: "Share failed", description: "Could not share the report." });
+        }
+    } else {
+        toast({ variant: "destructive", title: "Not supported", description: "Web Share API is not supported in your browser or no report is available to share." });
+    }
+  };
+
+  const handlePrint = () => {
+    window.print();
+  }
+
   if (!isClient) {
     return (
         <div className="flex items-center justify-center min-h-screen">
@@ -240,7 +263,7 @@ export default function VerifyPdfPage() {
         {analysisResult && (
           <div className="space-y-8">
             <Card className={cn("border-2", getVerdictStyles(analysisResult.finalVerdict.verdict).border)}>
-                <CardHeader className={cn("p-6", getVerdictStyles(analysisResult.finalVerdict.verdict).bg)}>
+                <CardHeader className={cn("p-6 flex flex-row items-center justify-between", getVerdictStyles(analysisResult.finalVerdict.verdict).bg)}>
                      <div className="flex items-center gap-4">
                         {getVerdictStyles(analysisResult.finalVerdict.verdict).icon}
                         <div>
@@ -249,6 +272,10 @@ export default function VerifyPdfPage() {
                                 {analysisResult.finalVerdict.verdict}
                             </CardTitle>
                         </div>
+                    </div>
+                     <div className="flex gap-2">
+                        <Button variant="outline" onClick={handlePrint}><Download className="mr-2 h-4 w-4" /> Download</Button>
+                        <Button onClick={handleShare}><Share2 className="mr-2 h-4 w-4" /> Share</Button>
                     </div>
                 </CardHeader>
                 <CardContent className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">

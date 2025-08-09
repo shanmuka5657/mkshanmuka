@@ -47,6 +47,7 @@ import {
   ClipboardCheck,
   LogOut,
   Download,
+  Share2,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -754,6 +755,24 @@ export default function CreditPage() {
     window.print();
   }
 
+  const handleShare = async (title: string, text: string) => {
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: title,
+                text: text,
+                url: window.location.href,
+            });
+            toast({ title: "Shared successfully!" });
+        } catch (error) {
+            toast({ variant: "destructive", title: "Share failed", description: "Could not share the content." });
+        }
+    } else {
+        toast({ variant: "destructive", title: "Not supported", description: "Web Share API is not supported in your browser." });
+    }
+  };
+
+
   const handleLogout = () => {
     if (typeof window !== 'undefined') {
         localStorage.removeItem('isLoggedIn');
@@ -999,6 +1018,12 @@ export default function CreditPage() {
                 </div>
             )}
           </CardContent>
+           {analysisResult && (
+              <CardFooter className="justify-end gap-2">
+                <Button variant="outline" onClick={handlePrint}><Download className="mr-2" />Download PDF</Button>
+                <Button onClick={() => handleShare('My Credit Summary', `Here is my AI-powered credit summary. Total Accounts: ${calculatedSummary.totalAccounts}, Total Outstanding: ₹${calculatedSummary.totalOutstanding.toLocaleString('en-IN')}`)}><Share2 className="mr-2" />Share</Button>
+              </CardFooter>
+            )}
         </Card>
       ),
       aiMeter: (
@@ -1050,6 +1075,12 @@ export default function CreditPage() {
                 </div>
             )}
           </CardContent>
+          {aiRating && (
+              <CardFooter className="justify-end gap-2">
+                <Button variant="outline" onClick={handlePrint}><Download className="mr-2" />Download PDF</Button>
+                <Button onClick={() => handleShare('My AI Credit Rating', `My AI Score is ${aiRating.aiScore}/100 (${aiRating.rating}).\nSummary: ${aiRating.summary}`)}><Share2 className="mr-2" />Share</Button>
+              </CardFooter>
+            )}
         </Card>
       ),
       loanEligibility: (
@@ -1117,6 +1148,12 @@ export default function CreditPage() {
                 </div>
               )}
           </CardContent>
+          {loanEligibility && (
+              <CardFooter className="justify-end gap-2">
+                <Button variant="outline" onClick={handlePrint}><Download className="mr-2" />Download PDF</Button>
+                <Button onClick={() => handleShare('My Loan Eligibility', `I could be eligible for a loan of ₹${loanEligibility.eligibleLoanAmount.toLocaleString('en-IN')} with a repayment capacity of ₹${loanEligibility.repaymentCapacity.toLocaleString('en-IN')}/month.`)}><Share2 className="mr-2" />Share</Button>
+              </CardFooter>
+            )}
         </Card>
       ),
       aiAnalysis: (
@@ -1181,6 +1218,12 @@ export default function CreditPage() {
                   <div className="text-center py-10 text-muted-foreground">Click the button in the dashboard to generate your AI risk assessment.</div>
                 )}
             </CardContent>
+            {riskAssessment && (
+              <CardFooter className="justify-end gap-2">
+                <Button variant="outline" onClick={handlePrint}><Download className="mr-2" />Download PDF</Button>
+                <Button onClick={() => handleShare('My AI Risk Assessment', `Overall Risk: ${riskAssessment.level} (Score: ${riskAssessment.score}/100). Expected Loss: ₹${riskAssessment.expectedLoss.toLocaleString('en-IN')}`)}><Share2 className="mr-2" />Share</Button>
+              </CardFooter>
+            )}
         </Card>
       ),
       creditUnderwriting: (
@@ -1271,6 +1314,7 @@ export default function CreditPage() {
                     <span className="text-muted-foreground">AI is running final underwriting...</span>
                 </div>
           ) : underwritingResult && (
+            <>
             <CardContent>
               <div className={cn('p-4 rounded-lg border-l-4 mb-6', getUnderwritingDecisionColor(underwritingResult.underwritingDecision))}>
                 <h4 className="font-bold text-lg">Underwriting Decision: {underwritingResult.underwritingDecision}</h4>
@@ -1348,6 +1392,11 @@ export default function CreditPage() {
                 </div>
 
             </CardContent>
+            <CardFooter className="justify-end gap-2">
+                <Button variant="outline" onClick={handlePrint}><Download className="mr-2" />Download PDF</Button>
+                <Button onClick={() => handleShare('My Underwriting Decision', `Final Decision: ${underwritingResult.underwritingDecision}. Approved Amount: ₹${underwritingResult.approvedLoanAmount.toLocaleString('en-IN')}`)}><Share2 className="mr-2" />Share</Button>
+            </CardFooter>
+            </>
           )}
 
         </Card>
@@ -1507,6 +1556,12 @@ export default function CreditPage() {
                 )}
 
             </CardContent>
+            {financialRisk && (
+              <CardFooter className="justify-end gap-2">
+                <Button variant="outline" onClick={handlePrint}><Download className="mr-2" />Download PDF</Button>
+                <Button onClick={() => handleShare('My Financial Risk Assessment', `Overall Risk: ${financialRisk.financialRiskRating}. DTI: ${financialRisk.dtiAnalysis.dtiPercentage}%`)}><Share2 className="mr-2" />Share</Button>
+              </CardFooter>
+            )}
          </Card>
       ),
     };
