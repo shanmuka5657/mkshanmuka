@@ -7,13 +7,6 @@
   "theme_color": "#4361ee",
   "orientation": "portrait",
   "description": "Advanced AI Credit Score Analyzer & ML Model Trainer",
-  "id": "/?id=creditwiseai_pwa_1",
-  "dir": "ltr",
-  "lang": "en-US",
-  "categories": [
-    "finance",
-    "business"
-  ],
   "icons": [
     {
       "src": "/icon-192x192.png",
@@ -23,18 +16,6 @@
     },
     {
       "src": "/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-maskable-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/icon-maskable-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -54,49 +35,26 @@
       "form_factor": "wide"
     }
   ],
-  "display_override": [
-    "window-controls-overlay",
-    "minimal-ui"
+  "id": "/?id=creditwise",
+  "categories": [
+    "finance",
+    "business"
   ],
-  "file_handlers": [
+  "dir": "ltr",
+  "lang": "en-US",
+  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
+  "prefer_related_applications": false,
+  "related_applications": [
     {
-      "action": "/credit",
-      "accept": {
-        "application/pdf": [
-          ".pdf"
-        ]
-      }
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.creditwise.ai",
+      "id": "com.creditwise.ai"
     }
   ],
-  "launch_handler": {
-    "client_mode": "focus-existing"
-  },
-  "protocol_handlers": [
+  "scope": "/",
+  "scope_extensions": [
     {
-      "protocol": "web+creditwise",
-      "url": "/credit?url=%s"
-    }
-  ],
-  "share_target": {
-    "action": "/share-target",
-    "method": "GET",
-    "params": {
-      "title": "title",
-      "text": "text",
-      "url": "url"
-    }
-  },
-  "shortcuts": [
-    {
-      "name": "New Analysis",
-      "short_name": "Analyze",
-      "url": "/credit",
-      "icons": [
-        {
-          "src": "/icon-192x192.png",
-          "sizes": "192x192"
-        }
-      ]
+      "origin": "https://*.creditwise.ai"
     }
   ]
 }
