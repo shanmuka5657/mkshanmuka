@@ -2,6 +2,11 @@
   "name": "CreditWise AI",
   "short_name": "CreditWiseAI",
   "start_url": "/?source=pwa",
+  "display": "standalone",
+  "background_color": "#f5f7fa",
+  "theme_color": "#4361ee",
+  "orientation": "portrait",
+  "description": "Advanced AI Credit Score Analyzer & ML Model Trainer",
   "icons": [
     {
       "src": "/icon-192x192.png",
@@ -16,11 +21,6 @@
       "purpose": "any maskable"
     }
   ],
-  "display": "standalone",
-  "background_color": "#f5f7fa",
-  "theme_color": "#4361ee",
-  "orientation": "portrait",
-  "description": "Advanced AI Credit Score Analyzer & ML Model Trainer",
   "screenshots": [
     {
       "src": "/screenshots/mobile.png",
@@ -35,26 +35,65 @@
       "form_factor": "wide"
     }
   ],
+  "display_override": [
+    "window-controls-overlay",
+    "minimal-ui"
+  ],
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "file_handlers": [
+    {
+      "action": "/process-file",
+      "accept": {
+        "application/pdf": [
+          ".pdf"
+        ],
+        "application/json": [
+          ".json"
+        ]
+      }
+    }
+  ],
+  "handle_links": "preferred",
   "launch_handler": {
     "client_mode": "focus-existing"
   },
-  "id": "/?id=creditwise",
-  "categories": ["finance", "business"],
-  "dir": "ltr",
-  "lang": "en-US",
-  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
-  "prefer_related_applications": false,
-  "related_applications": [
+  "protocol_handlers": [
     {
-      "platform": "play",
-      "url": "https://play.google.com/store/apps/details?id=com.creditwise.ai",
-      "id": "com.creditwise.ai"
+      "protocol": "web+creditwise",
+      "url": "/handle-protocol?url=%s"
     }
   ],
-  "scope": "/",
-  "scope_extensions": [
+  "share_target": {
+    "action": "/share-target",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "shortcuts": [
     {
-      "origin": "https://*.creditwise.ai"
+      "name": "New Analysis",
+      "short_name": "Analyze",
+      "url": "/credit",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "widgets": [
+    {
+      "name": "Credit Score Summary",
+      "tag": "credit-score",
+      "template": "credit-widget",
+      "ms_ac_template": "/widgets/score.html",
+      "data": "/widgets/score.json"
     }
   ]
 }
