@@ -1581,7 +1581,7 @@ export default function CreditPage() {
 
   return (
     <div className="bg-background font-body text-foreground">
-       <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm print:hidden">
+       <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm no-print">
         <div className="container flex h-16 items-center justify-between">
             <div className="mr-4 flex items-center">
               <Logo />
@@ -1601,14 +1601,14 @@ export default function CreditPage() {
         </div>
       </header>
 
-      <main className="container mx-auto p-4 md:p-8 print:p-0">
+      <main className="container mx-auto p-4 md:p-8 printable-area">
           <TooltipProvider>
-            <div className="text-center mb-12 print:hidden">
+            <div className="text-center mb-12 no-print">
               <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">Credit Analysis</h1>
               <div className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">Upload your CIBIL report PDF to unlock instant AI-powered insights, personalized scoring, and actionable advice.</div>
             </div>
 
-            <Card className="mb-8 shadow-lg hover:shadow-xl transition-shadow print:hidden">
+            <Card className="mb-8 shadow-lg hover:shadow-xl transition-shadow no-print">
               <CardHeader>
                 <CardTitle className="flex items-center text-xl">
                   <UploadCloud className="mr-3 h-6 w-6 text-primary" />Upload Your CIBIL Report (PDF)
@@ -1653,7 +1653,7 @@ export default function CreditPage() {
             </Card>
 
             {isLoading && (
-                <Card className="text-center p-8 my-8 print:hidden">
+                <Card className="text-center p-8 my-8 no-print">
                     <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary mb-4" />
                     <h3 className="text-xl font-semibold">Processing your report...</h3>
                     <div className="text-muted-foreground">This may take a moment.</div>
@@ -1753,7 +1753,7 @@ export default function CreditPage() {
                   </Card>
 
 
-                  <Card>
+                  <Card className="no-print">
                     <CardHeader>
                       <CardTitle className="text-2xl font-bold">Analysis Dashboard</CardTitle>
                       <CardDescription>Select a section to view its detailed analysis. Some sections require previous steps to be completed.</CardDescription>
@@ -1778,8 +1778,8 @@ export default function CreditPage() {
             )}
 
             {rawText && (
-              <div className="space-y-8 mt-8">
-                  <Card className="print:hidden mt-8">
+              <div className="space-y-8 mt-8 no-print">
+                  <Card>
                       <Accordion type="single" collapsible className="w-full">
                           <AccordionItem value="item-1">
                               <AccordionTrigger className="p-6">
@@ -1821,13 +1821,6 @@ export default function CreditPage() {
                           </AccordionItem>
                       </Accordion>
                     </Card>
-
-                  <div className="print-this">
-                    <div className="p-8 bg-white shadow-lg a4-paper">
-                        <h2 className="text-2xl font-bold mb-4 border-b pb-2 text-black">Raw Document Text</h2>
-                        <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans">{rawText}</pre>
-                    </div>
-                  </div>
               </div>
             )}
             
@@ -1839,43 +1832,9 @@ export default function CreditPage() {
             />
           </TooltipProvider>
       </main>
-      <footer className="text-center py-6 text-sm text-muted-foreground print:hidden">
+      <footer className="text-center py-6 text-sm text-muted-foreground no-print">
          <div>© {new Date().getFullYear()} MkCreditWise.com. Built with Firebase and Google AI.</div>
       </footer>
-
-      <style jsx global>{`
-        @media print {
-            body * {
-                visibility: hidden;
-            }
-            .print-this, .print-this * {
-                visibility: visible;
-            }
-            .print-this {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-            }
-            .a4-paper {
-                width: 210mm;
-                min-height: 297mm;
-                margin: 0 auto;
-                color: #000 !important;
-                background: #fff !important;
-                box-shadow: none;
-                border: none;
-            }
-        }
-        .print-this {
-            display: none;
-        }
-        @media print {
-            .print-this {
-                display: block;
-            }
-        }
-      `}</style>
     </div>
   );
 }

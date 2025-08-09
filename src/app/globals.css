@@ -71,3 +71,26 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  body {
+    background-color: #fff !important;
+    color: #000 !important;
+  }
+  .no-print, .no-print * {
+    display: none !important;
+  }
+  .printable-area {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  .printable-area .card,
+  .printable-area .alert {
+      box-shadow: none !important;
+      border: 1px solid #ccc !important;
+  }
+}

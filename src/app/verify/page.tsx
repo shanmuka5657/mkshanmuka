@@ -207,7 +207,7 @@ export default function VerifyPdfPage() {
 
   return (
     <div className="bg-background font-body text-foreground">
-      <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm">
+      <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm no-print">
         <div className="container flex h-16 items-center">
           <div className="mr-4 flex items-center">
             <Logo />
@@ -215,13 +215,13 @@ export default function VerifyPdfPage() {
         </div>
       </header>
 
-      <main className="container mx-auto p-4 md:p-8">
-        <div className="text-center mb-12">
+      <main className="container mx-auto p-4 md:p-8 printable-area">
+        <div className="text-center mb-12 no-print">
           <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">VerityPDF Forensic Analysis</h1>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">Upload any PDF to uncover signs of tampering. Our AI performs a deep forensic analysis of metadata, fonts, and visual elements.</p>
         </div>
 
-        <Card className="mb-8 shadow-lg">
+        <Card className="mb-8 shadow-lg no-print">
           <CardHeader>
             <CardTitle className="flex items-center text-xl">
               <UploadCloud className="mr-3 h-6 w-6 text-primary" />Upload Document for Analysis
@@ -252,7 +252,7 @@ export default function VerifyPdfPage() {
         </Card>
 
         {isAnalyzing && !analysisResult && (
-          <Card className="text-center p-8 my-8">
+          <Card className="text-center p-8 my-8 no-print">
             <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary mb-4" />
             <h3 className="text-xl font-semibold">Performing Forensic Analysis...</h3>
             <p className="text-muted-foreground">The AI is inspecting every detail of your document.</p>
@@ -273,7 +273,7 @@ export default function VerifyPdfPage() {
                             </CardTitle>
                         </div>
                     </div>
-                     <div className="flex gap-2">
+                     <div className="flex gap-2 no-print">
                         <Button variant="outline" onClick={handlePrint}><Download className="mr-2 h-4 w-4" /> Download</Button>
                         <Button onClick={handleShare}><Share2 className="mr-2 h-4 w-4" /> Share</Button>
                     </div>
