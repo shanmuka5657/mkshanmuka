@@ -60,7 +60,8 @@ export type AiRatingOutput = z.infer<typeof AiRatingOutputSchema>;
 export async function getAiRating(
   input: AiRatingInput
 ): Promise<{ output: AiRatingOutput, usage: FlowUsage }> {
-  return aiRatingFlow(input);
+  const result = await aiRatingFlow(input);
+  return result;
 }
 
 const prompt = ai.definePrompt({
@@ -101,10 +102,10 @@ const aiRatingFlow = ai.defineFlow(
     }),
   },
   async (input) => {
-    const result = await prompt(input);
+    const result = await prompt.generate({input});
     if (!result.output) {
       throw new Error("AI failed to provide a rating.");
     }
-    return { output: result.output, usage: result.usage };
+    return { output: result.output, usage: result.usage() };
   }
 );
