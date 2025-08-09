@@ -206,12 +206,17 @@ export default function CreditPage() {
   const router = useRouter();
   
   useEffect(() => {
-      setIsClient(true);
-      const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-      if (!isLoggedIn) {
-          router.replace('/login');
-      }
-  }, [router]);
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (isClient) {
+        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        if (!isLoggedIn) {
+            router.replace('/login');
+        }
+    }
+  }, [isClient, router]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1022,7 +1027,7 @@ export default function CreditPage() {
            {analysisResult && (
               <CardFooter className="justify-end gap-2">
                 <Button variant="outline" onClick={handlePrint}><Download className="mr-2 h-4 w-4" />Download PDF</Button>
-                <Button onClick={() => handleShare('My Credit Summary', `Here is my AI-powered credit summary. Total Accounts: ${calculatedSummary.totalAccounts}, Total Outstanding: ₹${calculatedSummary.totalOutstanding.toLocaleString('en-IN')}`)}><Share2 className="mr-2 h-4 w-4" />Share</Button>
+                <Button onClick={() => handleShare('AI-Powered Credit Summary', `Here is my AI-powered credit summary from CreditWise AI.\n\n- Total Accounts: ${calculatedSummary.totalAccounts}\n- Total Outstanding: ₹${calculatedSummary.totalOutstanding.toLocaleString('en-IN')}\n- Active Accounts: ${calculatedSummary.activeAccounts}\n- Credit Utilization: ${calculatedSummary.creditUtilization}`)}><Share2 className="mr-2 h-4 w-4" />Share</Button>
               </CardFooter>
             )}
         </Card>
@@ -1079,7 +1084,7 @@ export default function CreditPage() {
           {aiRating && (
               <CardFooter className="justify-end gap-2">
                 <Button variant="outline" onClick={handlePrint}><Download className="mr-2 h-4 w-4" />Download PDF</Button>
-                <Button onClick={() => handleShare('My AI Credit Rating', `My AI Score is ${aiRating.aiScore}/900 (${aiRating.rating}).\nSummary: ${aiRating.summary}`)}><Share2 className="mr-2 h-4 w-4" />Share</Button>
+                <Button onClick={() => handleShare('My AI Credit Rating', `CreditWise AI Rating\n\nMy AI Score is ${aiRating.aiScore}/900 (${aiRating.rating}).\n\nSummary: ${aiRating.summary}\n\nPositive Factors:\n- ${aiRating.positiveFactors.join('\n- ')}`)}><Share2 className="mr-2 h-4 w-4" />Share</Button>
               </CardFooter>
             )}
         </Card>
@@ -1152,7 +1157,7 @@ export default function CreditPage() {
           {loanEligibility && (
               <CardFooter className="justify-end gap-2">
                 <Button variant="outline" onClick={handlePrint}><Download className="mr-2 h-4 w-4" />Download PDF</Button>
-                <Button onClick={() => handleShare('My Loan Eligibility', `I could be eligible for a loan of ₹${loanEligibility.eligibleLoanAmount.toLocaleString('en-IN')} with a repayment capacity of ₹${loanEligibility.repaymentCapacity.toLocaleString('en-IN')}/month.`)}><Share2 className="mr-2 h-4 w-4" />Share</Button>
+                <Button onClick={() => handleShare('My Loan Eligibility from CreditWise AI', `Loan Eligibility Report\n\n- Eligible Amount: ₹${loanEligibility.eligibleLoanAmount.toLocaleString('en-IN')}\n- Repayment Capacity: ₹${loanEligibility.repaymentCapacity.toLocaleString('en-IN')}/month\n- Est. Interest Rate: ${loanEligibility.estimatedInterestRate}\n\nSummary: ${loanEligibility.eligibilitySummary}`)}><Share2 className="mr-2 h-4 w-4" />Share</Button>
               </CardFooter>
             )}
         </Card>
@@ -1222,7 +1227,7 @@ export default function CreditPage() {
             {riskAssessment && (
               <CardFooter className="justify-end gap-2">
                 <Button variant="outline" onClick={handlePrint}><Download className="mr-2 h-4 w-4" />Download PDF</Button>
-                <Button onClick={() => handleShare('My AI Risk Assessment', `Overall Risk: ${riskAssessment.riskLevel} (Score: ${riskAssessment.riskScore}/100). Expected Loss: ₹${riskAssessment.expectedLoss.toLocaleString('en-IN')}`)}><Share2 className="mr-2 h-4 w-4" />Share</Button>
+                <Button onClick={() => handleShare('My AI Risk Assessment', `CreditWise AI Risk Assessment\n\n- Overall Risk: ${riskAssessment.riskLevel} (Score: ${riskAssessment.riskScore}/100)\n- Expected Loss: ₹${riskAssessment.expectedLoss.toLocaleString('en-IN')}\n- Probability of Default: ${riskAssessment.probabilityOfDefault}%\n\nKey Risk Factors:\n- ${riskAssessment.riskFactors.map(f => f.factor).join('\n- ')}`)}><Share2 className="mr-2 h-4 w-4" />Share</Button>
               </CardFooter>
             )}
         </Card>
@@ -1395,7 +1400,7 @@ export default function CreditPage() {
             </CardContent>
             <CardFooter className="justify-end gap-2">
                 <Button variant="outline" onClick={handlePrint}><Download className="mr-2 h-4 w-4" />Download PDF</Button>
-                <Button onClick={() => handleShare('My Underwriting Decision', `Final Decision: ${underwritingResult.underwritingDecision}. Approved Amount: ₹${underwritingResult.approvedLoanAmount.toLocaleString('en-IN')}`)}><Share2 className="mr-2 h-4 w-4" />Share</Button>
+                <Button onClick={() => handleShare('My Underwriting Decision from CreditWise AI', `Final Underwriting Decision: ${underwritingResult.underwritingDecision}\n\n- Approved Amount: ₹${underwritingResult.approvedLoanAmount.toLocaleString('en-IN')}\n- Recommended Interest Rate: ${underwritingResult.recommendedInterestRate}\n- Final Profile Rating: ${underwritingResult.finalProfileRating}\n\nSummary: ${underwritingResult.underwritingSummary}`)}><Share2 className="mr-2 h-4 w-4" />Share</Button>
             </CardFooter>
             </>
           )}
@@ -1560,7 +1565,7 @@ export default function CreditPage() {
             {financialRisk && (
               <CardFooter className="justify-end gap-2">
                 <Button variant="outline" onClick={handlePrint}><Download className="mr-2 h-4 w-4" />Download PDF</Button>
-                <Button onClick={() => handleShare('My Financial Risk Assessment', `Overall Risk: ${financialRisk.financialRiskRating}. DTI: ${financialRisk.dtiAnalysis.dtiPercentage}%`)}><Share2 className="mr-2 h-4 w-4" />Share</Button>
+                <Button onClick={() => handleShare('My Financial Risk Assessment', `CreditWise AI Financial Risk Assessment\n\n- Overall Risk: ${financialRisk.financialRiskRating}\n- DTI: ${financialRisk.dtiAnalysis.dtiPercentage}%\n- Debt Composition: ${financialRisk.debtComposition.unsecuredDebtPercentage}% Unsecured\n- Credit Utilization: ${financialRisk.creditUtilizationAnalysis.overallUtilization}%\n\nOutlook: ${financialRisk.overallOutlook}`)}><Share2 className="mr-2 h-4 w-4" />Share</Button>
               </CardFooter>
             )}
          </Card>

@@ -67,12 +67,17 @@ export default function VerifyPdfPage() {
   const router = useRouter();
 
   useEffect(() => {
-      setIsClient(true);
-      const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-      if (!isLoggedIn) {
-          router.replace('/login');
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+      if (isClient) {
+        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        if (!isLoggedIn) {
+            router.replace('/login');
+        }
       }
-  }, [router]);
+  }, [isClient, router]);
 
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -181,7 +186,7 @@ export default function VerifyPdfPage() {
         try {
             await navigator.share({
                 title: `VerityPDF Report: ${analysisResult.finalVerdict.verdict}`,
-                text: `VerityPDF analysis complete. Final Verdict: ${analysisResult.finalVerdict.verdict}. Confidence: ${analysisResult.confidenceScore.score}/100.`,
+                text: `VerityPDF analysis complete for document type: ${analysisResult.documentType}.\n\nFinal Verdict: ${analysisResult.finalVerdict.verdict}.\nConfidence: ${analysisResult.confidenceScore.score}/100.\n\nRecommendation: ${analysisResult.finalVerdict.recommendation}`,
                 url: window.location.href,
             });
             toast({ title: "Shared successfully!" });

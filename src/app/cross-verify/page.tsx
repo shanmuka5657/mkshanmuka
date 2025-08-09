@@ -129,12 +129,17 @@ export default function CrossVerifyPage() {
   const router = useRouter();
   
   useEffect(() => {
-      setIsClient(true);
-      const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-      if (!isLoggedIn) {
-          router.replace('/login');
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+      if(isClient) {
+        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        if (!isLoggedIn) {
+            router.replace('/login');
+        }
       }
-  }, [router]);
+  }, [isClient, router]);
 
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -252,8 +257,8 @@ export default function CrossVerifyPage() {
     if (navigator.share && verificationResult) {
         try {
             await navigator.share({
-                title: 'Cross-Verification Report',
-                text: verificationResult.overallAssessment,
+                title: 'Cross-Verification Report from CreditWise AI',
+                text: `Cross-Verification Report\n\nOverall Assessment: ${verificationResult.overallAssessment}`,
                 url: window.location.href,
             });
             toast({ title: "Shared successfully!" });
