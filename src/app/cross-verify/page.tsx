@@ -19,7 +19,6 @@ import {
   Sparkles,
   ChevronDown,
   Printer,
-  Share2,
   Download,
 } from 'lucide-react';
 
@@ -253,23 +252,6 @@ export default function CrossVerifyPage() {
     window.print();
   }
 
-  const handleShare = async () => {
-    if (navigator.share && verificationResult) {
-        try {
-            await navigator.share({
-                title: 'Cross-Verification Report from CreditWise AI',
-                text: `Cross-Verification Report\n\nOverall Assessment: ${verificationResult.overallAssessment}`,
-                url: window.location.href,
-            });
-            toast({ title: "Shared successfully!" });
-        } catch (error) {
-            toast({ variant: "destructive", title: "Share failed", description: "Could not share the report." });
-        }
-    } else {
-        toast({ variant: "destructive", title: "Not supported", description: "Web Share API is not supported in your browser or no report is available to share." });
-    }
-  };
-
   const hasFiles = cibilFile.file || bankStatementFile.file || salarySlips.length > 0;
   
   if (!isClient) {
@@ -377,7 +359,6 @@ export default function CrossVerifyPage() {
                             </div>
                             <div className="flex gap-2 no-print">
                                 <Button onClick={handlePrint} variant="outline"><Download className="mr-2 h-4 w-4" />Download</Button>
-                                <Button onClick={handleShare}><Share2 className="mr-2 h-4 w-4" />Share</Button>
                             </div>
                         </div>
                     </CardHeader>

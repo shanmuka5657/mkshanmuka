@@ -21,7 +21,6 @@ import {
   ShieldClose,
   FileQuestion,
   Download,
-  Share2,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -181,23 +180,6 @@ export default function VerifyPdfPage() {
     return { icon: <FileQuestion className="h-10 w-10" />, color: 'text-muted-foreground', bg: 'bg-muted', border: 'border-border' };
   };
 
-  const handleShare = async () => {
-    if (navigator.share && analysisResult) {
-        try {
-            await navigator.share({
-                title: `VerityPDF Report: ${analysisResult.finalVerdict.verdict}`,
-                text: `VerityPDF analysis complete for document type: ${analysisResult.documentType}.\n\nFinal Verdict: ${analysisResult.finalVerdict.verdict}.\nConfidence: ${analysisResult.confidenceScore.score}/100.\n\nRecommendation: ${analysisResult.finalVerdict.recommendation}`,
-                url: window.location.href,
-            });
-            toast({ title: "Shared successfully!" });
-        } catch (error) {
-            toast({ variant: "destructive", title: "Share failed", description: "Could not share the report." });
-        }
-    } else {
-        toast({ variant: "destructive", title: "Not supported", description: "Web Share API is not supported in your browser or no report is available to share." });
-    }
-  };
-
   const handlePrint = () => {
     window.print();
   }
@@ -280,7 +262,6 @@ export default function VerifyPdfPage() {
                     </div>
                      <div className="flex gap-2 no-print">
                         <Button variant="outline" onClick={handlePrint}><Download className="mr-2 h-4 w-4" /> Download</Button>
-                        <Button onClick={handleShare}><Share2 className="mr-2 h-4 w-4" /> Share</Button>
                     </div>
                 </CardHeader>
                 <CardContent className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
