@@ -87,6 +87,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Badge } from '@/components/ui/badge';
 import { Logo } from '@/components/ui/logo';
 import { useRouter } from 'next/navigation';
+import { saveCreditAnalysisSummary } from '@/lib/firestore-service';
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -369,6 +370,24 @@ export default function CreditPage() {
         }));
         setActiveLoanDetails(enhancedLoanDetails);
         toast({ title: "Credit Summary Complete", description: "Credit report has been analyzed." });
+
+        // Save summary to Firestore after successful analysis
+        try {
+            await saveCreditAnalysisSummary(output, creditScore);
+            toast({
+                title: "Report Saved",
+                description: "A summary has been saved to the database.",
+                variant: 'default',
+                className: 'bg-green-100 text-green-800'
+            });
+        } catch(dbError: any) {
+            toast({
+                variant: "destructive",
+                title: "Database Error",
+                description: `Analysis complete, but failed to save summary: ${dbError.message}`
+            });
+        }
+
     } catch (error: any) {
         console.error('Error analyzing report:', error);
         handleOverloadedError(error);
