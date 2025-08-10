@@ -6,35 +6,39 @@ import { usePathname } from 'next/navigation';
 import { FileText, Fingerprint, FileCheck2, BrainCircuit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 const allNavItems = [
-  { href: '/credit', label: 'Credit', icon: FileText, roles: ['user', 'admin'] },
-  { href: '/verify', label: 'Verify', icon: Fingerprint, roles: ['user', 'admin'] },
-  { href: '/cross-verify', label: 'Cross-Verify', icon: FileCheck2, roles: ['user', 'admin'] },
-  { href: '/trainer', label: 'Trainer', icon: BrainCircuit, roles: ['admin'] },
+  { href: '/credit', label: 'Credit', icon: FileText },
+  { href: '/verify', label: 'Verify', icon: Fingerprint },
+  { href: '/cross-verify', label: 'Cross-Verify', icon: FileCheck2 },
+  { href: '/trainer', label: 'Trainer', icon: BrainCircuit },
 ];
 
 export function BottomNavbar() {
   const pathname = usePathname();
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // Ensure this runs only on the client
-    setUserRole(localStorage.getItem('userRole'));
+    // Determine if the user is logged in to decide whether to show the navbar
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
   }, []);
 
-  // Filter nav items based on user role
-  const navItems = allNavItems.filter(item => 
-    item.roles.includes(userRole || 'user')
-  );
-
-  // Don't render the navbar until the role is determined, to avoid flash of incorrect items
-  if (!userRole) {
+  // Only show the navbar on the main app pages, not on the login page
+  if (!user || pathname === '/login') {
     return null;
   }
+  
+  // For this version, all logged-in users are 'user' role.
+  // Future logic for admin roles could be added here.
+  const navItems = allNavItems;
 
   return (
-    <div className="fixed bottom-0 left-0 z-50 w-full h-20 bg-background border-t border-border print:hidden">
+    <div className="fixed bottom-0 left-0 z-50 w-full h-20 bg-background border-t border-border no-print">
       <div className={`grid h-full max-w-lg grid-cols-${navItems.length} mx-auto font-medium`}>
         {navItems.map((item) => {
           const isActive = pathname === item.href;

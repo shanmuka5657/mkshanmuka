@@ -5,17 +5,15 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/ui/logo';
-import { LogIn } from 'lucide-react';
-import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
+import { LogIn, Loader2 } from 'lucide-react';
+import { signInAnonymously, onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -23,59 +21,46 @@ export default function LoginPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        router.push('/credit');
+        router.replace('/credit');
+      } else {
+        setIsCheckingAuth(false);
       }
     });
     return () => unsubscribe();
   }, [router]);
 
-
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password.trim()) {
-      toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: 'Please enter both email and password.',
-      });
-      return;
-    }
+    setIsLoading(true);
     
-    // For this demo, we'll allow any email/password to work for simplicity,
-    // but a real app would use `signInWithEmailAndPassword`.
-    // We'll simulate a successful login and then redirect.
-    
-    toast({
-      title: 'Login Successful',
-      description: 'Redirecting to the app...',
-    });
-    
-    // In a real app, you would use this:
-    /*
-    signInWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        // Signed in 
-        const user = userCredential.user;
+    signInAnonymously(auth)
+      .then(() => {
         toast({
-          title: 'Login Successful',
-          description: 'Welcome back!',
+          title: 'Authentication Successful',
+          description: 'Redirecting to the app...',
         });
-        router.push('/credit');
+        // The onAuthStateChanged listener above will handle the redirect
       })
       .catch((error) => {
-        const errorCode = error.code;
-        const errorMessage = error.message;
+        console.error("Anonymous sign-in failed:", error);
         toast({
           variant: 'destructive',
           title: 'Login Failed',
-          description: errorMessage,
+          description: 'Could not connect to the authentication service. Please check your connection and Firebase configuration.',
         });
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
-    */
-
-    // For the demo, we just redirect. The /credit page will handle anon sign-in.
-    router.push('/credit');
   };
+  
+  if (isCheckingAuth) {
+    return (
+        <div className="flex items-center justify-center min-h-screen">
+            <Loader2 className="h-12 w-12 animate-spin text-primary"/>
+        </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
@@ -84,36 +69,16 @@ export default function LoginPage() {
           <div className="mx-auto mb-4">
              <Logo />
           </div>
-          <CardTitle className="text-2xl">Welcome Back</CardTitle>
-          <CardDescription>Enter any email and password to continue.</CardDescription>
+          <CardTitle className="text-2xl">Welcome to CreditWise AI</CardTitle>
+          <CardDescription>Click below to start your secure session.</CardDescription>
         </CardHeader>
         <form onSubmit={handleLogin}>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="user@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
+          <CardContent>
+            {/* Content can be added here if needed in the future */}
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full">
-              <LogIn className="mr-2 h-4 w-4" />
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
               Continue to App
             </Button>
           </CardFooter>
@@ -122,5 +87,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-    

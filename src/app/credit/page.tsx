@@ -89,7 +89,7 @@ import { Logo } from '@/components/ui/logo';
 import { useRouter } from 'next/navigation';
 import { saveCreditAnalysisSummary } from '@/lib/firestore-service';
 import { auth } from '@/lib/firebase';
-import { signInAnonymously, onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged, User } from 'firebase/auth';
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -210,24 +210,18 @@ export default function CreditPage() {
   
   useEffect(() => {
     setIsClient(true);
-    // Sign in anonymously to get a UID for Firestore rules
+    // Listen for auth state changes. If the user is not logged in, redirect them.
     const unsubscribe = onAuthStateChanged(auth, (user) => {
         if (user) {
             setFirebaseUser(user);
         } else {
-            signInAnonymously(auth).catch((error) => {
-                console.error("Anonymous sign-in failed:", error);
-                toast({
-                    variant: "destructive",
-                    title: "Authentication Error",
-                    description: "Could not connect to the service securely. Please refresh the page.",
-                });
-            });
+            // User is signed out, redirect to login.
+            router.replace('/login');
         }
     });
 
     return () => unsubscribe();
-  }, [toast]);
+  }, [router]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -791,7 +785,7 @@ export default function CreditPage() {
 
   const handleLogout = () => {
     auth.signOut();
-    router.push('/login');
+    // The onAuthStateChanged listener will handle the redirect.
   };
 
   const NavButton = ({
@@ -1578,7 +1572,7 @@ export default function CreditPage() {
   
   const { customerDetails, reportSummary } = analysisResult || initialAnalysis;
   
-  if (!isClient) {
+  if (!isClient || !firebaseUser) {
     return (
         <div className="flex items-center justify-center min-h-screen">
             <Loader2 className="h-12 w-12 animate-spin text-primary"/>
@@ -1623,7 +1617,7 @@ export default function CreditPage() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap items-center gap-4">
-                    <Button onClick={() => creditFileInputRef.current?.click()} disabled={!firebaseUser}>
+                    <Button onClick={() => creditFileInputRef.current?.click()}>
                         <UploadCloud className="mr-2" />
                         Choose PDF File
                     </Button>
@@ -1636,15 +1630,6 @@ export default function CreditPage() {
                         </Button>
                     )}
                 </div>
-                 {!firebaseUser && (
-                     <Alert variant="destructive" className="mt-4">
-                        <Loader2 className="h-4 w-4 animate-spin"/>
-                        <AlertTitle>Authenticating...</AlertTitle>
-                        <AlertDescription>
-                        Please wait while we establish a secure connection. You will be able to upload a file shortly.
-                        </AlertDescription>
-                    </Alert>
-                )}
                 {creditFile && !isLoading && rawText && (
                   <div className="mt-4">
                     <Alert>
@@ -1854,5 +1839,3 @@ export default function CreditPage() {
     </div>
   );
 }
-
-    
