@@ -1,9 +1,37 @@
 
 'use server';
 
-import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import type { AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
+
+// Initialize Firebase Admin SDK
+// This function initializes the app if it's not already initialized.
+function initializeFirebaseAdmin() {
+  if (admin.apps.length > 0) {
+    return admin.app();
+  }
+
+  // Sanitize the private key
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+
+  if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !privateKey) {
+      throw new Error('Firebase Admin environment variables are not set.');
+  }
+
+  const serviceAccount = {
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: privateKey,
+  };
+
+  return admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+}
+
+const db = initializeFirebaseAdmin().firestore();
+
 
 /**
  * Calculates DPD (Days Past Due) statistics from account payment histories.
@@ -79,16 +107,14 @@ export async function saveCreditAnalysisSummary(
       dpdSummary: dpdSummary,
 
       // Timestamps
-      createdAt: serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
     };
 
-    const docRef = await addDoc(collection(db, 'credit_reports'), reportSummary);
+    const docRef = await db.collection('credit_reports').add(reportSummary);
     console.log('Credit report summary saved with ID: ', docRef.id);
     return docRef.id;
   } catch (e: any) {
-    console.error('Error adding document to Firestore: ', e);
-    // Depending on requirements, you might want to throw the error
-    // to be handled by the calling function.
+    console.error('Original Firestore Error: ', e);
     throw new Error(`Failed to save analysis summary to the database: ${e.message}`);
   }
 }
