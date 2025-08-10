@@ -384,7 +384,7 @@ export default function CreditPage() {
             toast({
                 variant: "destructive",
                 title: "Database Error",
-                description: `Analysis complete, but failed to save summary: ${dbError.message}`
+                description: `Analysis complete, but failed to save summary. ${dbError.message}`
             });
         }
 

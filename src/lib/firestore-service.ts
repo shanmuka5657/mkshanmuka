@@ -5,24 +5,29 @@ import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import type { AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
 
-// Service account credentials from environment variables
-const serviceAccount = {
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-};
+// This function now initializes the Admin SDK within the function scope
+// to ensure it only runs when called and has access to environment variables.
+function getAdminDb() {
+  const serviceAccount = {
+    projectId: process.env.FIREBASE_PROJECT_ID, // Use server-side variable
+    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+  };
 
-// Initialize Firebase Admin SDK
-let adminApp: App;
-if (!getApps().length) {
-  adminApp = initializeApp({
-    credential: cert(serviceAccount)
-  });
-} else {
-  adminApp = getApps()[0];
+  // Check if credentials are provided
+  if (!serviceAccount.projectId || !serviceAccount.privateKey || !serviceAccount.clientEmail) {
+    console.error("Firebase Admin credentials are not set in environment variables.");
+    throw new Error('Firebase Admin credentials are not set in environment variables.');
+  }
+
+  // Ensure Firebase Admin is initialized
+  if (!getApps().length) {
+    initializeApp({
+      credential: cert(serviceAccount)
+    });
+  }
+  return getFirestore();
 }
-
-const db = getFirestore(adminApp);
 
 
 /**
@@ -68,11 +73,9 @@ export async function saveCreditAnalysisSummary(
   analysisResult: AnalyzeCreditReportOutput,
   cibilScore: number | null
 ): Promise<string> {
-  if (!process.env.FIREBASE_PRIVATE_KEY || !process.env.FIREBASE_CLIENT_EMAIL) {
-    throw new Error('Firebase Admin credentials are not set in environment variables.');
-  }
-
+  
   try {
+    const db = getAdminDb(); // Get initialized DB instance
     const { customerDetails, allAccounts, emiDetails } = analysisResult;
 
     const activeLoans = allAccounts.filter(acc => 
@@ -111,6 +114,10 @@ export async function saveCreditAnalysisSummary(
     return docRef.id;
   } catch (e: any) {
     console.error('Error adding document to Firestore with Admin SDK: ', e);
+    // Re-throw with a more user-friendly message
+    if (e.message.includes('credentials')) {
+        throw new Error('Server configuration error: Firebase Admin credentials are not set correctly. Please check your environment variables.');
+    }
     throw new Error(`Failed to save analysis summary to the database: ${e.message}`);
   }
 }
