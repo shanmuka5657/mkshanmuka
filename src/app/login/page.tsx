@@ -27,17 +27,28 @@ export default function LoginPage() {
   const { toast } = useToast();
 
   useEffect(() => {
+    if (!auth) {
+      // If Firebase didn't initialize, we can't check auth state.
+      // The console log in firebase.ts should show the error.
+      toast({
+        variant: 'destructive',
+        title: 'Firebase Not Initialized',
+        description: 'Could not connect to Firebase. Please check the browser console and your .env file.',
+        duration: 10000,
+      });
+      setIsCheckingAuth(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        // If user is already logged in, redirect them to the credit page
         router.replace('/credit');
       } else {
-        // No user, so we can stop showing the loading spinner
         setIsCheckingAuth(false);
       }
     });
     return () => unsubscribe();
-  }, [router]);
+  }, [router, toast]);
 
   const handleAuthAction = async (action: 'login' | 'signup') => {
     if (!email || !password) {
@@ -50,40 +61,54 @@ export default function LoginPage() {
     }
     setIsLoading(true);
     try {
-      let userCredential;
       if (action === 'signup') {
-        userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await createUserWithEmailAndPassword(auth, email, password);
         toast({
           title: 'Signup Successful',
-          description: 'Welcome! You are now being redirected.',
+          description: 'Welcome! You are now logged in.',
           variant: 'default',
           className: 'bg-green-100 text-green-800'
         });
       } else {
-        userCredential = await signInWithEmailAndPassword(auth, email, password);
+        await signInWithEmailAndPassword(auth, email, password);
          toast({
           title: 'Login Successful',
           description: 'Welcome back! You are now being redirected.',
         });
       }
-      // The onAuthStateChanged listener will handle the redirect, but we can also push here
-      // This is a failsafe in case the listener is slow to react.
-      router.replace('/credit');
+      // The onAuthStateChanged listener will handle the redirect.
     } catch (error: any) {
-      const errorCode = error.code;
-      let friendlyMessage = 'An unexpected error occurred. Please check your Firebase project setup and environment variables.';
-      if (errorCode === 'auth/wrong-password') {
-        friendlyMessage = 'Incorrect password. Please try again.';
-      } else if (errorCode === 'auth/user-not-found') {
-        friendlyMessage = 'No account found with this email. Please sign up.';
-      } else if (errorCode === 'auth/email-already-in-use') {
-        friendlyMessage = 'This email is already in use. Please log in.';
-      } else if (errorCode === 'auth/weak-password') {
-          friendlyMessage = 'Password should be at least 6 characters long.';
-      } else if (errorCode === 'auth/invalid-email') {
-          friendlyMessage = 'Please enter a valid email address.';
-      } else if (errorCode === 'auth/network-request-failed' || errorCode === 'auth/internal-error' || errorCode === 'auth/invalid-api-key') {
-          friendlyMessage = 'Could not connect to Firebase. Please verify your API keys in the .env file and ensure your project is set up correctly.';
+      console.error("Firebase Auth Error:", error.code, error.message); // Detailed log
+      
+      let friendlyMessage = 'An unexpected error occurred. Please try again.';
+      switch (error.code) {
+        case 'auth/wrong-password':
+          friendlyMessage = 'Incorrect password. Please try again.';
+          break;
+        case 'auth/user-not-found':
+          friendlyMessage = 'No account found with this email. Please sign up or check for typos.';
+          break;
+        case 'auth/email-already-in-use':
+          friendlyMessage = 'This email is already registered. Please log in instead.';
+          break;
+        case 'auth/weak-password':
+          friendlyMessage = 'Password is too weak. It should be at least 6 characters long.';
+          break;
+        case 'auth/invalid-email':
+          friendlyMessage = 'The email address is not valid.';
+          break;
+        case 'auth/invalid-credential':
+             friendlyMessage = 'The email or password you entered is incorrect.';
+             break;
+        case 'auth/network-request-failed':
+            friendlyMessage = 'Network error. Please check your internet connection.';
+            break;
+        case 'auth/invalid-api-key':
+             friendlyMessage = 'Invalid API Key. Please check your NEXT_PUBLIC_FIREBASE_API_KEY in the .env file.';
+             break;
+        default:
+            friendlyMessage = `An unexpected error occurred. (Code: ${error.code})`;
+            break;
       }
       
       toast({
