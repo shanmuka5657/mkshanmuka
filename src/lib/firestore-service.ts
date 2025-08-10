@@ -1,30 +1,18 @@
 
 'use server';
 
-import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import type { AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
 
-// This function now initializes the Admin SDK within the function scope
-// to ensure it only runs when called and has access to environment variables.
+// This function initializes the Admin SDK.
+// When deployed on Firebase App Hosting, it will automatically use the
+// application's default credentials without needing explicit configuration.
 function getAdminDb() {
-  const serviceAccount = {
-    projectId: process.env.FIREBASE_PROJECT_ID, // Use server-side variable
-    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  };
-
-  // Check if credentials are provided
-  if (!serviceAccount.projectId || !serviceAccount.privateKey || !serviceAccount.clientEmail) {
-    console.error("Firebase Admin credentials are not set in environment variables.");
-    throw new Error('Firebase Admin credentials are not set in environment variables.');
-  }
-
-  // Ensure Firebase Admin is initialized
+  // Ensure Firebase Admin is initialized.
   if (!getApps().length) {
-    initializeApp({
-      credential: cert(serviceAccount)
-    });
+    // No credentials needed here when running in a Firebase environment.
+    initializeApp();
   }
   return getFirestore();
 }
@@ -115,8 +103,8 @@ export async function saveCreditAnalysisSummary(
   } catch (e: any) {
     console.error('Error adding document to Firestore with Admin SDK: ', e);
     // Re-throw with a more user-friendly message
-    if (e.message.includes('credentials')) {
-        throw new Error('Server configuration error: Firebase Admin credentials are not set correctly. Please check your environment variables.');
+    if (e.message.includes('permission-denied') || e.message.includes('PERMISSION_DENIED')) {
+        throw new Error('Database permission denied. This may be an issue with service account roles or Firestore rules.');
     }
     throw new Error(`Failed to save analysis summary to the database: ${e.message}`);
   }
