@@ -49,6 +49,10 @@ export async function saveCreditAnalysisSummary(
   cibilScore: number | null
 ): Promise<string> {
   try {
+    if (!db) {
+      throw new Error("Firestore is not initialized. Check Firebase config.");
+    }
+    
     const { customerDetails, allAccounts, emiDetails } = analysisResult;
 
     const activeLoans = allAccounts.filter(acc => 
