@@ -1,22 +1,9 @@
 
 'use server';
 
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import type { AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
-
-// This function initializes the Admin SDK.
-// When deployed on Firebase App Hosting, it will automatically use the
-// application's default credentials without needing explicit configuration.
-function getAdminDb() {
-  // Ensure Firebase Admin is initialized.
-  if (!getApps().length) {
-    // No credentials needed here when running in a Firebase environment.
-    initializeApp();
-  }
-  return getFirestore();
-}
-
 
 /**
  * Calculates DPD (Days Past Due) statistics from account payment histories.
@@ -61,9 +48,7 @@ export async function saveCreditAnalysisSummary(
   analysisResult: AnalyzeCreditReportOutput,
   cibilScore: number | null
 ): Promise<string> {
-  
   try {
-    const db = getAdminDb(); // Get initialized DB instance
     const { customerDetails, allAccounts, emiDetails } = analysisResult;
 
     const activeLoans = allAccounts.filter(acc => 
@@ -94,18 +79,16 @@ export async function saveCreditAnalysisSummary(
       dpdSummary: dpdSummary,
 
       // Timestamps
-      createdAt: new Date(), // Using a client-side date for server action
+      createdAt: serverTimestamp(),
     };
 
-    const docRef = await db.collection('credit_reports').add(reportSummary);
+    const docRef = await addDoc(collection(db, 'credit_reports'), reportSummary);
     console.log('Credit report summary saved with ID: ', docRef.id);
     return docRef.id;
   } catch (e: any) {
-    console.error('Error adding document to Firestore with Admin SDK: ', e);
-    // Re-throw with a more user-friendly message
-    if (e.message.includes('permission-denied') || e.message.includes('PERMISSION_DENIED')) {
-        throw new Error('Database permission denied. This may be an issue with service account roles or Firestore rules.');
-    }
+    console.error('Error adding document to Firestore: ', e);
+    // Depending on requirements, you might want to throw the error
+    // to be handled by the calling function.
     throw new Error(`Failed to save analysis summary to the database: ${e.message}`);
   }
 }
