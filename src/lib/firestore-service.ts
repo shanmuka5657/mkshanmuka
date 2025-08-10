@@ -1,9 +1,29 @@
 
 'use server';
 
-import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 import type { AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
+
+// Service account credentials from environment variables
+const serviceAccount = {
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+};
+
+// Initialize Firebase Admin SDK
+let adminApp: App;
+if (!getApps().length) {
+  adminApp = initializeApp({
+    credential: cert(serviceAccount)
+  });
+} else {
+  adminApp = getApps()[0];
+}
+
+const db = getFirestore(adminApp);
+
 
 /**
  * Calculates DPD (Days Past Due) statistics from account payment histories.
@@ -48,6 +68,10 @@ export async function saveCreditAnalysisSummary(
   analysisResult: AnalyzeCreditReportOutput,
   cibilScore: number | null
 ): Promise<string> {
+  if (!process.env.FIREBASE_PRIVATE_KEY || !process.env.FIREBASE_CLIENT_EMAIL) {
+    throw new Error('Firebase Admin credentials are not set in environment variables.');
+  }
+
   try {
     const { customerDetails, allAccounts, emiDetails } = analysisResult;
 
@@ -79,16 +103,14 @@ export async function saveCreditAnalysisSummary(
       dpdSummary: dpdSummary,
 
       // Timestamps
-      createdAt: serverTimestamp(),
+      createdAt: new Date(), // Using a client-side date for server action
     };
 
-    const docRef = await addDoc(collection(db, 'credit_reports'), reportSummary);
+    const docRef = await db.collection('credit_reports').add(reportSummary);
     console.log('Credit report summary saved with ID: ', docRef.id);
     return docRef.id;
-  } catch (e) {
-    console.error('Error adding document to Firestore: ', e);
-    // Depending on requirements, you might want to throw the error
-    // to be handled by the calling function.
-    throw new Error('Failed to save analysis summary to the database.');
+  } catch (e: any) {
+    console.error('Error adding document to Firestore with Admin SDK: ', e);
+    throw new Error(`Failed to save analysis summary to the database: ${e.message}`);
   }
 }
