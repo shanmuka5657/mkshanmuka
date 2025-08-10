@@ -5,33 +5,16 @@ import * as admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
 
-// Initialize Firebase Admin SDK
 // This function initializes the app if it's not already initialized.
+// It relies on the default credentials provided by the Firebase/Google Cloud environment.
 function initializeFirebaseAdmin() {
   if (admin.apps.length > 0) {
     return admin.app();
   }
-
-  // Sanitize the private key
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-
-  if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !privateKey) {
-      throw new Error('Firebase Admin environment variables are not set.');
-  }
-
-  const serviceAccount = {
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: privateKey,
-  };
-
-  return admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
+  // When running in a Google Cloud environment (like App Hosting),
+  // initializeApp() automatically discovers the service account credentials.
+  return admin.initializeApp();
 }
-
-const db = initializeFirebaseAdmin().firestore();
-
 
 /**
  * Calculates DPD (Days Past Due) statistics from account payment histories.
@@ -77,6 +60,7 @@ export async function saveCreditAnalysisSummary(
   cibilScore: number | null
 ): Promise<string> {
   try {
+    const db = initializeFirebaseAdmin().firestore();
     const { customerDetails, allAccounts, emiDetails } = analysisResult;
 
     const activeLoans = allAccounts.filter(acc => 
@@ -114,7 +98,7 @@ export async function saveCreditAnalysisSummary(
     console.log('Credit report summary saved with ID: ', docRef.id);
     return docRef.id;
   } catch (e: any) {
-    console.error('Original Firestore Error: ', e);
+    console.error('Firestore Write Error:', e.message);
     throw new Error(`Failed to save analysis summary to the database: ${e.message}`);
   }
 }
