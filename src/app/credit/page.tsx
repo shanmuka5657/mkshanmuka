@@ -89,7 +89,7 @@ import { Logo } from '@/components/ui/logo';
 import { useRouter } from 'next/navigation';
 import { saveCreditAnalysisSummary } from '@/lib/firestore-service';
 import { auth } from '@/lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged, signInAnonymously, User } from 'firebase/auth';
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -210,18 +210,26 @@ export default function CreditPage() {
   
   useEffect(() => {
     setIsClient(true);
-    // Listen for auth state changes. If the user is not logged in, redirect them.
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-        if (user) {
-            setFirebaseUser(user);
-        } else {
-            // User is signed out, redirect to login.
-            router.replace('/login');
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // User is signed in.
+        setFirebaseUser(user);
+      } else {
+        // No user is signed in. Attempt to sign in anonymously.
+        try {
+          const userCredential = await signInAnonymously(auth);
+          setFirebaseUser(userCredential.user);
+        } catch (error) {
+          console.error("Anonymous sign-in failed:", error);
+          // If sign-in fails, user will remain null, and the loading screen will persist.
+          // This prevents the app from being used without auth.
         }
+      }
     });
 
     return () => unsubscribe();
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1574,8 +1582,10 @@ export default function CreditPage() {
   
   if (!isClient || !firebaseUser) {
     return (
-        <div className="flex items-center justify-center min-h-screen">
-            <Loader2 className="h-12 w-12 animate-spin text-primary"/>
+        <div className="flex flex-col items-center justify-center min-h-screen bg-background">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Authenticating your session...</p>
+            <p className="text-xs text-muted-foreground mt-2">(If this persists, check your Firebase config in the .env file)</p>
         </div>
     );
   }

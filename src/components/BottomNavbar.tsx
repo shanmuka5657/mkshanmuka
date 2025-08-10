@@ -28,8 +28,8 @@ export function BottomNavbar() {
     return () => unsubscribe();
   }, []);
 
-  // Only show the navbar on the main app pages, not on the login page
-  if (!user || pathname === '/login') {
+  // Don't show the navbar if the user isn't authenticated yet.
+  if (!user) {
     return null;
   }
   
