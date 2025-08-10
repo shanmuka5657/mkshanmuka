@@ -82,7 +82,7 @@ export default function LoginPage() {
           friendlyMessage = 'Password should be at least 6 characters long.';
       } else if (errorCode === 'auth/invalid-email') {
           friendlyMessage = 'Please enter a valid email address.';
-      } else if (errorCode === 'auth/network-request-failed' || errorCode === 'auth/internal-error') {
+      } else if (errorCode === 'auth/network-request-failed' || errorCode === 'auth/internal-error' || errorCode === 'auth/invalid-api-key') {
           friendlyMessage = 'Could not connect to Firebase. Please verify your API keys in the .env file and ensure your project is set up correctly.';
       }
       
