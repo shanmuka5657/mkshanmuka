@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,8 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/ui/logo';
 import { LogIn } from 'lucide-react';
+import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -17,33 +19,62 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
 
+  // Redirect if user is already logged in
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        router.push('/credit');
+      }
+    });
+    return () => unsubscribe();
+  }, [router]);
+
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // This is a simulated login. 
-    // In a real app, you would validate credentials against a backend.
-    if (email.trim() && password.trim()) {
-      toast({
-        title: 'Login Successful',
-        description: 'Welcome back!',
-      });
-      // Set a flag in localStorage to indicate the user is logged in
-      localStorage.setItem('isLoggedIn', 'true');
-
-      // --- Assign user role based on email ---
-      if (email.toLowerCase() === 'admin@mkcreditwise.com') {
-        localStorage.setItem('userRole', 'admin');
-      } else {
-        localStorage.setItem('userRole', 'user');
-      }
-
-      router.push('/credit');
-    } else {
+    if (!email.trim() || !password.trim()) {
       toast({
         variant: 'destructive',
         title: 'Login Failed',
         description: 'Please enter both email and password.',
       });
+      return;
     }
+    
+    // For this demo, we'll allow any email/password to work for simplicity,
+    // but a real app would use `signInWithEmailAndPassword`.
+    // We'll simulate a successful login and then redirect.
+    
+    toast({
+      title: 'Login Successful',
+      description: 'Redirecting to the app...',
+    });
+    
+    // In a real app, you would use this:
+    /*
+    signInWithEmailAndPassword(auth, email, password)
+      .then((userCredential) => {
+        // Signed in 
+        const user = userCredential.user;
+        toast({
+          title: 'Login Successful',
+          description: 'Welcome back!',
+        });
+        router.push('/credit');
+      })
+      .catch((error) => {
+        const errorCode = error.code;
+        const errorMessage = error.message;
+        toast({
+          variant: 'destructive',
+          title: 'Login Failed',
+          description: errorMessage,
+        });
+      });
+    */
+
+    // For the demo, we just redirect. The /credit page will handle anon sign-in.
+    router.push('/credit');
   };
 
   return (
@@ -54,7 +85,7 @@ export default function LoginPage() {
              <Logo />
           </div>
           <CardTitle className="text-2xl">Welcome Back</CardTitle>
-          <CardDescription>Enter your credentials to access your account. (Hint: use admin@mkcreditwise.com for admin access)</CardDescription>
+          <CardDescription>Enter any email and password to continue.</CardDescription>
         </CardHeader>
         <form onSubmit={handleLogin}>
           <CardContent className="space-y-4">
@@ -83,7 +114,7 @@ export default function LoginPage() {
           <CardFooter>
             <Button type="submit" className="w-full">
               <LogIn className="mr-2 h-4 w-4" />
-              Login
+              Continue to App
             </Button>
           </CardFooter>
         </form>
@@ -91,3 +122,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    

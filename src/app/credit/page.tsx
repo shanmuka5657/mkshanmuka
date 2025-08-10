@@ -88,6 +88,8 @@ import { Badge } from '@/components/ui/badge';
 import { Logo } from '@/components/ui/logo';
 import { useRouter } from 'next/navigation';
 import { saveCreditAnalysisSummary } from '@/lib/firestore-service';
+import { auth } from '@/lib/firebase';
+import { signInAnonymously, onAuthStateChanged, User } from 'firebase/auth';
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -200,6 +202,7 @@ export default function CreditPage() {
   // New state for overload error
   const [isModelOverloaded, setIsModelOverloaded] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
 
   const { toast } = useToast()
   const creditFileInputRef = useRef<HTMLInputElement>(null);
@@ -207,16 +210,24 @@ export default function CreditPage() {
   
   useEffect(() => {
     setIsClient(true);
-  }, []);
-
-  useEffect(() => {
-    if (isClient) {
-        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        if (!isLoggedIn) {
-            router.replace('/login');
+    // Sign in anonymously to get a UID for Firestore rules
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+        if (user) {
+            setFirebaseUser(user);
+        } else {
+            signInAnonymously(auth).catch((error) => {
+                console.error("Anonymous sign-in failed:", error);
+                toast({
+                    variant: "destructive",
+                    title: "Authentication Error",
+                    description: "Could not connect to the service securely. Please refresh the page.",
+                });
+            });
         }
-    }
-  }, [isClient, router]);
+    });
+
+    return () => unsubscribe();
+  }, [toast]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -381,7 +392,7 @@ export default function CreditPage() {
                 className: 'bg-green-100 text-green-800'
             });
         } catch(dbError: any) {
-            toast({
+             toast({
                 variant: "destructive",
                 title: "Database Error",
                 description: `Analysis complete, but failed to save summary. ${dbError.message}`
@@ -779,10 +790,8 @@ export default function CreditPage() {
   }
 
   const handleLogout = () => {
-    if (typeof window !== 'undefined') {
-        localStorage.removeItem('isLoggedIn');
-        router.push('/login');
-    }
+    auth.signOut();
+    router.push('/login');
   };
 
   const NavButton = ({
@@ -1614,7 +1623,7 @@ export default function CreditPage() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap items-center gap-4">
-                    <Button onClick={() => creditFileInputRef.current?.click()}>
+                    <Button onClick={() => creditFileInputRef.current?.click()} disabled={!firebaseUser}>
                         <UploadCloud className="mr-2" />
                         Choose PDF File
                     </Button>
@@ -1627,6 +1636,15 @@ export default function CreditPage() {
                         </Button>
                     )}
                 </div>
+                 {!firebaseUser && (
+                     <Alert variant="destructive" className="mt-4">
+                        <Loader2 className="h-4 w-4 animate-spin"/>
+                        <AlertTitle>Authenticating...</AlertTitle>
+                        <AlertDescription>
+                        Please wait while we establish a secure connection. You will be able to upload a file shortly.
+                        </AlertDescription>
+                    </Alert>
+                )}
                 {creditFile && !isLoading && rawText && (
                   <div className="mt-4">
                     <Alert>
@@ -1836,3 +1854,5 @@ export default function CreditPage() {
     </div>
   );
 }
+
+    
