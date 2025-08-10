@@ -15,10 +15,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, LogIn } from 'lucide-react';
+import { Loader2, LogIn, UserPlus } from 'lucide-react';
 import { Logo } from '@/components/ui/logo';
 
 export default function LoginPage() {
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -28,8 +29,6 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!auth) {
-      // If Firebase didn't initialize, we can't check auth state.
-      // The console log in firebase.ts should show the error.
       toast({
         variant: 'destructive',
         title: 'Firebase Not Initialized',
@@ -50,7 +49,7 @@ export default function LoginPage() {
     return () => unsubscribe();
   }, [router, toast]);
 
-  const handleAuthAction = async (action: 'login' | 'signup') => {
+  const handleAuthAction = async () => {
     if (!email || !password) {
       toast({
         variant: 'destructive',
@@ -61,7 +60,7 @@ export default function LoginPage() {
     }
     setIsLoading(true);
     try {
-      if (action === 'signup') {
+      if (mode === 'signup') {
         await createUserWithEmailAndPassword(auth, email, password);
         toast({
           title: 'Signup Successful',
@@ -78,7 +77,7 @@ export default function LoginPage() {
       }
       // The onAuthStateChanged listener will handle the redirect.
     } catch (error: any) {
-      console.error("Firebase Auth Error:", error.code, error.message); // Detailed log
+      console.error("Firebase Auth Error:", error.code, error.message);
       
       let friendlyMessage = 'An unexpected error occurred. Please try again.';
       switch (error.code) {
@@ -121,6 +120,10 @@ export default function LoginPage() {
     }
   };
   
+  const toggleMode = () => {
+    setMode(prevMode => (prevMode === 'login' ? 'signup' : 'login'));
+  };
+
   if (isCheckingAuth) {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-background">
@@ -137,8 +140,8 @@ export default function LoginPage() {
           <div className="mx-auto mb-4">
             <Logo />
           </div>
-          <CardTitle>Welcome</CardTitle>
-          <CardDescription>Login or create an account to continue</CardDescription>
+          <CardTitle>{mode === 'login' ? 'Welcome Back!' : 'Create an Account'}</CardTitle>
+          <CardDescription>{mode === 'login' ? 'Log in to continue to your account' : 'Enter your details to get started'}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -164,15 +167,17 @@ export default function LoginPage() {
             />
           </div>
         </CardContent>
-        <CardFooter className="flex flex-col gap-3">
-          <Button onClick={() => handleAuthAction('login')} className="w-full" disabled={isLoading}>
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
-            Login
+        <CardFooter className="flex flex-col gap-4">
+          <Button onClick={handleAuthAction} className="w-full" disabled={isLoading}>
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (mode === 'login' ? <LogIn className="mr-2 h-4 w-4" /> : <UserPlus className="mr-2 h-4 w-4" />)}
+            {mode === 'login' ? 'Login' : 'Sign Up'}
           </Button>
-          <Button onClick={() => handleAuthAction('signup')} className="w-full" variant="outline" disabled={isLoading}>
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Sign Up
-          </Button>
+           <p className="text-center text-sm text-muted-foreground">
+            {mode === 'login' ? "Don't have an account?" : "Already have an account?"}{' '}
+            <button onClick={toggleMode} className="underline underline-offset-4 hover:text-primary font-semibold" disabled={isLoading}>
+              {mode === 'login' ? 'Sign Up' : 'Login'}
+            </button>
+          </p>
         </CardFooter>
       </Card>
     </div>
