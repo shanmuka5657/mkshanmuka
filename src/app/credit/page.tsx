@@ -89,7 +89,7 @@ import { Logo } from '@/components/ui/logo';
 import { useRouter } from 'next/navigation';
 import { saveCreditAnalysisSummary } from '@/lib/firestore-service';
 import { auth } from '@/lib/firebase';
-import { onAuthStateChanged, signInAnonymously, User } from 'firebase/auth';
+import { onAuthStateChanged, User } from 'firebase/auth';
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -210,26 +210,16 @@ export default function CreditPage() {
   
   useEffect(() => {
     setIsClient(true);
-
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        // User is signed in.
         setFirebaseUser(user);
       } else {
-        // No user is signed in. Attempt to sign in anonymously.
-        try {
-          const userCredential = await signInAnonymously(auth);
-          setFirebaseUser(userCredential.user);
-        } catch (error) {
-          console.error("Anonymous sign-in failed:", error);
-          // If sign-in fails, user will remain null, and the loading screen will persist.
-          // This prevents the app from being used without auth.
-        }
+        router.replace('/login');
       }
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1584,8 +1574,7 @@ export default function CreditPage() {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-background">
             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Authenticating your session...</p>
-            <p className="text-xs text-muted-foreground mt-2">(If this persists, check your Firebase config in the .env file)</p>
+            <p className="text-muted-foreground">Checking authentication...</p>
         </div>
     );
   }
@@ -1597,13 +1586,8 @@ export default function CreditPage() {
             <div className="mr-4 flex items-center">
               <Logo />
             </div>
-            <div className="flex items-center gap-2">
-                <div id="install-button" style={{ display: 'none' }}>
-                    <Button variant="outline" size="sm">
-                        <Download className="mr-2 h-4 w-4" />
-                        Install App
-                    </Button>
-                </div>
+            <div className="flex items-center gap-4">
+                <div className="text-sm text-muted-foreground hidden sm:block">{firebaseUser.email}</div>
                 <Button variant="ghost" size="sm" onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     Logout

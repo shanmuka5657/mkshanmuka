@@ -14,29 +14,28 @@ import { Input } from '@/components/ui/input';
 import { Logo } from '@/components/ui/logo';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 export default function ModelTrainerPage() {
   const [modelName, setModelName] = useState('CreditUnderwritingModel-v1');
   const [candidates, setCandidates] = useState<TrainingCandidate[]>([]);
   const [isTraining, setIsTraining] = useState(false);
-  const [isClient, setIsClient] = useState(false);
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    // Ensure this runs only on the client
-    setIsClient(true);
-    const userRole = localStorage.getItem('userRole');
-    if (userRole !== 'admin') {
-        toast({
-            variant: 'destructive',
-            title: 'Access Denied',
-            description: 'You do not have permission to view this page.',
-        });
-        router.replace('/credit');
-        return;
-    }
-    // Load candidates from our simulated store
-    setCandidates(getTrainingCandidates());
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setFirebaseUser(user);
+        // Load candidates from our simulated store
+        setCandidates(getTrainingCandidates());
+      } else {
+        router.replace('/login');
+      }
+    });
+
+    return () => unsubscribe();
   }, [router]);
   
   const handleApprove = (id: string) => {
@@ -98,7 +97,7 @@ export default function ModelTrainerPage() {
   
   const approvedCount = candidates.filter(c => c.status === 'approved').length;
 
-  if (!isClient) {
+  if (!firebaseUser) {
     return (
         <div className="flex items-center justify-center min-h-screen">
             <Loader2 className="h-12 w-12 animate-spin text-primary"/>

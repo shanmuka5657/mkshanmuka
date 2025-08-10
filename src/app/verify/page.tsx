@@ -47,6 +47,8 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Logo } from '@/components/ui/logo';
 import { useRouter } from 'next/navigation';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 
 if (typeof window !== 'undefined') {
@@ -59,24 +61,23 @@ export default function VerifyPdfPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [analysisResult, setAnalysisResult] = useState<VerifyPdfOutput | null>(null);
-  const [isClient, setIsClient] = useState(false);
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  useEffect(() => {
-      if (isClient) {
-        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        if (!isLoggedIn) {
-            router.replace('/login');
-        }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setFirebaseUser(user);
+      } else {
+        router.replace('/login');
       }
-  }, [isClient, router]);
+    });
+
+    return () => unsubscribe();
+  }, [router]);
 
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -184,7 +185,7 @@ export default function VerifyPdfPage() {
     window.print();
   }
 
-  if (!isClient) {
+  if (!firebaseUser) {
     return (
         <div className="flex items-center justify-center min-h-screen">
             <Loader2 className="h-12 w-12 animate-spin text-primary"/>

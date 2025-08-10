@@ -21,20 +21,19 @@ export function BottomNavbar() {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // Determine if the user is logged in to decide whether to show the navbar
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
     });
     return () => unsubscribe();
   }, []);
-
-  // Don't show the navbar if the user isn't authenticated yet.
-  if (!user) {
+  
+  // Don't show the navbar if the user isn't authenticated yet or on the login page.
+  if (!user || pathname === '/login') {
     return null;
   }
   
-  // For this version, all logged-in users are 'user' role.
-  // Future logic for admin roles could be added here.
+  // In a real app, you could have role-based logic here.
+  // For now, all logged-in users see all items.
   const navItems = allNavItems;
 
   return (

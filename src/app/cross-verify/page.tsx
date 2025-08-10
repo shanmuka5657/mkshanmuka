@@ -40,6 +40,8 @@ import { analyzeSalarySlips, SalarySlipAnalysisOutput } from '@/ai/flows/salary-
 import { crossVerifyDocuments, CrossVerificationInput, CrossVerificationOutput } from '@/ai/flows/cross-verification';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useRouter } from 'next/navigation';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 // PDFJS worker setup
 if (typeof window !== 'undefined') {
@@ -118,7 +120,7 @@ export default function CrossVerifyPage() {
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [verificationResult, setVerificationResult] = useState<CrossVerificationOutput | null>(null);
-  const [isClient, setIsClient] = useState(false);
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
 
   const cibilInputRef = useRef<HTMLInputElement>(null);
   const bankInputRef = useRef<HTMLInputElement>(null);
@@ -128,17 +130,16 @@ export default function CrossVerifyPage() {
   const router = useRouter();
   
   useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  useEffect(() => {
-      if(isClient) {
-        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        if (!isLoggedIn) {
-            router.replace('/login');
-        }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setFirebaseUser(user);
+      } else {
+        router.replace('/login');
       }
-  }, [isClient, router]);
+    });
+
+    return () => unsubscribe();
+  }, [router]);
 
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -254,7 +255,7 @@ export default function CrossVerifyPage() {
 
   const hasFiles = cibilFile.file || bankStatementFile.file || salarySlips.length > 0;
   
-  if (!isClient) {
+  if (!firebaseUser) {
     return (
         <div className="flex items-center justify-center min-h-screen">
             <Loader2 className="h-12 w-12 animate-spin text-primary"/>
