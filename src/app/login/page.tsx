@@ -66,10 +66,12 @@ export default function LoginPage() {
           description: 'Welcome back! You are now being redirected.',
         });
       }
-      // The onAuthStateChanged listener will handle the redirect.
+      // The onAuthStateChanged listener will handle the redirect, but we can also push here
+      // This is a failsafe in case the listener is slow to react.
+      router.replace('/credit');
     } catch (error: any) {
       const errorCode = error.code;
-      let friendlyMessage = 'An unexpected error occurred.';
+      let friendlyMessage = 'An unexpected error occurred. Please check your Firebase project setup and environment variables.';
       if (errorCode === 'auth/wrong-password') {
         friendlyMessage = 'Incorrect password. Please try again.';
       } else if (errorCode === 'auth/user-not-found') {
@@ -80,6 +82,8 @@ export default function LoginPage() {
           friendlyMessage = 'Password should be at least 6 characters long.';
       } else if (errorCode === 'auth/invalid-email') {
           friendlyMessage = 'Please enter a valid email address.';
+      } else if (errorCode === 'auth/network-request-failed' || errorCode === 'auth/internal-error') {
+          friendlyMessage = 'Could not connect to Firebase. Please verify your API keys in the .env file and ensure your project is set up correctly.';
       }
       
       toast({
@@ -96,7 +100,7 @@ export default function LoginPage() {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-background">
             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Checking authentication status...</p>
+            <p className="text-muted-foreground">Connecting to Firebase...</p>
         </div>
     );
   }
