@@ -66,7 +66,6 @@ const prompt = ai.definePrompt({
   name: 'riskAssessmentPrompt',
   input: {schema: RiskAssessmentInputSchema},
   output: {schema: RiskAssessmentOutputSchema},
-  model: 'googleai/gemini-1.5-flash',
   prompt: `You are an expert credit risk analyst. Your task is to conduct a detailed, technical risk assessment based on the provided structured credit data. Your focus is on quantifiable risk metrics (PD, EAD, LGD, Expected Loss) and identifying specific, data-backed risk factors. Do NOT be conversational.
 
 Analyze the user's full structured data. Identify all potential risks, such as late payments, high credit utilization, negative account statuses (written-off, settled), and recent credit inquiries.

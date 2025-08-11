@@ -64,7 +64,6 @@ const prompt = ai.definePrompt({
   name: 'crossVerifyDocumentsPrompt',
   input: {schema: CrossVerificationInputSchema},
   output: {schema: CrossVerificationOutputSchema},
-  model: 'googleai/gemini-1.5-flash',
   prompt: `You are an expert underwriter specializing in document verification. Your task is to meticulously compare the details from up to three sources: a CIBIL credit report, a bank statement analysis, and a salary slip analysis. Provide a definitive cross-verification report.
 
 **Verification Rules:**
