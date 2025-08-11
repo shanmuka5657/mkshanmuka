@@ -6,6 +6,9 @@ import Script from 'next/script';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { BottomNavbar } from '@/components/BottomNavbar';
+import { Logo } from '@/components/ui/logo';
+import { UserNav } from '@/components/UserNav';
+import { auth } from '@/lib/firebase';
 
 export const metadata: Metadata = {
   title: 'MkCreditWise.com - AI Credit Analysis',
@@ -28,6 +31,14 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <div className="relative flex flex-col min-h-screen">
+            <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur-sm no-print">
+                <div className="container flex h-16 items-center justify-between">
+                    <div className="mr-4 flex items-center">
+                      <Logo />
+                    </div>
+                    <UserNav />
+                </div>
+            </header>
           <main className="flex-1 pb-20">
             {children}
           </main>

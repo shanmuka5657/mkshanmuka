@@ -78,20 +78,19 @@ export default function DashboardPage() {
 
   return (
     <div className="bg-background font-body text-foreground">
-       <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm no-print">
-        <div className="container flex h-16 items-center justify-between">
-            <div className="mr-4 flex items-center">
-              <Logo />
-            </div>
-        </div>
-      </header>
        <main className="container mx-auto p-4 md:p-8">
+            <div className="text-center mb-12">
+                <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">Welcome to your Dashboard</h1>
+                <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+                    View your past credit report analyses or start a new one.
+                </p>
+            </div>
             <Card>
                 <CardHeader>
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <CardTitle className="flex items-center text-2xl">
-                                <LayoutDashboard className="mr-3 h-6 w-6 text-primary" />
+                                <FileText className="mr-3 h-6 w-6 text-primary" />
                                 My Reports
                             </CardTitle>
                             <CardDescription>
@@ -108,28 +107,30 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent>
                     {reports.length > 0 ? (
-                    <Table>
-                        <TableHeader>
-                        <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>CIBIL Score</TableHead>
-                            <TableHead>Total EMI</TableHead>
-                            <TableHead>Active Loans</TableHead>
-                            <TableHead>Analysis Date</TableHead>
-                        </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                        {reports.map((report) => (
-                            <TableRow key={report.id}>
-                            <TableCell className="font-medium">{report.name}</TableCell>
-                            <TableCell>{getRiskBadge(report.cibilScore)}</TableCell>
-                            <TableCell>₹{report.totalEmi.toLocaleString('en-IN')}</TableCell>
-                            <TableCell>{report.activeLoanCount}</TableCell>
-                            <TableCell>{new Date(report.createdAt.seconds * 1000).toLocaleDateString()}</TableCell>
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                            <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>CIBIL Score</TableHead>
+                                <TableHead>Total EMI</TableHead>
+                                <TableHead>Active Loans</TableHead>
+                                <TableHead>Analysis Date</TableHead>
                             </TableRow>
-                        ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                            {reports.map((report) => (
+                                <TableRow key={report.id}>
+                                <TableCell className="font-medium">{report.name}</TableCell>
+                                <TableCell>{getRiskBadge(report.cibilScore)}</TableCell>
+                                <TableCell>₹{report.totalEmi.toLocaleString('en-IN')}</TableCell>
+                                <TableCell>{report.activeLoanCount}</TableCell>
+                                <TableCell>{new Date(report.createdAt.seconds * 1000).toLocaleDateString()}</TableCell>
+                                </TableRow>
+                            ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                     ) : (
                          <Alert className="text-center py-10">
                             <AlertCircle className="h-4 w-4" />
