@@ -7,7 +7,7 @@ import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { getAiRating, AiRatingInput, AiRatingOutput } from "@/ai/flows/ai-rating";
-import { getRiskAssessment, RiskAssessmentOutput } from "@/ai/flows/risk-assessment";
+import { getRiskAssessment } from "@/ai/flows/risk-assessment";
 import type { AnalyzeCreditReportOutput } from "@/ai/flows/credit-report-analysis";
 import { cn } from "@/lib/utils";
 import { AnalysisCard } from "./AnalysisCard";
