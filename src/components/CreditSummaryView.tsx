@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/chart"
 import { Tooltip as UiTooltip, TooltipContent as UiTooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
-import { subMonths, isAfter, parse } from 'date-fns';
 
 interface CreditSummaryViewProps {
   analysisResult: AnalyzeCreditReportOutput
@@ -91,19 +90,15 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
     const dpd = { onTime: 0, late30: 0, late60: 0, late90: 0, late90Plus: 0, default: 0 };
     if (!allAccounts) return dpd;
 
-    const now = new Date();
-    const monthsToSubtract = dpdTimeRange === "all" ? null : parseInt(dpdTimeRange, 10);
-    const cutoffDate = monthsToSubtract ? subMonths(now, monthsToSubtract) : null;
+    const monthsToConsider = dpdTimeRange === "all" ? null : parseInt(dpdTimeRange, 10);
     
     for (const acc of allAccounts) {
         if (acc.monthlyPaymentHistory) {
-            for (const month of acc.monthlyPaymentHistory) {
-                // Check if the payment history entry is within the selected time range
-                const paymentDate = parse(`${month.month}-${month.year}`, 'MMM-yy', new Date());
-                if (cutoffDate && !isAfter(paymentDate, cutoffDate)) {
-                    continue; // Skip if it's outside the time range
-                }
+            const historyToScan = monthsToConsider 
+                ? acc.monthlyPaymentHistory.slice(0, monthsToConsider)
+                : acc.monthlyPaymentHistory;
 
+            for (const month of historyToScan) {
                 const s = month.status.trim().toUpperCase();
                 if (s === 'STD' || s === '000' || s === 'XXX') {
                     dpd.onTime++;
