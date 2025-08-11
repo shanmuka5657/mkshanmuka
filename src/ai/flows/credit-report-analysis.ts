@@ -125,17 +125,19 @@ const prompt = ai.definePrompt({
         *   Calculate the SUM for "High Credit/Sanc. Amt.", "Current" balance, and "Overdue" amount across all accounts. Format currency as "₹X,XX,XXX". If 0, use "₹0".
         *   Calculate "Credit Utilization" and "Debt-to-Limit Ratio" as percentages, formatted as strings (e.g., "75%").
     *   **Enquiry Summary:** Locate the "ENQUIRY(S)" summary section. Extract "Total", "Past 30 days", "Past 12 months", "Past 24 months", and the most "Recent" enquiry date (DD-MM-YYYY).
-    *   **DPD Summary:**
-        *   **CRITICAL:** Go through the 'paymentHistory' string of EVERY single account in the report.
-        *   For each account, iterate through every payment status code in its history string (e.g., "000|000|STD|030|...").
-        *   You MUST count each code individually.
-        *   'STD', '000', and 'XXX' are all on-time payments. Add them to the 'onTime' count.
-        *   Codes '001' to '030' go into 'late30'.
-        *   Codes '031' to '060' go into 'late60'.
-        *   Codes '061' to '090' go into 'late90'.
-        *   Any code greater than '090' goes into 'late90Plus'.
-        *   Codes 'SUB', 'DBT', 'LSS' go into 'default'.
-        *   Aggregate the total counts from ALL accounts into the final dpdSummary fields.
+    *   **DPD Summary (dpdSummary):**
+        *   **CRITICAL RULE:** Do NOT read a summary table for this. You MUST derive these numbers by manually iterating through the 'paymentHistory' of every single account listed in the 'ACCOUNT INFORMATION' section.
+        *   Initialize counters for onTime, late30, late60, late90, late90Plus, and default to 0.
+        *   For each account, get its 'paymentHistory' string.
+        *   Split the string by the '|' delimiter.
+        *   For each resulting code (e.g., 'STD', '000', '030'):
+            *   'STD', '000', and 'XXX' increment the 'onTime' counter.
+            *   Numerical codes '001' through '030' increment the 'late30' counter.
+            *   Numerical codes '031' through '060' increment the 'late60' counter.
+            *   Numerical codes '061' through '090' increment the 'late90' counter.
+            *   Any numerical code greater than '090' increments the 'late90Plus' counter.
+            *   'SUB', 'DBT', 'LSS' codes increment the 'default' counter.
+        *   After iterating through all payment codes for all accounts, populate the final dpdSummary fields with the aggregated counts. This is the ONLY way you should calculate this summary.
 
 3.  **All Accounts (allAccounts):**
     *   Go to the "ACCOUNT INFORMATION" section. Iterate through EVERY account.
@@ -177,3 +179,5 @@ const analyzeCreditReportFlow = ai.defineFlow(
     return { output, usage: result.usage };
   }
 );
+
+    
