@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -30,7 +29,7 @@ export default function LoginPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        router.replace('/dashboard'); // Redirect to dashboard if already logged in
+        router.replace('/dashboard');
       } else {
         setIsCheckingAuth(false);
       }
@@ -134,7 +133,7 @@ export default function LoginPage() {
           </div>
           <CardTitle>{mode === 'login' ? 'Welcome Back' : 'Create an Account'}</CardTitle>
           <CardDescription>
-            {mode === 'login' ? 'Enter your credentials to access your account. (Hint: use admin@mkcreditwise.com for admin access)' : 'Enter your details to get started'}
+            {mode === 'login' ? 'Enter your credentials to access your account.' : 'Enter your details to get started'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
