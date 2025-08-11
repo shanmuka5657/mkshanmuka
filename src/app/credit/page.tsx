@@ -577,7 +577,14 @@ export default function CreditPage() {
     }
   };
 
-  const handlePrint = () => {
+  const handleDownload = () => {
+    // In a real app, you might trigger a server-side PDF generation here
+    // and log the download event in Firestore.
+    // For this demo, we'll use the browser's print-to-PDF functionality.
+    toast({
+      title: "Preparing Download...",
+      description: "Your report will be downloaded as a PDF. Please use the 'Save as PDF' option in your print dialog.",
+    });
     window.print();
   }
 
@@ -746,9 +753,9 @@ export default function CreditPage() {
                                 <LayoutGrid className="mr-3 h-6 w-6 text-primary" />
                                 Analysis Dashboard
                             </CardTitle>
-                            <Button variant="outline" onClick={handlePrint} className="no-print">
-                                <Printer className="mr-2"/>
-                                Print Report
+                            <Button variant="outline" onClick={handleDownload} className="no-print">
+                                <Download className="mr-2"/>
+                                Download Report
                             </Button>
                           </div>
                           <CardDescription>

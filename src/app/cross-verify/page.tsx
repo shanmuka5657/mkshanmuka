@@ -253,7 +253,7 @@ export default function CrossVerifyPage() {
       if (salaryInputRef.current) salaryInputRef.current.value = '';
   };
   
-  const handlePrint = () => {
+  const handleDownload = () => {
     window.print();
   }
 
@@ -355,7 +355,7 @@ export default function CrossVerifyPage() {
                                 <CardDescription>Summary of findings from comparing all provided documents.</CardDescription>
                             </div>
                             <div className="flex gap-2 no-print">
-                                <Button onClick={handlePrint} variant="outline"><Download className="mr-2 h-4 w-4" />Download</Button>
+                                <Button onClick={handleDownload} variant="outline"><Download className="mr-2 h-4 w-4" />Download Report</Button>
                             </div>
                         </div>
                     </CardHeader>

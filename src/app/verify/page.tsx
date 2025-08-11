@@ -181,7 +181,7 @@ export default function VerifyPdfPage() {
     return { icon: <FileQuestion className="h-10 w-10" />, color: 'text-muted-foreground', bg: 'bg-muted', border: 'border-border' };
   };
 
-  const handlePrint = () => {
+  const handleDownload = () => {
     window.print();
   }
 
@@ -254,7 +254,7 @@ export default function VerifyPdfPage() {
                         </div>
                     </div>
                      <div className="flex gap-2 no-print">
-                        <Button variant="outline" onClick={handlePrint}><Download className="mr-2 h-4 w-4" /> Download</Button>
+                        <Button variant="outline" onClick={handleDownload}><Download className="mr-2 h-4 w-4" /> Download Report</Button>
                     </div>
                 </CardHeader>
                 <CardContent className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
