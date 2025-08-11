@@ -5,39 +5,25 @@ import { getDocument, GlobalWorkerOptions, version } from 'pdfjs-dist';
 import {
   UploadCloud,
   FileText,
-  BarChartBig,
-  Sparkles,
   Trash2,
   Loader2,
-  AlertCircle,
-  Pencil,
-  Download,
-  Grid,
-  PieChart as PieChartIcon,
-  BarChart as BarChartIcon,
-  Clock,
-  ThumbsUp,
-  ThumbsDown,
-  Activity,
+  ClipboardCheck,
+  CircleAlert,
+  BarChart,
   User,
   LogOut,
   Home,
+  Download
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { useToast } from "@/hooks/use-toast"
 import { analyzeCreditReport, AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
 import { AiAgentChat } from '@/components/CreditChat';
 import { cn } from '@/lib/utils';
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert"
 import {
   Table,
   TableBody,
@@ -51,6 +37,9 @@ import { saveCreditAnalysisSummary } from '@/lib/firestore-service';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { AnalysisDashboard } from '@/components/AnalysisDashboard';
+
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
   customerDetails: {
@@ -63,23 +52,23 @@ const initialAnalysis: AnalyzeCreditReportOutput = {
   },
   reportSummary: {
     accountSummary: {
-      total: '0',
-      active: '0',
-      closed: '0',
-      settled: '0',
-      writtenOff: '0',
-      doubtful: '0',
-      highCredit: '₹0',
-      currentBalance: '₹0',
-      overdue: '₹0',
-      creditUtilization: '0%',
-      debtToLimitRatio: '0%',
+      total: 'N/A',
+      active: 'N/A',
+      closed: 'N/A',
+      settled: 'N/A',
+      writtenOff: 'N/A',
+      doubtful: 'N/A',
+      highCredit: 'N/A',
+      currentBalance: 'N/A',
+      overdue: 'N/A',
+      creditUtilization: 'N/A',
+      debtToLimitRatio: 'N/A',
     },
     enquirySummary: {
-      total: '0',
-      past30Days: '0',
-      past12Months: '0',
-      past24Months: '0',
+      total: 'N/A',
+      past30Days: 'N/A',
+      past12Months: 'N/A',
+      past24Months: 'N/A',
       recentDate: 'N/A',
     },
      dpdSummary: {
@@ -98,8 +87,6 @@ const initialAnalysis: AnalyzeCreditReportOutput = {
   }
 };
 
-const PIE_CHART_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF'];
-
 
 const SummaryBox = ({ title, value, isLoading = false, valueClassName = '' }: { title: string; value: string | number; isLoading?: boolean; valueClassName?: string }) => (
   <Card className="text-center p-3 bg-muted/30">
@@ -110,16 +97,13 @@ const SummaryBox = ({ title, value, isLoading = false, valueClassName = '' }: { 
 
 export default function CreditPage() {
   const [creditFile, setCreditFile] = useState<File | null>(null);
-  const [creditFileName, setCreditFileName] = useState('No CIBIL report chosen');
+  const [creditFileName, setCreditFileName] = useState('');
   const [rawText, setRawText] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
-
-  const [analysisResult, setAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-
-  const [accountTypeData, setAccountTypeData] = useState<any[]>([]);
-  const [enquiryTrendData, setEnquiryTrendData] = useState<any[]>([]);
+  const [cibilScore, setCibilScore] = useState<number | null>(null);
+  
+  const [analysisResult, setAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(null);
   
   const [isClient, setIsClient] = useState(false);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
@@ -159,39 +143,38 @@ export default function CreditPage() {
   
   const resetState = () => {
     setCreditFile(null);
-    setCreditFileName('No CIBIL report chosen');
+    setCreditFileName('');
     setRawText('');
-    setIsLoading(false);
-    setProgress(0);
+    setIsProcessing(false);
     setAnalysisResult(null);
     setIsAnalyzing(false);
-    setAccountTypeData([]);
-    setEnquiryTrendData([]);
-
+    setCibilScore(null);
     if (creditFileInputRef.current) {
       creditFileInputRef.current.value = '';
     }
   };
 
   const processFile = async (selectedFile: File) => {
-    setIsLoading(true);
-    setProgress(10);
+    setIsProcessing(true);
     try {
       const reader = new FileReader();
       reader.onload = async (e) => {
         const buffer = e.target?.result as ArrayBuffer;
         if (buffer) {
-          setProgress(30);
           const pdf = await getDocument({ data: buffer }).promise;
           let textContent = '';
           for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const text = await page.getTextContent();
             textContent += text.items.map(item => 'str' in item ? item.str : '').join(' ');
-            setProgress(30 + Math.round((70 * i) / pdf.numPages));
           }
           setRawText(textContent);
-          handleAnalyzeCreditReport(textContent);
+          
+          const scoreMatch = textContent.match(/(?:CIBIL (?:TRANSUNION )?SCORE|CREDITVISION. SCORE)\s*(\d{3})/i);
+          const extractedScore = scoreMatch ? parseInt(scoreMatch[1], 10) : null;
+          setCibilScore(extractedScore);
+          
+          handleAnalyzeCreditReport(textContent, extractedScore);
         }
       };
       reader.readAsArrayBuffer(selectedFile);
@@ -202,43 +185,26 @@ export default function CreditPage() {
         title: "Error",
         description: "Failed to process the PDF file.",
       })
-      setIsLoading(false);
+      setIsProcessing(false);
     }
   };
   
-  const handleAnalyzeCreditReport = async (text: string) => {
+  const handleAnalyzeCreditReport = async (text: string, score: number | null) => {
     setIsAnalyzing(true);
     try {
-        const { output, usage } = await analyzeCreditReport({ creditReportText: text });
+        const { output } = await analyzeCreditReport({ creditReportText: text });
         setAnalysisResult(output);
-        
-        // Process data for charts
-        const accountTypes = output.allAccounts.reduce((acc, account) => {
-            const type = account.type || 'Unknown';
-            acc[type] = (acc[type] || 0) + 1;
-            return acc;
-        }, {} as Record<string, number>);
-
-        setAccountTypeData(Object.entries(accountTypes).map(([name, value]) => ({ name, value })));
-
-        setEnquiryTrendData([
-            { name: 'Last 30 Days', enquiries: parseInt(output.reportSummary.enquirySummary.past30Days) },
-            { name: 'Last 12 Months', enquiries: parseInt(output.reportSummary.enquirySummary.past12Months) },
-            { name: 'Last 24 Months', enquiries: parseInt(output.reportSummary.enquirySummary.past24Months) },
-        ]);
         
         toast({ title: "Credit Report Analysis Complete", description: "Your AI-powered summary is ready." });
 
-        const scoreMatch = text.match(/(?:CIBIL (?:TRANSUNION )?SCORE|CREDITVISION. SCORE)\s*(\d{3})/i);
-        const cibilScore = scoreMatch ? parseInt(scoreMatch[1], 10) : null;
-
-        await saveCreditAnalysisSummary(output, cibilScore);
-        toast({
-            title: "Report Saved to Database",
-            description: `A summary of this analysis has been saved.`,
-            variant: 'default',
-            className: 'bg-green-100 text-green-800'
-        });
+        if(firebaseUser) {
+           await saveCreditAnalysisSummary(output, score);
+            toast({
+                title: "Report Saved",
+                description: `A summary of this analysis has been saved to your dashboard.`,
+                variant: 'default',
+            });
+        }
 
     } catch (error: any) {
         console.error('Error analyzing report:', error);
@@ -249,15 +215,12 @@ export default function CreditPage() {
         });
     } finally {
         setIsAnalyzing(false);
-        setIsLoading(false);
+        setIsProcessing(false);
     }
   };
 
-  const handleDownload = () => {
-    window.print();
-  }
-
-  const { reportSummary } = analysisResult || initialAnalysis;
+  const { customerDetails, reportSummary } = analysisResult || initialAnalysis;
+  const isReady = !!creditFile && !isProcessing && !isAnalyzing;
   
   if (!isClient || !firebaseUser) {
     return (
@@ -269,195 +232,122 @@ export default function CreditPage() {
   }
 
   return (
-    <div className="bg-background font-body text-foreground">
-      <main className="container mx-auto p-4 md:p-8 printable-area">
-          <div className="text-center mb-8 no-print">
-            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">Credit Analysis</h1>
-            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">Upload your CIBIL report to generate an instant AI-powered summary.</p>
+    <div className="bg-muted/30 font-body text-foreground">
+      <main className="container mx-auto p-4 md:p-8 space-y-6">
+          <div className="text-center">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">Credit Analysis</h1>
+            <p className="mt-2 text-md text-muted-foreground max-w-2xl mx-auto">Upload your CIBIL report PDF to unlock instant AI-powered insights, personalized scoring, and actionable advice.</p>
           </div>
 
-          <Card className="mb-8 shadow-lg no-print">
+          <Card>
             <CardHeader>
-              <CardTitle className="flex items-center text-xl">
-                <UploadCloud className="mr-3 h-6 w-6 text-primary" />
-                Upload CIBIL Report (PDF)
+              <CardTitle className="flex items-center text-lg gap-2">
+                <UploadCloud className="text-primary" />
+                Upload Your CIBIL Report (PDF)
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap items-center gap-4">
-                  <Button onClick={() => creditFileInputRef.current?.click()}>
+              <div className="flex items-center gap-4">
+                  <Button onClick={() => creditFileInputRef.current?.click()} disabled={isProcessing}>
                       <UploadCloud className="mr-2" />
                       Choose PDF File
                   </Button>
                   <Input ref={creditFileInputRef} type="file" accept=".pdf" onChange={handleFileChange} className="hidden" />
-                  <span className="text-muted-foreground flex-1 min-w-0 truncate">{creditFileName}</span>
+                  <span className="text-sm text-muted-foreground flex-1 min-w-0 truncate">{creditFileName}</span>
                   {creditFile && (
-                      <Button variant="ghost" size="icon" onClick={resetState}>
+                      <Button variant="ghost" size="icon" onClick={resetState} disabled={isProcessing}>
                           <Trash2 className="h-5 w-5" />
                           <span className="sr-only">Remove file</span>
                       </Button>
                   )}
               </div>
+              { isReady && (
+                 <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3 text-sm text-blue-800">
+                    <ClipboardCheck className="h-5 w-5"/>
+                    <div>
+                        <h4 className="font-semibold">Ready to Analyze</h4>
+                        <p className="text-xs">Your report has been processed. Use the Analysis Dashboard below to start generating AI insights.</p>
+                    </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg"><User className="text-primary"/>Credit Score & Consumer Information</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="flex flex-col items-center justify-center p-4">
+                    <p className="text-sm text-muted-foreground">Official CIBIL Score</p>
+                    <h2 className="text-6xl font-bold text-primary my-2">{cibilScore ?? 'N/A'}</h2>
+                    {cibilScore && <Progress value={((cibilScore - 300)/600) * 100} className="w-full max-w-xs" />}
+                </div>
+                <div>
+                    <h3 className="font-semibold mb-3">AI-Extracted Consumer Information</h3>
+                    <div className="space-y-2 text-sm">
+                        <div className="flex justify-between"><span className="text-muted-foreground">Name</span> <strong>{customerDetails.name}</strong></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Date of Birth</span> <strong>{customerDetails.dateOfBirth}</strong></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Gender</span> <strong>{customerDetails.gender}</strong></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">PAN</span> <strong>{customerDetails.pan}</strong></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Mobile Number</span> <strong>{customerDetails.mobileNumber}</strong></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Address</span> <strong className="text-right">{customerDetails.address}</strong></div>
+                    </div>
+                </div>
             </CardContent>
           </Card>
 
-          {(isLoading || isAnalyzing) && (
-              <Card className="text-center p-8 my-8 no-print">
-                  <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary mb-4" />
-                  <h3 className="text-xl font-semibold">AI is analyzing your report...</h3>
-                  <div className="text-muted-foreground">This may take a moment.</div>
-                  {isLoading && !isAnalyzing && <Progress value={progress} className="w-full max-w-md mx-auto mt-4" />}
-              </Card>
-          )}
-
-          {analysisResult && !isAnalyzing && (
-            <div className="space-y-8">
-              <Card>
+           <Card>
                 <CardHeader>
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <CardTitle className="flex items-center text-xl">
-                                <Grid className="mr-3 h-6 w-6 text-primary" />
-                                AI-Powered Credit Summary
-                            </CardTitle>
-                            <CardDescription>
-                                This is a detailed summary of your credit profile.
-                            </CardDescription>
+                    <CardTitle className="flex items-center gap-2 text-lg"><FileText className="text-primary" />Report Summary</CardTitle>
+                    <CardDescription>This summary is generated by an AI analyzing your CIBIL report.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h3 className="font-semibold mb-3">Account Summary</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                            <SummaryBox title="Total Accounts" value={reportSummary.accountSummary.total} />
+                            <SummaryBox title="Zero-Balance" value={'N/A'} />
+                            <SummaryBox title="High Credit/Sanc. Amt" value={reportSummary.accountSummary.highCredit} />
+                            <SummaryBox title="Current Balance" value={reportSummary.accountSummary.currentBalance} valueClassName={reportSummary.accountSummary.currentBalance !== 'N/A' ? "text-destructive" : ""} />
+                            <SummaryBox title="Overdue Amount" value={reportSummary.accountSummary.overdue} valueClassName={reportSummary.accountSummary.overdue !== 'N/A' && reportSummary.accountSummary.overdue !== '₹0' ? "text-destructive" : ""} />
+                            <SummaryBox title="Most Recent Account" value={'N/A'} />
+                            <SummaryBox title="Oldest Account" value={'N/A'} />
                         </div>
-                         <Button variant="outline" onClick={handleDownload} className="no-print ml-auto">
-                            <Download className="mr-2 h-4 w-4" />
-                            Download Report
-                        </Button>
                     </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        <SummaryBox title="Total Accounts" value={reportSummary.accountSummary.total} />
-                        <SummaryBox title="Total Credit Limit" value={reportSummary.accountSummary.highCredit} />
-                        <SummaryBox title="Total Outstanding" value={reportSummary.accountSummary.currentBalance} valueClassName="text-destructive" />
-                        <SummaryBox title="Credit Utilization" value={reportSummary.accountSummary.creditUtilization} />
-                        <SummaryBox title="Debt-to-Limit Ratio" value={reportSummary.accountSummary.debtToLimitRatio} />
-                        <SummaryBox title="Active Accounts" value={reportSummary.accountSummary.active} valueClassName="text-green-600" />
-                        <SummaryBox title="Closed Accounts" value={reportSummary.accountSummary.closed} />
-                        <SummaryBox title="Written Off" value={reportSummary.accountSummary.writtenOff} valueClassName={parseInt(reportSummary.accountSummary.writtenOff) > 0 ? 'text-destructive' : ''} />
-                        <SummaryBox title="Settled" value={reportSummary.accountSummary.settled} />
-                        <SummaryBox title="Doubtful" value={reportSummary.accountSummary.doubtful} />
-                        <SummaryBox title="Total Monthly EMI" value={`₹${analysisResult.emiDetails.totalEmi.toLocaleString('en-IN')}`} />
+                     <div>
+                        <h3 className="font-semibold mb-3">Enquiry Summary</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                             <SummaryBox title="Total Enquiries" value={reportSummary.enquirySummary.total} />
+                             <SummaryBox title="Last 30 Days" value={reportSummary.enquirySummary.past30Days} />
+                             <SummaryBox title="Last 12 Months" value={reportSummary.enquirySummary.past12Months} />
+                             <SummaryBox title="Last 24 Months" value={reportSummary.enquirySummary.past24Months} />
+                             <SummaryBox title="Most Recent Enquiry" value={reportSummary.enquirySummary.recentDate} />
+                        </div>
                     </div>
                 </CardContent>
-              </Card>
+            </Card>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center text-xl">
-                            <PieChartIcon className="mr-3 h-6 w-6 text-primary" />
-                            Account Type Distribution
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <ResponsiveContainer width="100%" height={250}>
-                            <PieChart>
-                                <Pie data={accountTypeData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                                    {accountTypeData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={PIE_CHART_COLORS[index % PIE_CHART_COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip />
-                                <Legend />
-                            </PieChart>
-                        </ResponsiveContainer>
+            <AnalysisDashboard rawText={rawText} analysisResult={analysisResult} />
+
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="item-1">
+                <AccordionTrigger>
+                    <div className="flex items-center gap-2 font-semibold">
+                        <BarChart className="text-primary"/>Raw Report Text & Cost
+                    </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <Card>
+                    <CardContent className="pt-4">
+                        <pre className="text-xs bg-muted p-4 rounded-lg max-h-96 overflow-auto whitespace-pre-wrap">{rawText || "Upload a report to see the raw extracted text."}</pre>
                     </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center text-xl">
-                            <BarChartIcon className="mr-3 h-6 w-6 text-primary" />
-                            Enquiry Trends
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <ResponsiveContainer width="100%" height={250}>
-                            <BarChart data={enquiryTrendData}>
-                                <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                                <Tooltip />
-                                <Bar dataKey="enquiries" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
-              </div>
-
-              <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center text-xl">
-                        <Clock className="mr-3 h-6 w-6 text-primary" />
-                        DPD Analysis
-                    </CardTitle>
-                    <CardDescription>Your payment history at a glance.</CardDescription>
-                </CardHeader>
-                <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                    <div className="p-4 rounded-lg bg-green-100 text-green-800 text-center"><div className="font-bold text-2xl">{reportSummary.dpdSummary.onTime}</div><div className="text-sm">ON TIME</div></div>
-                    <div className="p-4 rounded-lg bg-yellow-100 text-yellow-800 text-center"><div className="font-bold text-2xl">{reportSummary.dpdSummary.late30}</div><div className="text-sm">1-30 DAYS</div></div>
-                    <div className="p-4 rounded-lg bg-orange-100 text-orange-800 text-center"><div className="font-bold text-2xl">{reportSummary.dpdSummary.late60}</div><div className="text-sm">31-60 DAYS</div></div>
-                    <div className="p-4 rounded-lg bg-red-100 text-red-800 text-center"><div className="font-bold text-2xl">{reportSummary.dpdSummary.late90}</div><div className="text-sm">61-90 DAYS</div></div>
-                    <div className="p-4 rounded-lg bg-red-200 text-red-900 text-center"><div className="font-bold text-2xl">{reportSummary.dpdSummary.late90Plus}</div><div className="text-sm">90+ DAYS</div></div>
-                    <div className="p-4 rounded-lg bg-black text-white text-center"><div className="font-bold text-2xl">{reportSummary.dpdSummary.default}</div><div className="text-sm">DEFAULT</div></div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Pencil className="mr-3 h-5 w-5 text-primary" /> Account Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                   <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                        <TableRow>
-                            <TableHead>Type</TableHead>
-                            <TableHead>Ownership</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Sanctioned</TableHead>
-                            <TableHead>Outstanding</TableHead>
-                            <TableHead>Overdue</TableHead>
-                            <TableHead>EMI</TableHead>
-                            <TableHead>Payment History</TableHead>
-                        </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                        {analysisResult.allAccounts.map((account, index) => (
-                            <TableRow key={index}>
-                            <TableCell className="font-semibold">{account.type}</TableCell>
-                             <TableCell>{account.ownership}</TableCell>
-                            <TableCell>
-                                <div className="flex flex-col">
-                                    <Badge variant={cn(account.status.toLowerCase().includes('open') ? 'default' : account.status.toLowerCase().includes('closed') ? 'secondary' : 'destructive') as any}>
-                                        {account.status}
-                                    </Badge>
-                                    <span className="text-xs text-muted-foreground mt-1">
-                                        {account.status.toLowerCase().includes('closed') ? `Closed: ${account.closed}` : `Opened: ${account.opened}`}
-                                    </span>
-                                </div>
-                            </TableCell>
-                            <TableCell>{account.sanctioned}</TableCell>
-                            <TableCell>{account.outstanding}</TableCell>
-                            <TableCell>{account.overdue}</TableCell>
-                            <TableCell>{account.emi}</TableCell>
-                            <TableCell className="max-w-xs truncate font-mono text-xs">{account.paymentHistory}</TableCell>
-                            </TableRow>
-                        ))}
-                        </TableBody>
-                    </Table>
-                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+                  </Card>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
       </main>
+      <AiAgentChat cibilReportText={rawText} />
     </div>
   );
 }
