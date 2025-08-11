@@ -347,12 +347,12 @@ export default function CreditPage() {
                         <h3 className="font-semibold mb-3">Account Summary</h3>
                         <div className="grid grid-cols-2 gap-3">
                             <SummaryBox title="Total Accounts" value={reportSummary.accountSummary.total} />
-                            <SummaryBox title="Zero-Balance" value={'N/A'} />
+                            <SummaryBox title="Active Accounts" value={reportSummary.accountSummary.active} />
                             <SummaryBox title="High Credit/Sanc. Amt" value={reportSummary.accountSummary.highCredit} />
                             <SummaryBox title="Current Balance" value={reportSummary.accountSummary.currentBalance} valueClassName={reportSummary.accountSummary.currentBalance !== 'N/A' && reportSummary.accountSummary.currentBalance !== '₹0' ? "text-destructive" : ""} />
                             <SummaryBox title="Overdue Amount" value={reportSummary.accountSummary.overdue} valueClassName={reportSummary.accountSummary.overdue !== 'N/A' && reportSummary.accountSummary.overdue !== '₹0' ? "text-destructive" : ""} />
-                            <SummaryBox title="Most Recent Account" value={'N/A'} />
-                            <SummaryBox title="Oldest Account" value={'N/A'} />
+                            <SummaryBox title="Written-Off" value={reportSummary.accountSummary.writtenOff} />
+                            <SummaryBox title="Settled" value={reportSummary.accountSummary.settled} />
                         </div>
                     </div>
                      <div>

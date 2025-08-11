@@ -8,13 +8,14 @@ import { AnalyzeCreditReportOutput } from "@/ai/flows/credit-report-analysis"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
 import { Badge } from "./ui/badge"
-import { ArrowLeft, Clock, FileText, PieChart as PieChartIcon, BarChart2, CalendarDays, Edit } from "lucide-react"
+import { ArrowLeft, Clock, FileText, PieChart as PieChartIcon, BarChart2, Edit } from "lucide-react"
 import { Button } from "./ui/button"
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import { Tooltip as UiTooltip, TooltipContent as UiTooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
 
 interface CreditSummaryViewProps {
   analysisResult: AnalyzeCreditReportOutput
@@ -34,6 +35,36 @@ const getStatusBadge = (status: string, openedDate: string, closedDate: string) 
   }
   return <Badge variant="outline">{status}</Badge>
 }
+
+const getDpdBadgeVariant = (status: string) => {
+    if (!status) return 'default';
+    const s = status.toUpperCase();
+    if (s === 'STD' || s === '000' || s === 'XXX') return 'success';
+    if (s === 'SUB' || s === 'DBT' || s === 'LSS') return 'destructive';
+    const days = parseInt(s, 10);
+    if (isNaN(days)) return 'secondary';
+    if (days > 0) return 'warning';
+    return 'default';
+};
+
+const DpdBadge = ({ month, year, status }: { month: string, year: string, status: string }) => {
+    const variant = getDpdBadgeVariant(status);
+    let colorClasses = "bg-gray-200 text-gray-800"; // default
+    if (variant === 'success') colorClasses = "bg-green-100 text-green-800";
+    if (variant === 'warning') colorClasses = "bg-yellow-100 text-yellow-800";
+    if (variant === 'destructive') colorClasses = "bg-red-100 text-red-800 dark:text-red-200";
+
+    return (
+        <UiTooltip>
+            <TooltipTrigger>
+                 <Badge className={`border-transparent ${colorClasses}`}>{status}</Badge>
+            </TooltipTrigger>
+            <UiTooltipContent>
+                <p>{month} 20{year}</p>
+            </UiTooltipContent>
+        </UiTooltip>
+    );
+};
 
 const SummaryCard = ({ title, value, valueClassName = "" }: { title: string; value: string | number; valueClassName?: string }) => (
   <div className="p-3 rounded-lg bg-muted/40 text-center border">
@@ -157,49 +188,52 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Account</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Sanctioned</TableHead>
-                  <TableHead>Outstanding</TableHead>
-                  <TableHead>Overdue</TableHead>
-                  <TableHead>EMI</TableHead>
-                  <TableHead className="min-w-[200px]">Repayment History</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {allAccounts.map((account, index) => (
-                  <TableRow key={index}>
-                    <TableCell>
-                      <div className="font-medium">{account.type}</div>
-                      <div className="text-xs text-muted-foreground">{account.ownership}</div>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(account.status, account.opened, account.closed)}</TableCell>
-                    <TableCell>{account.sanctioned}</TableCell>
-                    <TableCell>{account.outstanding}</TableCell>
-                    <TableCell>{account.overdue}</TableCell>
-                    <TableCell>{account.emi}</TableCell>
-                    <TableCell>
-                        <Badge variant="outline" className="font-mono text-xs whitespace-pre-wrap">
-                            {account.paymentHistory}
-                        </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {allAccounts.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center">No account information found.</TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+             <TooltipProvider>
+                <Table>
+                <TableHeader>
+                    <TableRow>
+                    <TableHead>Account</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Sanctioned</TableHead>
+                    <TableHead>Outstanding</TableHead>
+                    <TableHead>Overdue</TableHead>
+                    <TableHead>EMI</TableHead>
+                    <TableHead className="min-w-[300px]">Monthly Payment History (Last 12 Months)</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {allAccounts.map((account, index) => (
+                    <TableRow key={index}>
+                        <TableCell>
+                        <div className="font-medium">{account.type}</div>
+                        <div className="text-xs text-muted-foreground">{account.ownership}</div>
+                        </TableCell>
+                        <TableCell>{getStatusBadge(account.status, account.opened, account.closed)}</TableCell>
+                        <TableCell>{account.sanctioned}</TableCell>
+                        <TableCell>{account.outstanding}</TableCell>
+                        <TableCell>{account.overdue}</TableCell>
+                        <TableCell>{account.emi}</TableCell>
+                        <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                                {account.monthlyPaymentHistory.slice(0, 12).map((item, idx) => (
+                                    <DpdBadge key={idx} {...item} />
+                                ))}
+                                {account.monthlyPaymentHistory.length === 0 && <Badge variant="outline">N/A</Badge>}
+                            </div>
+                        </TableCell>
+                    </TableRow>
+                    ))}
+                    {allAccounts.length === 0 && (
+                    <TableRow>
+                        <TableCell colSpan={7} className="text-center">No account information found.</TableCell>
+                    </TableRow>
+                    )}
+                </TableBody>
+                </Table>
+            </TooltipProvider>
           </div>
         </CardContent>
       </Card>
     </div>
   )
 }
-
-    

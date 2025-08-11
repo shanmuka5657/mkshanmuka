@@ -68,6 +68,12 @@ const ReportSummarySchema = z.object({
   dpdSummary: DpdSummarySchema,
 });
 
+const MonthlyPaymentDetailSchema = z.object({
+    month: z.string().describe("The three-letter abbreviation for the month (e.g., 'JAN', 'FEB')."),
+    year: z.string().describe("The two-digit year (e.g., '24')."),
+    status: z.string().describe("The DPD status code for that month (e.g., 'STD', '030', 'LSS')."),
+});
+
 const AccountDetailSchema = z.object({
     type: z.string().describe("The type of the account (e.g., 'Credit Card', 'Personal Loan')."),
     ownership: z.string().describe("The ownership type (e.g., 'Individual', 'Joint')."),
@@ -79,6 +85,7 @@ const AccountDetailSchema = z.object({
     opened: z.string().describe("The date the account was opened in DD-MM-YYYY format. Use 'NA' if not applicable."),
     closed: z.string().describe("The date the account was closed in DD-MM-YYYY format. Use 'NA' if not applicable."),
     paymentHistory: z.string().describe("The raw payment history string (e.g., '000|000|STD...'). Use 'NA' if not applicable."),
+    monthlyPaymentHistory: z.array(MonthlyPaymentDetailSchema).describe("A structured list of monthly payment statuses derived from the payment history string. Each entry should have the month, year, and status. If payment history is 'NA', this should be an empty array.")
 });
 
 const LoanDetailSchema = z.object({
@@ -107,7 +114,7 @@ export async function analyzeCreditReport(input: AnalyzeCreditReportInput): Prom
   if (!result.output) {
       throw new Error("AI failed to analyze the report.");
   }
-  return result;
+  return { output: result.output, usage: result.usage };
 }
 
 const prompt = ai.definePrompt({
@@ -150,6 +157,7 @@ const prompt = ai.definePrompt({
 3.  **All Accounts (allAccounts):**
     *   Go to the "ACCOUNT INFORMATION" section. Iterate through EVERY account.
     *   For each account, extract all fields defined in the AccountDetailSchema.
+    *   **Monthly Payment History (monthlyPaymentHistory):** For each account, look for the payment history string which often has a date header (e.g., "Dec '23 | Nov '23 ..."). Parse this string. For each month-year-status triplet, create a structured object and add it to the 'monthlyPaymentHistory' array. If the date header is missing, you must infer the dates starting from the most recent month and going backwards. If the payment history is 'NA', this array MUST be empty.
     *   **CRITICAL FORMATTING:** Currency fields MUST be "₹X,XXX,XXX" (use "₹NaN" if not applicable). Dates MUST be "DD-MM-YYYY" (use "NA" if not applicable). 'paymentHistory' must be the raw, unaltered string.
 
 4.  **EMI Calculation (emiDetails):**
@@ -179,11 +187,10 @@ const analyzeCreditReportFlow = ai.defineFlow(
     }),
   },
   async input => {
-    const result = await prompt(input);
-    const output = result.output;
+    const {output, usage} = await prompt(input);
     if (!output) {
       throw new Error("AI failed to analyze the report.");
     }
-    return { output, usage: result.usage };
+    return { output, usage };
   }
 );
