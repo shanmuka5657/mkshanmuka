@@ -132,7 +132,7 @@ export default function ModelTrainerPage() {
           </CardHeader>
           <CardContent>
              <Image
-              src="https://placehold.co/1080x2340.png"
+              src="https://storage.googleapis.com/studiopaper-assets/static-assets/creditwise-screenshot.png"
               alt="CreditWise AI App Screenshot"
               width={1080}
               height={2340}
