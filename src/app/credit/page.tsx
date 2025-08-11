@@ -91,7 +91,7 @@ export default function CreditPage() {
   const [isClient, setIsClient] = useState(false);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [activeView, setActiveView] = useState<string | null>(null);
-  const [isTextExtracted, setIsTextExtracted] = useState(false);
+  const [isTextExtracted, setIsTextExtracted] = useState(isAnalysisComplete);
 
   const { toast } = useToast()
   const creditFileInputRef = useRef<HTMLInputElement>(null);
@@ -188,7 +188,7 @@ export default function CreditPage() {
         
         toast({ title: "Credit Report Analysis Complete", description: "Your AI-powered summary is ready." });
 
-        if(firebaseUser) {
+        if(firebaseUser && output) {
            await saveCreditAnalysisSummary(output, cibilScore);
             toast({
                 title: "Report Saved",
@@ -319,7 +319,7 @@ export default function CreditPage() {
                 <div className="flex flex-col items-center justify-center p-4">
                     <p className="text-sm text-muted-foreground">Official CIBIL Score</p>
                     <h2 className="text-6xl font-bold text-primary my-2">{cibilScore ?? 'N/A'}</h2>
-                    {cibilScore && <Progress value={((cibilScore - 300)/600) * 100} className="w-full max-w-xs" />}
+                    {cibilScore && <Progress value={cibilScore} maxValue={900} />}
                 </div>
                 <div>
                     <h3 className="font-semibold mb-3">AI-Extracted Consumer Information</h3>
@@ -393,3 +393,5 @@ export default function CreditPage() {
     </div>
   );
 }
+
+    

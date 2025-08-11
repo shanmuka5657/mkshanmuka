@@ -14,7 +14,6 @@ export interface CreditReportSummary {
   totalEmi: number;
   activeLoanCount: number;
   closedLoanCount: number;
-  dpdSummary: AnalyzeCreditReportOutput['reportSummary']['dpdSummary'];
   createdAt: Timestamp;
 }
 
@@ -39,7 +38,7 @@ export async function saveCreditAnalysisSummary(
       throw new Error("Firestore is not initialized. Check Firebase config.");
     }
     
-    const { customerDetails, allAccounts, emiDetails, reportSummary } = analysisResult;
+    const { customerDetails, allAccounts, emiDetails } = analysisResult;
 
     const activeLoans = allAccounts.filter(acc => 
         acc.status &&
@@ -65,9 +64,6 @@ export async function saveCreditAnalysisSummary(
       // Loan Counts
       activeLoanCount: activeLoans,
       closedLoanCount: closedLoans,
-
-      // DPD Summary from the analysis
-      dpdSummary: reportSummary.dpdSummary,
 
       // Timestamps
       createdAt: serverTimestamp(),
@@ -109,3 +105,5 @@ export async function getReportsForUser(uid: string): Promise<CreditReportSummar
 
   return reports;
 }
+
+    

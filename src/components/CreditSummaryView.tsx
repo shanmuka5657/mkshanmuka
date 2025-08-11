@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { Bar, BarChart, Pie, PieChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, Cell } from "recharts"
 
 import { AnalyzeCreditReportOutput } from "@/ai/flows/credit-report-analysis"
@@ -16,6 +16,8 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 import { Tooltip as UiTooltip, TooltipContent as UiTooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+import { subMonths, isAfter, parse } from 'date-fns';
 
 interface CreditSummaryViewProps {
   analysisResult: AnalyzeCreditReportOutput
@@ -81,6 +83,7 @@ const DpdCard = ({ title, value, colorClass }: { title: string, value: string | 
 )
 
 export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewProps) {
+  const [dpdTimeRange, setDpdTimeRange] = useState<string>("all");
   const { reportSummary, allAccounts, emiDetails } = analysisResult
   const { accountSummary, enquirySummary } = reportSummary
 
@@ -88,9 +91,19 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
     const dpd = { onTime: 0, late30: 0, late60: 0, late90: 0, late90Plus: 0, default: 0 };
     if (!allAccounts) return dpd;
 
+    const now = new Date();
+    const monthsToSubtract = dpdTimeRange === "all" ? null : parseInt(dpdTimeRange, 10);
+    const cutoffDate = monthsToSubtract ? subMonths(now, monthsToSubtract) : null;
+    
     for (const acc of allAccounts) {
         if (acc.monthlyPaymentHistory) {
             for (const month of acc.monthlyPaymentHistory) {
+                // Check if the payment history entry is within the selected time range
+                const paymentDate = parse(`${month.month}-${month.year}`, 'MMM-yy', new Date());
+                if (cutoffDate && !isAfter(paymentDate, cutoffDate)) {
+                    continue; // Skip if it's outside the time range
+                }
+
                 const s = month.status.trim().toUpperCase();
                 if (s === 'STD' || s === '000' || s === 'XXX') {
                     dpd.onTime++;
@@ -109,7 +122,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
         }
     }
     return dpd;
-  }, [allAccounts]);
+  }, [allAccounts, dpdTimeRange]);
 
   const accountTypeData = useMemo(() => {
     const types = allAccounts.reduce((acc, account) => {
@@ -194,9 +207,25 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
       </div>
 
       <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Clock />DPD Analysis</CardTitle>
-            <CardDescription>Your payment history at a glance. DPD (Days Past Due) shows how timely your payments have been.</CardDescription>
+          <CardHeader className="flex-row items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2"><Clock />DPD Analysis</CardTitle>
+              <CardDescription>Your payment history at a glance. DPD (Days Past Due) shows how timely your payments have been.</CardDescription>
+            </div>
+            <div className="w-48">
+              <Select onValueChange={setDpdTimeRange} defaultValue="all">
+                <SelectTrigger>
+                  <SelectValue placeholder="Select period" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Overall</SelectItem>
+                  <SelectItem value="6">Last 6 Months</SelectItem>
+                  <SelectItem value="9">Last 9 Months</SelectItem>
+                  <SelectItem value="12">Last 12 Months</SelectItem>
+                  <SelectItem value="18">Last 18 Months</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </CardHeader>
           <CardContent className="grid grid-cols-2 lg:grid-cols-6 gap-3">
               <DpdCard title="ON TIME" value={dpdSummary.onTime} colorClass="bg-green-100 text-green-800" />
@@ -204,7 +233,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
               <DpdCard title="31-60 DAYS" value={dpdSummary.late60} colorClass="bg-yellow-100 text-yellow-800" />
               <DpdCard title="61-90 DAYS" value={dpdSummary.late90} colorClass="bg-red-100 text-red-800" />
               <DpdCard title="90+ DAYS" value={dpdSummary.late90Plus} colorClass="bg-red-100 text-red-800" />
-              <DpdCard title="DEFAULT" value={dpdSummary.default} colorClass="bg-black text-white" />
+              <DpdCard title="DEFAULT" value={dpdSummary.default} colorClass="black text-white" />
           </CardContent>
       </Card>
 
@@ -225,31 +254,35 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
                     <TableHead>Outstanding</TableHead>
                     <TableHead>Overdue</TableHead>
                     <TableHead>EMI</TableHead>
-                    <TableHead className="min-w-[300px]">Monthly Payment History (Last 12 Months)</TableHead>
+                    <TableHead className="min-w-[300px]">Monthly Payment History</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {allAccounts.map((account, index) => (
-                    <TableRow key={index}>
-                        <TableCell>
-                        <div className="font-medium">{account.type}</div>
-                        <div className="text-xs text-muted-foreground">{account.ownership}</div>
-                        </TableCell>
-                        <TableCell>{getStatusBadge(account.status, account.opened, account.closed)}</TableCell>
-                        <TableCell>{account.sanctioned}</TableCell>
-                        <TableCell>{account.outstanding}</TableCell>
-                        <TableCell>{account.overdue}</TableCell>
-                        <TableCell>{account.emi}</TableCell>
-                        <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                                {account.monthlyPaymentHistory.slice(0, 12).map((item, idx) => (
-                                    <DpdBadge key={idx} {...item} />
-                                ))}
-                                {account.monthlyPaymentHistory.length === 0 && <Badge variant="outline">N/A</Badge>}
-                            </div>
-                        </TableCell>
-                    </TableRow>
-                    ))}
+                    {allAccounts.map((account, index) => {
+                      
+                      const monthsToShow = dpdTimeRange === "all" ? account.monthlyPaymentHistory.length : parseInt(dpdTimeRange, 10);
+                      
+                      return (
+                      <TableRow key={index}>
+                          <TableCell>
+                          <div className="font-medium">{account.type}</div>
+                          <div className="text-xs text-muted-foreground">{account.ownership}</div>
+                          </TableCell>
+                          <TableCell>{getStatusBadge(account.status, account.opened, account.closed)}</TableCell>
+                          <TableCell>{account.sanctioned}</TableCell>
+                          <TableCell>{account.outstanding}</TableCell>
+                          <TableCell>{account.overdue}</TableCell>
+                          <TableCell>{account.emi}</TableCell>
+                          <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                  {account.monthlyPaymentHistory.slice(0, monthsToShow).map((item, idx) => (
+                                      <DpdBadge key={idx} {...item} />
+                                  ))}
+                                  {account.monthlyPaymentHistory.length === 0 && <Badge variant="outline">N/A</Badge>}
+                              </div>
+                          </TableCell>
+                      </TableRow>
+                    )})}
                     {allAccounts.length === 0 && (
                     <TableRow>
                         <TableCell colSpan={7} className="text-center">No account information found.</TableCell>
@@ -264,3 +297,5 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
     </div>
   )
 }
+
+    
