@@ -30,26 +30,42 @@ const CustomerDetailsSchema = z.object({
 });
 
 const AccountSummarySchema = z.object({
-    total: z.string().describe('Total number of accounts (both active and closed). Return "N/A" if not found.'),
-    zeroBalance: z.string().describe('Number of accounts with zero balance. Return "N/A" if not found.'),
-    highCredit: z.string().describe('The total high credit or sanctioned amount across all accounts, formatted as ₹X,XX,XXX. Return "N/A" if not found.'),
-    currentBalance: z.string().describe('The total current balance across all accounts, formatted as ₹X,XX,XXX. Return "N/A" if not found.'),
-    overdue: z.string().describe('The total overdue amount across all accounts, formatted as ₹X,XX,XXX. Return "N/A" if not found.'),
-    recentDate: z.string().describe('The date the most recent account was opened, in DD-MM-YYYY format. Return "N/A" if not found.'),
-    oldestDate: z.string().describe('The date the oldest account was opened, in DD-MM-YYYY format. Return "N/A" if not found.'),
+    total: z.string().describe('Total number of accounts (both active and closed). Return "0" if not found.'),
+    active: z.string().describe('Number of accounts with an "Active" or "Open" status. Return "0" if not found.'),
+    closed: z.string().describe('Number of accounts with a "Closed" status. Return "0" if not found.'),
+    settled: z.string().describe('Number of accounts with a "Settled" status. Return "0" if not found.'),
+    writtenOff: z.string().describe('Number of accounts with a "Written-Off" or "Post-WO" status. Return "0" if not found.'),
+    doubtful: z.string().describe('Number of accounts with a "Doubtful" status. Return "0" if not found.'),
+    highCredit: z.string().describe('The total high credit or sanctioned amount across all accounts, formatted as ₹X,XX,XXX. Return "₹0" if not found.'),
+    currentBalance: z.string().describe('The total current balance (outstanding) across all accounts, formatted as ₹X,XX,XXX. Return "₹0" if not found.'),
+    overdue: z.string().describe('The total overdue amount across all accounts, formatted as ₹X,XX,XXX. Return "₹0" if not found.'),
+    creditUtilization: z.string().describe('The overall credit utilization percentage for all revolving credit lines (e.g., Credit Cards). Calculate as (Total Current Balance of CCs / Total High Credit of CCs) * 100. Return as a string like "25%". Return "0%" if not applicable.'),
+    debtToLimitRatio: z.string().describe('The overall debt-to-limit ratio for all accounts. Calculate as (Total Current Balance of all accounts / Total High Credit of all accounts) * 100. Return as a string like "74%". Return "0%" if not applicable.'),
 });
 
+
 const EnquirySummarySchema = z.object({
-    total: z.string().describe('Total number of enquiries. Return "N/A" if not found.'),
-    past30Days: z.string().describe('Number of enquiries in the past 30 days. Return "N/A" if not found.'),
-    past12Months: z.string().describe('Number of enquiries in the past 12 months. Return "N/A" if not found.'),
-    past24Months: z.string().describe('Number of enquiries in the past 24 months. Return "N/A" if not found.'),
+    total: z.string().describe('Total number of enquiries. Return "0" if not found.'),
+    past30Days: z.string().describe('Number of enquiries in the past 30 days. Return "0" if not found.'),
+    past12Months: z.string().describe('Number of enquiries in the past 12 months. Return "0" if not found.'),
+    past24Months: z.string().describe('Number of enquiries in the past 24 months. Return "0" if not found.'),
     recentDate: z.string().describe('The date of the most recent enquiry, in DD-MM-YYYY format. Return "N/A" if not found.'),
 });
+
+const DpdSummarySchema = z.object({
+    onTime: z.number().describe('Total count of on-time payments (STD, 000) across all accounts.'),
+    late30: z.number().describe('Total count of payments 1-30 days late.'),
+    late60: z.number().describe('Total count of payments 31-60 days late.'),
+    late90: z.number().describe('Total count of payments 61-90 days late.'),
+    late90Plus: z.number().describe('Total count of payments 90+ days late.'),
+    default: z.number().describe('Total count of default statuses (SUB, DBT, LSS).'),
+});
+
 
 const ReportSummarySchema = z.object({
   accountSummary: AccountSummarySchema,
   enquirySummary: EnquirySummarySchema,
+  dpdSummary: DpdSummarySchema,
 });
 
 const AccountDetailSchema = z.object({
@@ -104,9 +120,12 @@ const prompt = ai.definePrompt({
     *   If a field is missing, you MUST return "N/A".
 
 2.  **Report Summary (reportSummary):**
-    *   Locate the "SUMMARY" section for "ACCOUNT(S)" and "ENQUIRY(S)".
-    *   **Account Summary:** Extract "Total", "Zero-Balance", "High Credit/Sanc. Amt.", "Current", "Overdue", "Recent" (DD-MM-YYYY), and "Oldest" (DD-MM-YYYY). Format currency as "₹X,XX,XXX". If 0, use "₹0". If missing, use "N/A".
-    *   **Enquiry Summary:** Extract "Total", "Past 30 days", "Past 12 months", "Past 24 months", and "Recent" (DD-MM-YYYY). If missing, use "N/A".
+    *   **Account Summary:** Iterate through all accounts to calculate and extract these fields. DO NOT just look for a summary table.
+        *   Count the number of accounts for each status: "Total", "Active"/"Open", "Closed", "Settled", "Written-Off", "Doubtful".
+        *   Calculate the SUM for "High Credit/Sanc. Amt.", "Current" balance, and "Overdue" amount across all accounts. Format currency as "₹X,XX,XXX". If 0, use "₹0".
+        *   Calculate "Credit Utilization" and "Debt-to-Limit Ratio" as percentages, formatted as strings (e.g., "75%").
+    *   **Enquiry Summary:** Locate the "ENQUIRY(S)" summary section. Extract "Total", "Past 30 days", "Past 12 months", "Past 24 months", and the most "Recent" enquiry date (DD-MM-YYYY).
+    *   **DPD Summary:** Go through the 'paymentHistory' string of EVERY account. Count each payment status code ('STD', '000', 'XXX' are on-time) and aggregate them into the required fields (onTime, late30, late60, late90, late90Plus, default for SUB/DBT/LSS).
 
 3.  **All Accounts (allAccounts):**
     *   Go to the "ACCOUNT INFORMATION" section. Iterate through EVERY account.
@@ -148,3 +167,5 @@ const analyzeCreditReportFlow = ai.defineFlow(
     return { output, usage: result.usage };
   }
 );
+
+    
