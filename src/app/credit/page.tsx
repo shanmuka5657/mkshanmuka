@@ -575,7 +575,7 @@ export default function CreditPage() {
   const calculatedSummary = useMemo(() => {
     const allAccounts = analysisResult?.allAccounts || [];
     const enquirySummary = analysisResult?.reportSummary.enquirySummary;
-    if (allAccounts.length === 0) {
+    if (allAccounts.length === 0 && !analysisResult) { // Check if analysisResult exists but is empty
       return {
         totalAccounts: 0,
         totalCreditLimit: 0,
@@ -899,7 +899,7 @@ export default function CreditPage() {
                                 <Loader2 className="mr-3 h-8 w-8 animate-spin text-primary" />
                                 <span className="text-muted-foreground">AI is extracting report data...</span>
                               </div>
-                            ) : analysisResult && analysisResult.allAccounts.length > 0 ? (
+                            ) : analysisResult ? (
                                 <div className="space-y-8">
                                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                                     <SummaryItem label="Total Accounts" value={calculatedSummary.totalAccounts} valueClassName="text-foreground" />
@@ -988,7 +988,7 @@ export default function CreditPage() {
                                     </Card>
                                   )}
                                   
-                                  {analysisResult.allAccounts && analysisResult.allAccounts.length > 0 && (
+                                  {analysisResult.allAccounts && analysisResult.allAccounts.length > 0 ? (
                                     <Card>
                                       <CardHeader>
                                         <CardTitle className="flex items-center">
@@ -1034,6 +1034,14 @@ export default function CreditPage() {
                                         </Table>
                                       </CardContent>
                                     </Card>
+                                  ) : (
+                                    <Alert>
+                                        <AlertCircle className="h-4 w-4" />
+                                        <AlertTitle>No Accounts Found</AlertTitle>
+                                        <AlertDescription>
+                                            The AI analysis was successful, but no credit accounts (loans, credit cards, etc.) were found in this report.
+                                        </AlertDescription>
+                                    </Alert>
                                   )}
                                 </div>
                             ) : (
