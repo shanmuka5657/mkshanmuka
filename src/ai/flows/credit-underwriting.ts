@@ -183,7 +183,7 @@ const creditUnderwritingFlow = ai.defineFlow(
     }),
   },
   async (input) => {
-    const result = await prompt.generate({input});
+    const result = await prompt(input);
     const output = result.output;
 
     if (!output) {
@@ -198,6 +198,6 @@ const creditUnderwritingFlow = ai.defineFlow(
     output.exposureAtDefault = riskAssessment.exposureAtDefault;
     output.expectedLoss = riskAssessment.expectedLoss;
 
-    return { output, usage: result.usage() };
+    return { output, usage: result.usage };
   }
 );

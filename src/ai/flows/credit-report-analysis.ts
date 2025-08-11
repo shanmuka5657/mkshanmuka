@@ -179,11 +179,11 @@ const analyzeCreditReportFlow = ai.defineFlow(
     }),
   },
   async input => {
-    const result = await prompt.generate({input});
+    const result = await prompt(input);
     const output = result.output;
     if (!output) {
       throw new Error("AI failed to analyze the report.");
     }
-    return { output, usage: result.usage() };
+    return { output, usage: result.usage };
   }
 );

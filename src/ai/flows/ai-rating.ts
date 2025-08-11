@@ -101,11 +101,11 @@ const aiRatingFlow = ai.defineFlow(
     }),
   },
   async (input) => {
-    const result = await prompt.generate({input});
+    const result = await prompt(input);
     const output = result.output;
     if (!output) {
       throw new Error("AI failed to provide a rating.");
     }
-    return { output, usage: result.usage() };
+    return { output, usage: result.usage };
   }
 );
