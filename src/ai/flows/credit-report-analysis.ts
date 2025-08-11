@@ -53,7 +53,7 @@ const EnquirySummarySchema = z.object({
 });
 
 const DpdSummarySchema = z.object({
-    onTime: z.number().describe('Total count of on-time payments (STD, 000) across all accounts.'),
+    onTime: z.number().describe('Total count of on-time payments (STD, 000, XXX) across all accounts.'),
     late30: z.number().describe('Total count of payments 1-30 days late.'),
     late60: z.number().describe('Total count of payments 31-60 days late.'),
     late90: z.number().describe('Total count of payments 61-90 days late.'),
@@ -125,7 +125,7 @@ const prompt = ai.definePrompt({
         *   Calculate the SUM for "High Credit/Sanc. Amt.", "Current" balance, and "Overdue" amount across all accounts. Format currency as "₹X,XX,XXX". If 0, use "₹0".
         *   Calculate "Credit Utilization" and "Debt-to-Limit Ratio" as percentages, formatted as strings (e.g., "75%").
     *   **Enquiry Summary:** Locate the "ENQUIRY(S)" summary section. Extract "Total", "Past 30 days", "Past 12 months", "Past 24 months", and the most "Recent" enquiry date (DD-MM-YYYY).
-    *   **DPD Summary:** Go through the 'paymentHistory' string of EVERY account. Count each payment status code ('STD', '000', 'XXX' are on-time) and aggregate them into the required fields (onTime, late30, late60, late90, late90Plus, default for SUB/DBT/LSS).
+    *   **DPD Summary:** Go through the 'paymentHistory' string of EVERY account. Count each payment status code. 'STD', '000', and 'XXX' are all on-time payments. Aggregate the counts into the required fields (onTime, late30, late60, late90, late90Plus, default for SUB/DBT/LSS).
 
 3.  **All Accounts (allAccounts):**
     *   Go to the "ACCOUNT INFORMATION" section. Iterate through EVERY account.

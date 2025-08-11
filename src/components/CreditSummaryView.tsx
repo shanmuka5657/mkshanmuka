@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useMemo } from "react"
@@ -20,12 +21,17 @@ interface CreditSummaryViewProps {
   onBack: () => void
 }
 
-const getStatusBadge = (status: string) => {
+const getStatusBadge = (status: string, openedDate: string, closedDate: string) => {
   const s = status.toLowerCase()
-  if (s.includes("closed")) return <Badge variant="secondary">Closed</Badge>
-  if (s.includes("written-off")) return <Badge variant="destructive">Written-Off</Badge>
-  if (s.includes("settled")) return <Badge className="bg-yellow-500 text-white">Settled</Badge>
-  if (s.includes("open") || s.includes("active")) return <Badge className="bg-green-500 text-white">Active</Badge>
+  if (s.includes("closed") || s.includes("written-off") || s.includes("settled")) {
+      const variant = s.includes("written-off") ? "destructive" : s.includes("settled") ? "secondary" : "default"
+      const date = closedDate !== 'NA' ? ` on ${closedDate}` : ''
+      return <Badge variant={variant as any}>{status}{date}</Badge>
+  }
+  if (s.includes("open") || s.includes("active")) {
+      const date = openedDate !== 'NA' ? ` on ${openedDate}` : ''
+       return <Badge className="bg-green-500 text-white hover:bg-green-600">{status}{date}</Badge>
+  }
   return <Badge variant="outline">{status}</Badge>
 }
 
@@ -132,15 +138,15 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
       <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Clock />DPD Analysis</CardTitle>
-            <CardDescription>Your payment history at a glance.</CardDescription>
+            <CardDescription>Your payment history at a glance. DPD (Days Past Due) shows how timely your payments have been.</CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          <CardContent className="grid grid-cols-2 lg:grid-cols-6 gap-3">
               <DpdCard title="ON TIME" value={dpdSummary.onTime} colorClass="bg-green-100 text-green-800" />
               <DpdCard title="1-30 DAYS" value={dpdSummary.late30} colorClass="bg-yellow-100 text-yellow-800" />
               <DpdCard title="31-60 DAYS" value={dpdSummary.late60} colorClass="bg-yellow-100 text-yellow-800" />
               <DpdCard title="61-90 DAYS" value={dpdSummary.late90} colorClass="bg-red-100 text-red-800" />
               <DpdCard title="90+ DAYS" value={dpdSummary.late90Plus} colorClass="bg-red-100 text-red-800" />
-               <DpdCard title="DEFAULT" value={dpdSummary.default} colorClass="bg-black text-white" />
+              <DpdCard title="DEFAULT" value={dpdSummary.default} colorClass="bg-black text-white" />
           </CardContent>
       </Card>
 
@@ -154,34 +160,37 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Ownership</TableHead>
+                  <TableHead>Account</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Sanctioned</TableHead>
                   <TableHead>Outstanding</TableHead>
                   <TableHead>Overdue</TableHead>
                   <TableHead>EMI</TableHead>
-                  <TableHead>Opened</TableHead>
-                  <TableHead>Closed</TableHead>
+                  <TableHead className="min-w-[200px]">Repayment History</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {allAccounts.map((account, index) => (
                   <TableRow key={index}>
-                    <TableCell className="font-medium">{account.type}</TableCell>
-                    <TableCell>{account.ownership}</TableCell>
-                    <TableCell>{getStatusBadge(account.status)}</TableCell>
+                    <TableCell>
+                      <div className="font-medium">{account.type}</div>
+                      <div className="text-xs text-muted-foreground">{account.ownership}</div>
+                    </TableCell>
+                    <TableCell>{getStatusBadge(account.status, account.opened, account.closed)}</TableCell>
                     <TableCell>{account.sanctioned}</TableCell>
                     <TableCell>{account.outstanding}</TableCell>
                     <TableCell>{account.overdue}</TableCell>
                     <TableCell>{account.emi}</TableCell>
-                    <TableCell>{account.opened}</TableCell>
-                    <TableCell>{account.closed}</TableCell>
+                    <TableCell>
+                        <Badge variant="outline" className="font-mono text-xs whitespace-pre-wrap">
+                            {account.paymentHistory}
+                        </Badge>
+                    </TableCell>
                   </TableRow>
                 ))}
                 {allAccounts.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center">No account information found.</TableCell>
+                    <TableCell colSpan={7} className="text-center">No account information found.</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -192,3 +201,5 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
     </div>
   )
 }
+
+    
