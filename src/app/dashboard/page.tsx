@@ -97,12 +97,14 @@ export default function DashboardPage() {
                                 A history of all your analyzed credit reports.
                             </CardDescription>
                         </div>
-                        <Button asChild className="mt-4 sm:mt-0">
-                            <Link href="/credit">
-                                <PlusCircle className="mr-2 h-5 w-5" />
-                                Analyze New Report
-                            </Link>
-                        </Button>
+                         {reports.length > 0 && (
+                            <Button asChild className="mt-4 sm:mt-0">
+                                <Link href="/credit">
+                                    <PlusCircle className="mr-2 h-5 w-5" />
+                                    Analyze New Report
+                                </Link>
+                            </Button>
+                        )}
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -132,17 +134,19 @@ export default function DashboardPage() {
                         </Table>
                     </div>
                     ) : (
-                         <Alert className="text-center py-10">
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>No Reports Found</AlertTitle>
-                            <AlertDescription>
-                                You haven't analyzed any credit reports yet.
-                                <br />
-                                <Button asChild variant="link" className="mt-2">
-                                    <Link href="/credit">Click here to get started.</Link>
-                                </Button>
-                            </AlertDescription>
-                        </Alert>
+                         <div className="text-center py-16 px-4 border-2 border-dashed rounded-lg">
+                            <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
+                            <h3 className="mt-4 text-xl font-semibold">No Reports Analyzed Yet</h3>
+                            <p className="mt-2 text-sm text-muted-foreground">
+                                Get started by analyzing your first credit report to see your AI-powered insights.
+                            </p>
+                            <Button asChild className="mt-6">
+                                <Link href="/credit">
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Analyze Your First Report
+                                </Link>
+                            </Button>
+                        </div>
                     )}
                 </CardContent>
             </Card>
