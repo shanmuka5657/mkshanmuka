@@ -881,26 +881,55 @@ export default function CreditPage() {
                     <TabsContent value="summary">
                          <Card>
                           <CardHeader>
-                            <CardTitle className="flex items-center text-xl font-bold">
-                              <LayoutGrid className="mr-3 h-6 w-6 text-primary" />
-                              AI-Powered Credit Summary
-                            </CardTitle>
-                            <CardDescription>
-                              This is a detailed summary of your credit profile, with calculations performed client-side for accuracy.
-                            </CardDescription>
-                            <Button onClick={handleAnalyzeCreditReport} disabled={isAnalyzing || !!analysisResult}>
-                                {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Sparkles className="mr-2 h-4 w-4"/>}
-                                {analysisResult ? 'Analysis Complete' : 'Run Analysis'}
-                            </Button>
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <CardTitle className="flex items-center text-xl font-bold">
+                                    <LayoutGrid className="mr-3 h-6 w-6 text-primary" />
+                                    AI-Powered Credit Summary
+                                    </CardTitle>
+                                    <CardDescription>
+                                    An overview of your credit profile, automatically extracted and calculated by AI.
+                                    </CardDescription>
+                                </div>
+                                <Button onClick={handleAnalyzeCreditReport} disabled={isAnalyzing || !!analysisResult}>
+                                    {isAnalyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Sparkles className="mr-2 h-4 w-4"/>}
+                                    {analysisResult ? 'Analysis Complete' : 'Run Analysis'}
+                                </Button>
+                            </div>
                           </CardHeader>
                           <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <Card className="p-4">
+                                    <CardTitle className="text-base font-semibold mb-3 flex items-center"><UserIcon className="mr-2 text-primary" />Consumer Details</CardTitle>
+                                    <div className="space-y-2 text-sm">
+                                        <InfoItem label="Name" value={customerDetails.name} isLoading={isAnalyzing}/>
+                                        <InfoItem label="PAN" value={customerDetails.pan} isLoading={isAnalyzing}/>
+                                        <InfoItem label="Date of Birth" value={customerDetails.dateOfBirth} isLoading={isAnalyzing}/>
+                                        <InfoItem label="Mobile" value={customerDetails.mobileNumber} isLoading={isAnalyzing}/>
+                                        <InfoItem label="Address" value={customerDetails.address} isLoading={isAnalyzing}/>
+                                    </div>
+                                </Card>
+                                <Card className="p-4">
+                                    <CardTitle className="text-base font-semibold mb-3 flex items-center"><BarChartBig className="mr-2 text-primary"/>Credit Score & Enquiries</CardTitle>
+                                     <div className="space-y-2 text-sm">
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-semibold text-muted-foreground">CIBIL Score</span>
+                                            <span className="font-bold text-lg text-primary">{creditScore || 'N/A'}</span>
+                                        </div>
+                                         <InfoItem label="Total Enquiries" value={reportSummary.enquirySummary.total} isLoading={isAnalyzing}/>
+                                         <InfoItem label="Enquiries (12 Mo.)" value={reportSummary.enquirySummary.past12Months} isLoading={isAnalyzing}/>
+                                         <InfoItem label="Recent Enquiry" value={reportSummary.enquirySummary.recentDate} isLoading={isAnalyzing}/>
+                                    </div>
+                                </Card>
+                            </div>
+
                             {isAnalyzing ? (
                               <div className="flex items-center justify-center py-10">
                                 <Loader2 className="mr-3 h-8 w-8 animate-spin text-primary" />
-                                <span className="text-muted-foreground">AI is extracting report data...</span>
+                                <span className="text-muted-foreground">AI is processing the detailed report...</span>
                               </div>
                             ) : analysisResult ? (
-                                <div className="space-y-8">
+                                <div className="space-y-8 mt-8">
                                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                                     <SummaryItem label="Total Accounts" value={calculatedSummary.totalAccounts} valueClassName="text-foreground" />
                                     <SummaryItem label="Total Credit Limit" value={`₹${calculatedSummary.totalCreditLimit.toLocaleString('en-IN')}`} valueClassName="text-foreground" />
@@ -908,11 +937,8 @@ export default function CreditPage() {
                                     <SummaryItem label="Credit Utilization" value={calculatedSummary.creditUtilization} valueClassName="text-foreground" />
                                     <SummaryItem label="Debt-to-Limit Ratio" value={calculatedSummary.debtToLimitRatio} valueClassName="text-foreground" />
                                     <SummaryItem label="Active Accounts" value={calculatedSummary.activeAccounts} valueClassName="text-green-600" />
-                                    <SummaryItem label="Closed Accounts" value={calculatedSummary.closedAccounts} valueClassName="text-foreground" />
                                     <SummaryItem label="Written Off" value={calculatedSummary.writtenOff} valueClassName="text-destructive" />
                                     <SummaryItem label="Settled" value={calculatedSummary.settled} valueClassName="text-orange-500" />
-                                    <SummaryItem label="Doubtful" value={calculatedSummary.doubtful} valueClassName="text-destructive" />
-                                    <SummaryItem label="Total Monthly EMI" value={`₹${calculatedSummary.totalMonthlyEMI.toLocaleString('en-IN')}`} valueClassName="text-foreground" />
                                   </div>
 
                                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
