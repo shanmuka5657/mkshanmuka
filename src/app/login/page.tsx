@@ -36,7 +36,7 @@ export default function LoginPage() {
       }
     });
     return () => unsubscribe();
-  }, [router, toast]);
+  }, [router]);
 
   const handleAuthAction = async () => {
     if (!email || !password) {

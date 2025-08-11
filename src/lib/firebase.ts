@@ -6,12 +6,12 @@ import { getStorage } from "firebase/storage";
 
 // Your web app's Firebase configuration is injected by the build process
 const firebaseConfig: FirebaseOptions = {
-  apiKey: "AIzaSyAeiyY3IH-zAkV8fSmmKyR1b32pCa46fQg",
-  authDomain: "creditwise-ai-nd7s0.firebaseapp.com",
-  projectId: "creditwise-ai-nd7s0",
-  storageBucket: "creditwise-ai-nd7s0.appspot.com",
-  messagingSenderId: "492248595221",
-  appId: "1:492248595221:web:e4cd8882c947d66aa6071c"
+  "projectId": "creditwise-ai-nd7s0",
+  "appId": "1:492248595221:web:ba48c35eec8dc524a6071c",
+  "storageBucket": "creditwise-ai-nd7s0.appspot.com",
+  "apiKey": "AIzaSyAeIyY3IH-zAkV8FSmmKyR1b32pCa46fQg",
+  "authDomain": "creditwise-ai-nd7s0.firebaseapp.com",
+  "messagingSenderId": "492248595221"
 };
 
 
