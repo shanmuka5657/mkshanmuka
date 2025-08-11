@@ -30,6 +30,7 @@ import { useRouter } from 'next/navigation';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { AnalysisDashboard } from '@/components/AnalysisDashboard';
 import { CreditSummaryView } from '@/components/CreditSummaryView';
+import { RiskAssessmentView } from '@/components/RiskAssessmentView';
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -213,6 +214,8 @@ export default function CreditPage() {
     switch (activeView) {
       case 'summary':
         return <CreditSummaryView analysisResult={analysisResult} onBack={() => setActiveView(null)} />;
+      case 'risk':
+        return <RiskAssessmentView analysisResult={analysisResult} onBack={() => setActiveView(null)} />;
       default:
         return null;
     }
