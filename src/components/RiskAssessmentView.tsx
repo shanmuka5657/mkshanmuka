@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Loader2, Shield, AlertTriangle, CheckCircle, Lightbulb, Sparkles } from "lucide-react";
+import { ArrowLeft, Loader2, Shield, AlertTriangle, CheckCircle, Lightbulb, Sparkles, MinusCircle } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -11,6 +11,7 @@ import type { AnalyzeCreditReportOutput } from "@/ai/flows/credit-report-analysi
 import { Badge } from "./ui/badge";
 import { cn } from "@/lib/utils";
 import { AnalysisCard } from "./AnalysisCard";
+import { Separator } from "./ui/separator";
 
 interface RiskAssessmentViewProps {
   analysisResult: AnalyzeCreditReportOutput;
@@ -20,32 +21,70 @@ interface RiskAssessmentViewProps {
 const getRiskLevelStyles = (level: string) => {
     switch (level) {
         case 'Low':
-            return {
-                badge: 'bg-green-100 text-green-800 border-green-200',
-                text: 'text-green-600',
-                icon: <CheckCircle className="text-green-500" />
-            };
+            return { text: 'text-green-600', icon: <CheckCircle className="text-green-500" /> };
         case 'Medium':
-            return {
-                badge: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-                text: 'text-yellow-600',
-                icon: <AlertTriangle className="text-yellow-500" />
-            };
+            return { text: 'text-yellow-600', icon: <AlertTriangle className="text-yellow-500" /> };
         case 'High':
         case 'Very High':
-            return {
-                badge: 'bg-red-100 text-red-800 border-red-200',
-                text: 'text-red-600',
-                icon: <AlertTriangle className="text-red-500" />
-            };
+            return { text: 'text-red-600', icon: <AlertTriangle className="text-red-500" /> };
         default:
-            return {
-                badge: 'bg-gray-100 text-gray-800 border-gray-200',
-                text: 'text-gray-600',
-                icon: <Shield />
-            };
+            return { text: 'text-gray-600', icon: <Shield /> };
     }
+};
+
+const RiskColumn = ({ assessment, title }: { assessment: RiskAssessmentOutput['assessmentWithGuarantor'], title: string }) => {
+    const riskStyles = getRiskLevelStyles(assessment.riskLevel);
+    return (
+        <div className="space-y-4">
+            <CardHeader className="p-0">
+                <CardTitle className="flex items-center gap-2">{riskStyles.icon} {title}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6 p-0">
+                <div className="p-6 bg-muted/50 rounded-lg flex flex-col items-center justify-center text-center">
+                    <CardDescription className="mb-1">Risk Score</CardDescription>
+                    <div className={cn("text-6xl font-bold", riskStyles.text)}>{assessment.riskScore}</div>
+                    <p className="text-muted-foreground text-sm">out of 100</p>
+                    <Badge variant={assessment.riskLevel === 'High' || assessment.riskLevel === 'Very High' ? 'destructive' : 'secondary'} className="mt-2">{assessment.riskLevel} Risk</Badge>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-center">
+                    <div className="p-2 bg-muted rounded-md">
+                        <p className="text-xs text-muted-foreground">Prob. of Default</p>
+                        <p className="text-lg font-bold">{assessment.probabilityOfDefault}%</p>
+                    </div>
+                    <div className="p-2 bg-muted rounded-md">
+                        <p className="text-xs text-muted-foreground">Loss Given Default</p>
+                        <p className="text-lg font-bold">{assessment.lossGivenDefault}%</p>
+                    </div>
+                     <div className="p-2 bg-muted rounded-md col-span-2">
+                        <p className="text-xs text-muted-foreground">Exposure at Default</p>
+                        <p className="text-lg font-bold">₹{assessment.exposureAtDefault.toLocaleString('en-IN')}</p>
+                    </div>
+                     <div className="p-2 bg-red-50 dark:bg-red-900/20 rounded-md col-span-2">
+                        <p className="text-xs text-red-700 dark:text-red-300">Expected Loss</p>
+                        <p className="text-lg font-bold text-red-600 dark:text-red-400">₹{assessment.expectedLoss.toLocaleString('en-IN')}</p>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 className="font-semibold mb-2">Key Risk Factors</h4>
+                    <div className="space-y-2">
+                        {assessment.riskFactors.map((factor, index) => (
+                            <div key={index} className="p-2 bg-muted/50 rounded-md text-xs">
+                                <div className="flex justify-between items-center">
+                                    <h5 className="font-semibold">{factor.factor}</h5>
+                                    <Badge variant={factor.severity === 'High' ? 'destructive' : factor.severity === 'Medium' ? 'secondary' : 'default'} className="capitalize">{factor.severity}</Badge>
+                                </div>
+                                <p className="text-muted-foreground mt-1">{factor.details}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </CardContent>
+        </div>
+    )
 }
+
 
 export function RiskAssessmentView({ analysisResult, onBack }: RiskAssessmentViewProps) {
   const [isLoading, setIsLoading] = useState(true);
@@ -93,8 +132,6 @@ export function RiskAssessmentView({ analysisResult, onBack }: RiskAssessmentVie
       </div>
     );
   }
-  
-  const riskStyles = getRiskLevelStyles(riskAssessment.riskLevel);
 
   return (
     <div className="space-y-6">
@@ -105,68 +142,22 @@ export function RiskAssessmentView({ analysisResult, onBack }: RiskAssessmentVie
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Shield /> AI Risk Assessment</CardTitle>
-          <CardDescription>A technical analysis of the credit profile, focusing on quantifiable risk factors and financial metrics.</CardDescription>
+          <CardDescription>A technical analysis of the credit profile, with a side-by-side comparison showing the impact of guarantor loans.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="p-6 flex flex-col items-center justify-center text-center">
-                <CardDescription className="mb-2">Overall Risk Score</CardDescription>
-                <div className={cn("text-7xl font-bold", riskStyles.text)}>{riskAssessment.riskScore}</div>
-                <p className="text-muted-foreground text-sm">out of 100 (higher is riskier)</p>
-            </Card>
-            <div className="p-6 bg-muted/50 rounded-lg flex flex-col justify-center">
-                 <div className="flex items-center gap-3">
-                    {riskStyles.icon}
-                    <h3 className="text-xl font-semibold">Risk Level: <span className={riskStyles.text}>{riskAssessment.riskLevel}</span></h3>
-                </div>
-                <p className="text-muted-foreground mt-2 pl-10">
-                    This rating is based on payment history, debt burden, credit utilization, and recent credit inquiries.
-                </p>
-            </div>
-          </div>
-          
-          <AnalysisCard title="Key Risk Factors">
-              <div className="space-y-3">
-                {riskAssessment.riskFactors.map((factor, index) => (
-                    <div key={index} className="p-3 bg-muted/50 rounded-md">
-                        <div className="flex justify-between items-center">
-                            <h4 className="font-semibold">{factor.factor}</h4>
-                             <Badge variant={factor.severity === 'High' ? 'destructive' : factor.severity === 'Medium' ? 'secondary' : 'default'} className="capitalize">{factor.severity}</Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1">{factor.details}</p>
-                    </div>
-                ))}
-              </div>
-          </AnalysisCard>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <RiskColumn assessment={riskAssessment.assessmentWithGuarantor} title="With Guarantor Loans" />
+            <RiskColumn assessment={riskAssessment.assessmentWithoutGuarantor} title="Without Guarantor Loans" />
+        </CardContent>
+      </Card>
 
-          <AnalysisCard title="Financial Risk Metrics">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                <div className="p-3 bg-muted rounded-md">
-                    <p className="text-sm text-muted-foreground">Probability of Default (PD)</p>
-                    <p className="text-2xl font-bold">{riskAssessment.probabilityOfDefault}%</p>
-                </div>
-                 <div className="p-3 bg-muted rounded-md">
-                    <p className="text-sm text-muted-foreground">Loss Given Default (LGD)</p>
-                    <p className="text-2xl font-bold">{riskAssessment.lossGivenDefault}%</p>
-                </div>
-                 <div className="p-3 bg-muted rounded-md">
-                    <p className="text-sm text-muted-foreground">Exposure at Default (EAD)</p>
-                    <p className="text-2xl font-bold">₹{riskAssessment.exposureAtDefault.toLocaleString('en-IN')}</p>
-                </div>
-                 <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-md">
-                    <p className="text-sm text-red-700 dark:text-red-300">Expected Loss (EL)</p>
-                    <p className="text-2xl font-bold text-red-600 dark:text-red-400">₹{riskAssessment.expectedLoss.toLocaleString('en-IN')}</p>
-                </div>
-              </div>
-              <div className="mt-4 p-4 bg-muted/50 rounded-md text-sm text-muted-foreground">
-                <h4 className="font-semibold text-foreground mb-2">How PD is Calculated:</h4>
-                <p>{riskAssessment.defaultProbabilityExplanation}</p>
-              </div>
-          </AnalysisCard>
-
-           <AnalysisCard title="Suggested Mitigations">
+       <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Lightbulb />Suggested Mitigations</CardTitle>
+                 <CardDescription>Actionable suggestions to improve the risk profile, based on the complete assessment.</CardDescription>
+            </CardHeader>
+            <CardContent>
                 <div className="space-y-3">
-                {riskAssessment.suggestedMitigations.map((mitigation, index) => (
+                {riskAssessment.assessmentWithGuarantor.suggestedMitigations.map((mitigation, index) => (
                     <div key={index} className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md">
                         <Lightbulb className="h-5 w-5 text-blue-500 mt-0.5" />
                         <div>
@@ -176,30 +167,25 @@ export function RiskAssessmentView({ analysisResult, onBack }: RiskAssessmentVie
                     </div>
                 ))}
                 </div>
-            </AnalysisCard>
-            
-            <Card className="bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
-                <CardHeader className="flex-row items-center gap-4 space-y-0">
-                    <Sparkles className="h-8 w-8 text-blue-500 flex-shrink-0" />
-                    <div>
-                        <CardTitle className="text-blue-900 dark:text-blue-300">How It Works</CardTitle>
-                        <CardDescription className="text-blue-700 dark:text-blue-400">
-                           The AI Risk Assessment analyzes your entire credit report to calculate a technical risk score. It focuses on these key areas:
-                        </CardDescription>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <ul className="list-disc pl-5 space-y-1 text-sm text-blue-700 dark:text-blue-400">
-                        <li><strong>Payment History:</strong> Checks for on-time payments, late payments (delinquencies), and their frequency.</li>
-                        <li><strong>Debt Load & Utilization:</strong> Measures total debt, the mix of secured vs. unsecured loans, and how much of your available credit you are using.</li>
-                        <li><strong>Credit Inquiries:</strong> Notes the number of recent applications for new credit, which can indicate risk.</li>
-                        <li><strong>Negative Marks:</strong> Identifies adverse account statuses like 'Written-Off' or 'Settled', which significantly impact the risk score.</li>
-                    </ul>
-                </CardContent>
-            </Card>
+            </CardContent>
+       </Card>
 
+       <Card>
+        <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Sparkles />How It Works</CardTitle>
+             <CardDescription>The AI analyzes your entire credit report to calculate a technical risk score.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <ul className="list-disc pl-5 space-y-2 text-sm text-muted-foreground">
+                <li><strong>Payment History:</strong> Checks for on-time payments, late payments (delinquencies), and their frequency.</li>
+                <li><strong>Debt Load & Utilization:</strong> Measures total debt, the mix of secured vs. unsecured loans, and how much of your available credit you are using.</li>
+                <li><strong>Credit Inquiries:</strong> Notes the number of recent applications for new credit, which can indicate risk.</li>
+                <li><strong>Negative Marks:</strong> Identifies adverse account statuses like 'Written-Off' or 'Settled', which significantly impact the risk score.</li>
+                <li><strong>Dual Analysis:</strong> The AI runs this entire process twice—once with your full report, and a second time ignoring any loans you are a guarantor for, allowing you to see the direct impact on your risk profile.</li>
+            </ul>
         </CardContent>
-      </Card>
+       </Card>
+
     </div>
   );
 }
