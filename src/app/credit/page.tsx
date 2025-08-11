@@ -91,7 +91,7 @@ export default function CreditPage() {
   const [isClient, setIsClient] = useState(false);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [activeView, setActiveView] = useState<string | null>(null);
-  const [isTextExtracted, setIsTextExtracted] = useState(isAnalysisComplete);
+  const [isTextExtracted, setIsTextExtracted] = useState(false);
 
   const { toast } = useToast()
   const creditFileInputRef = useRef<HTMLInputElement>(null);
@@ -225,8 +225,8 @@ export default function CreditPage() {
   }
 
   const { customerDetails, reportSummary } = analysisResult || initialAnalysis;
-  const isReadyForAnalysis = isTextExtracted && !isAnalyzing && !analysisResult;
   const isAnalysisComplete = !!analysisResult;
+  const isReadyForAnalysis = isTextExtracted && !isAnalyzing && !isAnalysisComplete;
   
   if (!isClient || !firebaseUser) {
     return (
@@ -393,5 +393,3 @@ export default function CreditPage() {
     </div>
   );
 }
-
-    
