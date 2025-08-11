@@ -4,8 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { auth } from '@/lib/firebase';
 import { Loader2, LayoutDashboard, FileText, PlusCircle, AlertCircle } from 'lucide-react';
 import {
   Card,
@@ -62,10 +61,10 @@ export default function DashboardPage() {
   };
 
   const getRiskBadge = (score: number | null) => {
-    if (score === null) return <Badge variant="secondary">N/A</Badge>;
+    if (score === null || isNaN(score)) return <Badge variant="secondary">N/A</Badge>;
     if (score >= 750) return <Badge className="bg-green-500 hover:bg-green-600 text-white">Excellent</Badge>;
-    if (score >= 700) return <Badge className="bg-blue-500 hover:bg-blue-600 text-white">Good</Badge>;
-    if (score >= 650) return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white">Fair</Badge>;
+    if (score >= 700) return <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white">Good</Badge>;
+    if (score >= 650) return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white">Fair</Badge>
     return <Badge variant="destructive">Poor</Badge>;
   };
 

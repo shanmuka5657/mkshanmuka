@@ -131,7 +131,13 @@ export async function getReportsForUser(uid: string): Promise<CreditReportSummar
   const querySnapshot = await getDocs(q);
   const reports: CreditReportSummary[] = [];
   querySnapshot.forEach((doc) => {
-    reports.push({ id: doc.id, ...doc.data() } as CreditReportSummary);
+    const data = doc.data();
+    // Basic type check to ensure createdAt is a Firestore Timestamp
+    if (data.createdAt && typeof data.createdAt.seconds === 'number') {
+       reports.push({ id: doc.id, ...data } as CreditReportSummary);
+    } else {
+        console.warn(`Document ${doc.id} is missing or has an invalid createdAt field.`);
+    }
   });
 
   return reports;
