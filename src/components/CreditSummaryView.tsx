@@ -212,7 +212,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
               <CardTitle className="flex items-center gap-2"><Clock />DPD Analysis</CardTitle>
               <CardDescription>Your payment history at a glance. DPD (Days Past Due) shows how timely your payments have been.</CardDescription>
             </div>
-            <div className="w-48">
+            <div className="w-48 no-print">
               <Select onValueChange={setDpdTimeRange} defaultValue="all">
                 <SelectTrigger>
                   <SelectValue placeholder="Select period" />
@@ -233,7 +233,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
               <DpdCard title="31-60 DAYS" value={dpdSummary.late60} colorClass="bg-yellow-100 text-yellow-800" />
               <DpdCard title="61-90 DAYS" value={dpdSummary.late90} colorClass="bg-red-100 text-red-800" />
               <DpdCard title="90+ DAYS" value={dpdSummary.late90Plus} colorClass="bg-red-100 text-red-800" />
-              <DpdCard title="DEFAULT" value={dpdSummary.default} colorClass="black text-white" />
+              <DpdCard title="DEFAULT" value={dpdSummary.default} colorClass="bg-black text-white" />
           </CardContent>
       </Card>
 
@@ -259,9 +259,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
                 </TableHeader>
                 <TableBody>
                     {allAccounts.map((account, index) => {
-                      
                       const monthsToShow = dpdTimeRange === "all" ? account.monthlyPaymentHistory.length : parseInt(dpdTimeRange, 10);
-                      
                       return (
                       <TableRow key={index}>
                           <TableCell>
@@ -297,5 +295,3 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
     </div>
   )
 }
-
-    
