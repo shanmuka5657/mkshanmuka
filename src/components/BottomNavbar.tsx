@@ -3,18 +3,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, FileText, Fingerprint, FileCheck2, BrainCircuit } from 'lucide-react';
+import { FileText, Fingerprint, FileCheck2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
 const allNavItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/credit', label: 'Credit', icon: FileText },
   { href: '/verify', label: 'Verify', icon: Fingerprint },
   { href: '/cross-verify', label: 'Cross-Verify', icon: FileCheck2 },
-  { href: '/trainer', label: 'Trainer', icon: BrainCircuit },
 ];
 
 export function BottomNavbar() {
@@ -33,15 +31,13 @@ export function BottomNavbar() {
     return null;
   }
   
-  // In a real app, you could have role-based logic here.
-  // For now, all logged-in users see all items.
   const navItems = allNavItems;
 
   return (
     <div className="fixed bottom-0 left-0 z-50 w-full h-20 bg-background border-t border-border no-print">
       <div className={`grid h-full max-w-lg grid-cols-${navItems.length} mx-auto font-medium`}>
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}

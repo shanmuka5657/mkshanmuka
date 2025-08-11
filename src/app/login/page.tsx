@@ -178,8 +178,10 @@ export default function LoginPage() {
           <div className="mx-auto mb-4">
             <Logo />
           </div>
-          <CardTitle>{mode === 'login' ? 'Welcome Back!' : 'Create an Account'}</CardTitle>
-          <CardDescription>{mode === 'login' ? 'Log in to continue to your account' : 'Enter your details to get started'}</CardDescription>
+          <CardTitle>{mode === 'login' ? 'Welcome Back' : 'Create an Account'}</CardTitle>
+          <CardDescription>
+            {mode === 'login' ? 'Enter your credentials to access your account. (Hint: use admin@mkcreditwise.com for admin access)' : 'Enter your details to get started'}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -187,7 +189,7 @@ export default function LoginPage() {
             <Input
               id="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder="user@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={isLoading}
