@@ -31,6 +31,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { AnalysisDashboard } from '@/components/AnalysisDashboard';
 import { CreditSummaryView } from '@/components/CreditSummaryView';
 import { RiskAssessmentView } from '@/components/RiskAssessmentView';
+import { AiRatingView } from '@/components/AiRatingView';
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -216,6 +217,8 @@ export default function CreditPage() {
         return <CreditSummaryView analysisResult={analysisResult} onBack={() => setActiveView(null)} />;
       case 'risk':
         return <RiskAssessmentView analysisResult={analysisResult} onBack={() => setActiveView(null)} />;
+      case 'rating':
+        return <AiRatingView analysisResult={analysisResult} onBack={() => setActiveView(null)} />;
       default:
         return null;
     }
