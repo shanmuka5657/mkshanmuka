@@ -103,11 +103,11 @@ const AnalyzeCreditReportOutputSchema = z.object({
 export type AnalyzeCreditReportOutput = z.infer<typeof AnalyzeCreditReportOutputSchema>;
 
 export async function analyzeCreditReport(input: AnalyzeCreditReportInput): Promise<{ output: AnalyzeCreditReportOutput, usage: FlowUsage }> {
-  const {output, usage} = await analyzeCreditReportFlow(input);
-  if (!output) {
+  const result = await analyzeCreditReportFlow(input);
+  if (!result.output) {
       throw new Error("AI failed to analyze the report.");
   }
-  return { output, usage };
+  return result;
 }
 
 const prompt = ai.definePrompt({
@@ -132,7 +132,7 @@ const prompt = ai.definePrompt({
     *   **DPD Summary (dpdSummary):**
         *   **CRITICAL RULE: THIS IS THE MOST IMPORTANT INSTRUCTION. DO NOT DEVIATE.** You MUST derive these numbers by manually iterating through the 'paymentHistory' of every single account listed in the 'ACCOUNT INFORMATION' section.
         *   Initialize six counters to zero: onTime, late30, late60, late90, late90Plus, and default.
-        *   For each account object in the 'allAccounts' array you are creating:
+        *   For each account object you are creating in the 'allAccounts' array:
             *   Get its 'paymentHistory' string.
             *   If the string is not 'NA' or empty, split it by the '|' delimiter to get an array of payment codes.
             *   For each code in the resulting array:
