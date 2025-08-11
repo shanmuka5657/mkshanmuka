@@ -23,7 +23,7 @@ runConfig:
     - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
       value: "492248595221"
     - variable: NEXT_PUBLIC_FIREBASE_APP_ID
-      value: "1:492248595221:web:ba48c35eec8dc524a6071c"
+      value: "1:492248595221:web:e4cd8882c947d66aa6071c"
 
 # Serve all traffic from the Next.js server.
 # https://firebase.google.com/docs/app-hosting/configure-nextjs
