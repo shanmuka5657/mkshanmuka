@@ -53,7 +53,7 @@ export default function LoginPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        router.replace('/dashboard');
+        router.replace('/dashboard'); // Redirect to dashboard after login/auth check
       } else {
         setIsCheckingAuth(false);
       }

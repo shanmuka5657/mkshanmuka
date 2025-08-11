@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { Loader2, FileText, PlusCircle } from 'lucide-react';
+import { Loader2, FileText, PlusCircle, BarChart, Home, Settings } from 'lucide-react';
 import {
   Card,
   CardContent,

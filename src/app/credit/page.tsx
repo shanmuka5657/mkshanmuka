@@ -22,6 +22,7 @@ import {
   Activity,
   User,
   LogOut,
+  Home,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -31,11 +32,6 @@ import { Progress } from '@/components/ui/progress';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { useToast } from "@/hooks/use-toast"
 import { analyzeCreditReport, AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
-import { getAiRating, AiRatingOutput } from '@/ai/flows/ai-rating';
-import { getLoanEligibility, LoanEligibilityOutput, LoanEligibilityInput } from '@/ai/flows/loan-eligibility';
-import { getFinancialRiskAssessment, FinancialRiskOutput } from '@/ai/flows/financial-risk-assessment';
-import { getCreditUnderwriting, CreditUnderwritingOutput, CreditUnderwritingInput } from '@/ai/flows/credit-underwriting';
-import { getRiskAssessment, RiskAssessmentOutput } from '@/ai/flows/risk-assessment';
 import { AiAgentChat } from '@/components/CreditChat';
 import { cn } from '@/lib/utils';
 import {
@@ -335,8 +331,8 @@ export default function CreditPage() {
                             </CardDescription>
                         </div>
                          <Button variant="outline" onClick={handleDownload} className="no-print ml-auto">
-                            <LogOut className="mr-2 h-4 w-4" />
-                            Logout
+                            <Download className="mr-2 h-4 w-4" />
+                            Download Report
                         </Button>
                     </div>
                 </CardHeader>
@@ -435,26 +431,29 @@ export default function CreditPage() {
                             <TableHead>Outstanding</TableHead>
                             <TableHead>Overdue</TableHead>
                             <TableHead>EMI</TableHead>
-                            <TableHead>Opened</TableHead>
-                            <TableHead>Closed</TableHead>
+                            <TableHead>Payment History</TableHead>
                         </TableRow>
                         </TableHeader>
                         <TableBody>
                         {analysisResult.allAccounts.map((account, index) => (
                             <TableRow key={index}>
                             <TableCell className="font-semibold">{account.type}</TableCell>
-                            <TableCell>{account.ownership}</TableCell>
+                             <TableCell>{account.ownership}</TableCell>
                             <TableCell>
-                                <Badge variant={cn(account.status.toLowerCase().includes('open') ? 'default' : account.status.toLowerCase().includes('closed') ? 'secondary' : 'destructive') as any}>
-                                    {account.status}
-                                </Badge>
+                                <div className="flex flex-col">
+                                    <Badge variant={cn(account.status.toLowerCase().includes('open') ? 'default' : account.status.toLowerCase().includes('closed') ? 'secondary' : 'destructive') as any}>
+                                        {account.status}
+                                    </Badge>
+                                    <span className="text-xs text-muted-foreground mt-1">
+                                        {account.status.toLowerCase().includes('closed') ? `Closed: ${account.closed}` : `Opened: ${account.opened}`}
+                                    </span>
+                                </div>
                             </TableCell>
                             <TableCell>{account.sanctioned}</TableCell>
                             <TableCell>{account.outstanding}</TableCell>
                             <TableCell>{account.overdue}</TableCell>
                             <TableCell>{account.emi}</TableCell>
-                            <TableCell>{account.opened}</TableCell>
-                            <TableCell>{account.closed}</TableCell>
+                            <TableCell className="max-w-xs truncate font-mono text-xs">{account.paymentHistory}</TableCell>
                             </TableRow>
                         ))}
                         </TableBody>
@@ -468,5 +467,3 @@ export default function CreditPage() {
     </div>
   );
 }
-
-    
