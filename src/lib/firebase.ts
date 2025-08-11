@@ -6,15 +6,15 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 // Your web app's Firebase configuration
-// This was provided by you and is now hardcoded to ensure a successful connection.
+// This is a public-facing configuration object.
+// Security is enforced by Firebase Security Rules and App Check.
 const firebaseConfig = {
-  apiKey: "AIzaSyAeIyY3IH-zAkV8FSmmKyR1b32pCa46fQg",
-  authDomain: "creditwise-ai-nd7s0.firebaseapp.com",
-  projectId: "creditwise-ai-nd7s0",
-  storageBucket: "creditwise-ai-nd7s0.firebasestorage.app",
-  messagingSenderId: "492248595221",
-  appId: "1:492248595221:web:ba48c35eec8dc524a6071c",
-  measurementId: "G-EDD2KZWTYX"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
 
@@ -24,7 +24,7 @@ let app;
 if (!getApps().length) {
   try {
     app = initializeApp(firebaseConfig);
-    console.log("Firebase initialized successfully with hardcoded config.");
+    console.log("Firebase initialized successfully.");
   } catch (e: any) {
     console.error("Critical Error: Failed to initialize Firebase. This is likely due to an invalid configuration. Please verify your .env.local file against the Firebase console.", e);
   }

@@ -34,7 +34,12 @@ const loadCandidates = (): TrainingCandidate[] => {
   }
 };
 
-let candidates: TrainingCandidate[] = loadCandidates();
+let candidates: TrainingCandidate[] = [];
+// Initialize candidates only on the client side
+if (typeof window !== 'undefined') {
+    candidates = loadCandidates();
+}
+
 
 // Function to save candidates to localStorage
 const saveCandidatesToStorage = (candidatesToSave: TrainingCandidate[]) => {
@@ -53,13 +58,17 @@ export function saveTrainingCandidate(data: TrainingData) {
     status: 'pending_review',
     data,
   };
-  candidates.unshift(newCandidate); // Add to the beginning of the list
-  saveCandidatesToStorage(candidates);
+  // Ensure we are working with the latest data from localStorage
+  const currentCandidates = loadCandidates();
+  currentCandidates.unshift(newCandidate); // Add to the beginning of the list
+  saveCandidatesToStorage(currentCandidates);
+  candidates = currentCandidates; // Update in-memory cache
 }
 
 export function getTrainingCandidates(): TrainingCandidate[] {
   // We need to re-load from storage here to ensure we have the latest version.
-  candidates = loadCandidates();
+  const loaded = loadCandidates();
+  candidates = loaded;
   return [...candidates];
 }
 

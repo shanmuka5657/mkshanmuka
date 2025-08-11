@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { Loader2, LayoutDashboard, FileText, PlusCircle, AlertCircle } from 'lucide-react';
+import { Loader2, FileText, PlusCircle } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -23,9 +23,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
-import { Logo } from '@/components/ui/logo';
 import { getReportsForUser, CreditReportSummary } from '@/lib/firestore-service';
 
 
@@ -68,7 +66,7 @@ export default function DashboardPage() {
     return <Badge variant="destructive">Poor</Badge>;
   };
 
-  if (isLoading) {
+  if (isLoading && !reports.length) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -108,7 +106,11 @@ export default function DashboardPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    {reports.length > 0 ? (
+                    {isLoading ? (
+                         <div className="flex justify-center items-center py-16">
+                           <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                         </div>
+                    ) : reports.length > 0 ? (
                     <div className="overflow-x-auto">
                         <Table>
                             <TableHeader>
