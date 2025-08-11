@@ -195,14 +195,6 @@ export default function VerifyPdfPage() {
 
   return (
     <div className="bg-background font-body text-foreground">
-      <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm no-print">
-        <div className="container flex h-16 items-center">
-          <div className="mr-4 flex items-center">
-            <Logo />
-          </div>
-        </div>
-      </header>
-
       <main className="container mx-auto p-4 md:p-8 printable-area">
         <div className="text-center mb-12 no-print">
           <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">VerityPDF Forensic Analysis</h1>

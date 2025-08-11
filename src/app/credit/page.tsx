@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import * as pdfjsLib from 'pdfjs-dist';
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
 import {
   UploadCloud,
   FileText,
@@ -208,9 +208,8 @@ export default function CreditPage() {
   }, [router]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-    }
+    // Set workerSrc for pdfjs-dist
+    GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${'4.4.168'}/build/pdf.worker.min.mjs`;
   }, []);
 
     // Effect to recalculate total EMI whenever loan details change
@@ -311,7 +310,7 @@ export default function CreditPage() {
         const buffer = e.target?.result as ArrayBuffer;
         if (buffer) {
           setProgress(30);
-          const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+          const pdf = await getDocument({ data: buffer }).promise;
           let textContent = '';
           for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
