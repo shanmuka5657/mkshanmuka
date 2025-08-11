@@ -11,7 +11,8 @@ import {
   ClipboardCheck,
   BarChart,
   User,
-  ArrowLeft
+  ArrowLeft,
+  Sparkles
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -92,13 +93,11 @@ export default function CreditPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [cibilScore, setCibilScore] = useState<number | null>(null);
-  
   const [analysisResult, setAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(null);
-  
   const [isClient, setIsClient] = useState(false);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-
   const [activeView, setActiveView] = useState<string | null>(null);
+  const [isTextExtracted, setIsTextExtracted] = useState(false);
 
   const { toast } = useToast()
   const creditFileInputRef = useRef<HTMLInputElement>(null);
@@ -142,6 +141,7 @@ export default function CreditPage() {
     setIsAnalyzing(false);
     setCibilScore(null);
     setActiveView(null);
+    setIsTextExtracted(false);
     if (creditFileInputRef.current) {
       creditFileInputRef.current.value = '';
     }
@@ -166,8 +166,7 @@ export default function CreditPage() {
           const scoreMatch = textContent.match(/(?:CIBIL (?:TRANSUNION )?SCORE|CREDITVISION. SCORE)\s*(\d{3})/i);
           const extractedScore = scoreMatch ? parseInt(scoreMatch[1], 10) : null;
           setCibilScore(extractedScore);
-          
-          handleAnalyzeCreditReport(textContent, extractedScore);
+          setIsTextExtracted(true);
         }
       };
       reader.readAsArrayBuffer(selectedFile);
@@ -178,20 +177,25 @@ export default function CreditPage() {
         title: "Error",
         description: "Failed to process the PDF file.",
       })
-      setIsProcessing(false);
+    } finally {
+        setIsProcessing(false);
     }
   };
   
-  const handleAnalyzeCreditReport = async (text: string, score: number | null) => {
+  const handleAnalyzeCreditReport = async () => {
+    if (!rawText) {
+        toast({ variant: 'destructive', title: 'Error', description: 'No report text to analyze.' });
+        return;
+    }
     setIsAnalyzing(true);
     try {
-        const { output } = await analyzeCreditReport({ creditReportText: text });
+        const { output } = await analyzeCreditReport({ creditReportText: rawText });
         setAnalysisResult(output);
         
         toast({ title: "Credit Report Analysis Complete", description: "Your AI-powered summary is ready." });
 
         if(firebaseUser) {
-           await saveCreditAnalysisSummary(output, score);
+           await saveCreditAnalysisSummary(output, cibilScore);
             toast({
                 title: "Report Saved",
                 description: `A summary of this analysis has been saved to your dashboard.`,
@@ -208,7 +212,6 @@ export default function CreditPage() {
         });
     } finally {
         setIsAnalyzing(false);
-        setIsProcessing(false);
     }
   };
   
@@ -218,15 +221,14 @@ export default function CreditPage() {
     switch (activeView) {
       case 'summary':
         return <CreditSummaryView analysisResult={analysisResult} onBack={() => setActiveView(null)} />;
-      // Add other cases here for other views
       default:
         return null;
     }
   }
 
-
   const { customerDetails, reportSummary } = analysisResult || initialAnalysis;
-  const isReady = !!creditFile && !isProcessing && !isAnalyzing;
+  const isReadyForAnalysis = isTextExtracted && !isAnalyzing && !analysisResult;
+  const isAnalysisComplete = !!analysisResult;
   
   if (!isClient || !firebaseUser) {
     return (
@@ -261,29 +263,53 @@ export default function CreditPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-4">
-                  <Button onClick={() => creditFileInputRef.current?.click()} disabled={isProcessing}>
-                      <UploadCloud className="mr-2" />
-                      Choose PDF File
-                  </Button>
-                  <Input ref={creditFileInputRef} type="file" accept=".pdf" onChange={handleFileChange} className="hidden" />
-                  <span className="text-sm text-muted-foreground flex-1 min-w-0 truncate">{creditFileName}</span>
-                  {creditFile && (
-                      <Button variant="ghost" size="icon" onClick={resetState} disabled={isProcessing}>
-                          <Trash2 className="h-5 w-5" />
-                          <span className="sr-only">Remove file</span>
-                      </Button>
-                  )}
-              </div>
-              { isReady && (
-                 <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3 text-sm text-blue-800">
-                    <ClipboardCheck className="h-5 w-5"/>
-                    <div>
-                        <h4 className="font-semibold">Ready to Analyze</h4>
-                        <p className="text-xs">Your report has been processed. Use the Analysis Dashboard below to start generating AI insights.</p>
-                    </div>
+                <div className="flex items-center gap-4">
+                    <Button onClick={() => creditFileInputRef.current?.click()} disabled={isProcessing || isAnalyzing}>
+                        <UploadCloud className="mr-2" />
+                        {creditFile ? 'Choose Another File' : 'Choose PDF File'}
+                    </Button>
+                    <Input ref={creditFileInputRef} type="file" accept=".pdf" onChange={handleFileChange} className="hidden" />
+                    <span className="text-sm text-muted-foreground flex-1 min-w-0 truncate">{creditFileName}</span>
+                    {creditFile && (
+                        <Button variant="ghost" size="icon" onClick={resetState} disabled={isProcessing || isAnalyzing}>
+                            <Trash2 className="h-5 w-5" />
+                            <span className="sr-only">Remove file</span>
+                        </Button>
+                    )}
                 </div>
-              )}
+
+                {isProcessing && (
+                    <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Processing PDF...
+                    </div>
+                )}
+                
+                {isReadyForAnalysis && (
+                    <div className="mt-4">
+                        <Button onClick={handleAnalyzeCreditReport} size="lg">
+                            <Sparkles className="mr-2 h-5 w-5"/>
+                            Analyze Report
+                        </Button>
+                    </div>
+                )}
+                
+                {isAnalyzing && (
+                     <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        AI is analyzing your report... this may take a moment.
+                    </div>
+                )}
+
+                {isAnalysisComplete && (
+                    <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3 text-sm text-green-800">
+                        <ClipboardCheck className="h-5 w-5"/>
+                        <div>
+                            <h4 className="font-semibold">Analysis Complete!</h4>
+                            <p className="text-xs">Your AI-powered insights are ready. Use the dashboard below to explore.</p>
+                        </div>
+                    </div>
+                )}
             </CardContent>
           </Card>
           

@@ -125,7 +125,17 @@ const prompt = ai.definePrompt({
         *   Calculate the SUM for "High Credit/Sanc. Amt.", "Current" balance, and "Overdue" amount across all accounts. Format currency as "₹X,XX,XXX". If 0, use "₹0".
         *   Calculate "Credit Utilization" and "Debt-to-Limit Ratio" as percentages, formatted as strings (e.g., "75%").
     *   **Enquiry Summary:** Locate the "ENQUIRY(S)" summary section. Extract "Total", "Past 30 days", "Past 12 months", "Past 24 months", and the most "Recent" enquiry date (DD-MM-YYYY).
-    *   **DPD Summary:** Go through the 'paymentHistory' string of EVERY account. Count each payment status code. 'STD', '000', and 'XXX' are all on-time payments. Aggregate the counts into the required fields (onTime, late30, late60, late90, late90Plus, default for SUB/DBT/LSS).
+    *   **DPD Summary:**
+        *   **CRITICAL:** Go through the 'paymentHistory' string of EVERY single account in the report.
+        *   For each account, iterate through every payment status code in its history string (e.g., "000|000|STD|030|...").
+        *   You MUST count each code individually.
+        *   'STD', '000', and 'XXX' are all on-time payments. Add them to the 'onTime' count.
+        *   Codes '001' to '030' go into 'late30'.
+        *   Codes '031' to '060' go into 'late60'.
+        *   Codes '061' to '090' go into 'late90'.
+        *   Any code greater than '090' goes into 'late90Plus'.
+        *   Codes 'SUB', 'DBT', 'LSS' go into 'default'.
+        *   Aggregate the total counts from ALL accounts into the final dpdSummary fields.
 
 3.  **All Accounts (allAccounts):**
     *   Go to the "ACCOUNT INFORMATION" section. Iterate through EVERY account.
@@ -167,5 +177,3 @@ const analyzeCreditReportFlow = ai.defineFlow(
     return { output, usage: result.usage };
   }
 );
-
-    
