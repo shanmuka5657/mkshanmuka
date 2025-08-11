@@ -1,60 +1,21 @@
 {
   "name": "CreditWise AI",
-  "short_name": "CreditWiseAI",
-  "start_url": "/?source=pwa",
+  "short_name": "CreditWise",
+  "description": "AI-Powered Credit Analysis",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#f5f7fa",
+  "background_color": "#ffffff",
   "theme_color": "#4361ee",
-  "orientation": "portrait",
-  "description": "Advanced AI Credit Score Analyzer & ML Model Trainer",
   "icons": [
     {
       "src": "/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
+      "type": "image/png"
     },
     {
       "src": "/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/screenshots/mobile.png",
-      "sizes": "1080x1920",
-      "type": "image/png",
-      "form_factor": "narrow"
-    },
-    {
-      "src": "/screenshots/desktop.png",
-      "sizes": "1920x1080",
-      "type": "image/png",
-      "form_factor": "wide"
-    }
-  ],
-  "id": "/?id=creditwise",
-  "categories": [
-    "finance",
-    "business"
-  ],
-  "dir": "ltr",
-  "lang": "en-US",
-  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
-  "prefer_related_applications": false,
-  "related_applications": [
-    {
-      "platform": "play",
-      "url": "https://play.google.com/store/apps/details?id=com.creditwise.ai",
-      "id": "com.creditwise.ai"
-    }
-  ],
-  "scope": "/",
-  "scope_extensions": [
-    {
-      "origin": "https://*.creditwise.ai"
+      "type": "image/png"
     }
   ]
 }
