@@ -28,17 +28,6 @@ export default function LoginPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!auth) {
-      toast({
-        variant: 'destructive',
-        title: 'Firebase Not Initialized',
-        description: 'Could not connect to Firebase. Please check the browser console.',
-        duration: 10000,
-      });
-      setIsCheckingAuth(false);
-      return;
-    }
-
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         router.replace('/dashboard');
@@ -102,7 +91,7 @@ export default function LoginPage() {
         case 'auth/network-request-failed':
             friendlyMessage = 'Network error. Please check your internet connection.';
             break;
-        case 'auth/api-key-not-valid':
+        case 'auth/invalid-api-key':
              friendlyMessage = 'The provided Firebase API key is not valid. Please check your configuration.';
              break;
         case 'auth/operation-not-allowed':
