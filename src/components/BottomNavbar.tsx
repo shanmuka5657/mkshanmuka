@@ -3,13 +3,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FileText, Fingerprint, FileCheck2, BrainCircuit } from 'lucide-react';
+import { LayoutDashboard, FileText, Fingerprint, FileCheck2, BrainCircuit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
 const allNavItems = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/credit', label: 'Credit', icon: FileText },
   { href: '/verify', label: 'Verify', icon: Fingerprint },
   { href: '/cross-verify', label: 'Cross-Verify', icon: FileCheck2 },

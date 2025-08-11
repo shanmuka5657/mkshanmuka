@@ -32,7 +32,7 @@ export default function LoginPage() {
       toast({
         variant: 'destructive',
         title: 'Firebase Not Initialized',
-        description: 'Could not connect to Firebase. Please check the browser console and your .env file.',
+        description: 'Could not connect to Firebase. Please check the browser console.',
         duration: 10000,
       });
       setIsCheckingAuth(false);
@@ -41,7 +41,7 @@ export default function LoginPage() {
 
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        router.replace('/credit');
+        router.replace('/dashboard');
       } else {
         setIsCheckingAuth(false);
       }
@@ -103,7 +103,10 @@ export default function LoginPage() {
             friendlyMessage = 'Network error. Please check your internet connection.';
             break;
         case 'auth/invalid-api-key':
-             friendlyMessage = 'Invalid API Key. Please check your NEXT_PUBLIC_FIREBASE_API_KEY in the .env file.';
+             friendlyMessage = 'Invalid API Key. Please check your Firebase configuration.';
+             break;
+        case 'auth/operation-not-allowed':
+             friendlyMessage = 'Email/Password sign-in is not enabled in your Firebase project.';
              break;
         default:
             friendlyMessage = `An unexpected error occurred. (Code: ${error.code})`;
