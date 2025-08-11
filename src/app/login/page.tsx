@@ -102,8 +102,8 @@ export default function LoginPage() {
         case 'auth/network-request-failed':
             friendlyMessage = 'Network error. Please check your internet connection.';
             break;
-        case 'auth/invalid-api-key':
-             friendlyMessage = 'Invalid API Key. Please check your Firebase configuration.';
+        case 'auth/api-key-not-valid':
+             friendlyMessage = 'The provided Firebase API key is not valid. Please check your configuration.';
              break;
         case 'auth/operation-not-allowed':
              friendlyMessage = 'Email/Password sign-in is not enabled in your Firebase project.';
