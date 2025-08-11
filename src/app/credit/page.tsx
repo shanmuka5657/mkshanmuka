@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -8,12 +9,9 @@ import {
   Trash2,
   Loader2,
   ClipboardCheck,
-  CircleAlert,
   BarChart,
   User,
-  LogOut,
-  Home,
-  Download
+  ArrowLeft
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -24,21 +22,13 @@ import { useToast } from "@/hooks/use-toast"
 import { analyzeCreditReport, AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
 import { AiAgentChat } from '@/components/CreditChat';
 import { cn } from '@/lib/utils';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Badge } from '@/components/ui/badge';
 import { saveCreditAnalysisSummary } from '@/lib/firestore-service';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { AnalysisDashboard } from '@/components/AnalysisDashboard';
+import { CreditSummaryView } from '@/components/CreditSummaryView';
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -108,6 +98,8 @@ export default function CreditPage() {
   const [isClient, setIsClient] = useState(false);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
 
+  const [activeView, setActiveView] = useState<string | null>(null);
+
   const { toast } = useToast()
   const creditFileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -149,6 +141,7 @@ export default function CreditPage() {
     setAnalysisResult(null);
     setIsAnalyzing(false);
     setCibilScore(null);
+    setActiveView(null);
     if (creditFileInputRef.current) {
       creditFileInputRef.current.value = '';
     }
@@ -218,6 +211,19 @@ export default function CreditPage() {
         setIsProcessing(false);
     }
   };
+  
+  const renderActiveView = () => {
+    if (!analysisResult) return null;
+
+    switch (activeView) {
+      case 'summary':
+        return <CreditSummaryView analysisResult={analysisResult} onBack={() => setActiveView(null)} />;
+      // Add other cases here for other views
+      default:
+        return null;
+    }
+  }
+
 
   const { customerDetails, reportSummary } = analysisResult || initialAnalysis;
   const isReady = !!creditFile && !isProcessing && !isAnalyzing;
@@ -229,6 +235,14 @@ export default function CreditPage() {
             <p className="text-muted-foreground">Loading...</p>
         </div>
     );
+  }
+  
+  if (activeView && analysisResult) {
+      return (
+          <main className="container mx-auto p-4 md:p-8 space-y-6">
+              {renderActiveView()}
+          </main>
+      );
   }
 
   return (
@@ -328,7 +342,11 @@ export default function CreditPage() {
                 </CardContent>
             </Card>
 
-            <AnalysisDashboard rawText={rawText} analysisResult={analysisResult} />
+            <AnalysisDashboard 
+                rawText={rawText} 
+                analysisResult={analysisResult} 
+                onSelectView={setActiveView}
+            />
 
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="item-1">
