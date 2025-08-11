@@ -62,14 +62,6 @@ const initialAnalysis: AnalyzeCreditReportOutput = {
       past24Months: 'N/A',
       recentDate: 'N/A',
     },
-     dpdSummary: {
-        onTime: 0,
-        late30: 0,
-        late60: 0,
-        late90: 0,
-        late90Plus: 0,
-        default: 0,
-    }
   },
   allAccounts: [],
   emiDetails: {

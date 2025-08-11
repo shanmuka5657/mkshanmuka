@@ -82,7 +82,34 @@ const DpdCard = ({ title, value, colorClass }: { title: string, value: string | 
 
 export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewProps) {
   const { reportSummary, allAccounts, emiDetails } = analysisResult
-  const { accountSummary, enquirySummary, dpdSummary } = reportSummary
+  const { accountSummary, enquirySummary } = reportSummary
+
+  const dpdSummary = useMemo(() => {
+    const dpd = { onTime: 0, late30: 0, late60: 0, late90: 0, late90Plus: 0, default: 0 };
+    if (!allAccounts) return dpd;
+
+    for (const acc of allAccounts) {
+        if (acc.monthlyPaymentHistory) {
+            for (const month of acc.monthlyPaymentHistory) {
+                const s = month.status.trim().toUpperCase();
+                if (s === 'STD' || s === '000' || s === 'XXX') {
+                    dpd.onTime++;
+                } else if (s === 'SUB' || s === 'DBT' || s === 'LSS') {
+                    dpd.default++;
+                } else {
+                    const daysLate = parseInt(s, 10);
+                    if (!isNaN(daysLate)) {
+                        if (daysLate >= 1 && daysLate <= 30) dpd.late30++;
+                        else if (daysLate >= 31 && daysLate <= 60) dpd.late60++;
+                        else if (daysLate >= 61 && daysLate <= 90) dpd.late90++;
+                        else if (daysLate > 90) dpd.late90Plus++;
+                    }
+                }
+            }
+        }
+    }
+    return dpd;
+  }, [allAccounts]);
 
   const accountTypeData = useMemo(() => {
     const types = allAccounts.reduce((acc, account) => {

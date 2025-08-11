@@ -52,20 +52,9 @@ const EnquirySummarySchema = z.object({
     recentDate: z.string().describe('The date of the most recent enquiry, in DD-MM-YYYY format. Return "N/A" if not found.'),
 });
 
-const DpdSummarySchema = z.object({
-    onTime: z.number().describe('Total count of on-time payments (STD, 000, XXX) across all accounts.'),
-    late30: z.number().describe('Total count of payments 1-30 days late.'),
-    late60: z.number().describe('Total count of payments 31-60 days late.'),
-    late90: z.number().describe('Total count of payments 61-90 days late.'),
-    late90Plus: z.number().describe('Total count of payments 90+ days late.'),
-    default: z.number().describe('Total count of default statuses (SUB, DBT, LSS).'),
-});
-
-
 const ReportSummarySchema = z.object({
   accountSummary: AccountSummarySchema,
   enquirySummary: EnquirySummarySchema,
-  dpdSummary: DpdSummarySchema,
 });
 
 const MonthlyPaymentDetailSchema = z.object({
@@ -121,7 +110,7 @@ const prompt = ai.definePrompt({
   name: 'analyzeCreditReportPrompt',
   input: {schema: AnalyzeCreditReportInputSchema},
   output: {schema: AnalyzeCreditReportOutputSchema},
-  prompt: `You are an expert CIBIL report data extractor. Your ONLY job is to read the provided credit report text and extract all specified information in a single, comprehensive pass. Do NOT perform any summarizations beyond what is explicitly asked for.
+  prompt: `You are an expert CIBIL report data extractor. Your ONLY job is to read the provided credit report text and extract all specified information in a single, comprehensive pass. Do NOT perform any summarizations or calculations beyond what is explicitly asked for.
 
 **Extraction Tasks:**
 
@@ -136,23 +125,6 @@ const prompt = ai.definePrompt({
         *   Calculate the SUM for "High Credit/Sanc. Amt.", "Current" balance, and "Overdue" amount across all accounts. Format currency as "₹X,XX,XXX". If 0, use "₹0".
         *   Calculate "Credit Utilization" and "Debt-to-Limit Ratio" as percentages, formatted as strings (e.g., "75%").
     *   **Enquiry Summary:** Locate the "ENQUIRY(S)" summary section. Extract "Total", "Past 30 days", "Past 12 months", "Past 24 months", and the most "Recent" enquiry date (DD-MM-YYYY).
-    *   **DPD Summary (dpdSummary):**
-        *   **CRITICAL RULE: THIS IS THE MOST IMPORTANT INSTRUCTION. DO NOT DEVIATE.** You MUST derive these numbers by manually iterating through the 'paymentHistory' of every single account listed in the 'ACCOUNT INFORMATION' section.
-        *   Initialize six counters to zero: onTime, late30, late60, late90, late90Plus, and default.
-        *   For each account object you are creating in the 'allAccounts' array:
-            *   Get its 'paymentHistory' string.
-            *   If the string is not 'NA' or empty, split it by the '|' delimiter to get an array of payment codes.
-            *   For each code in the resulting array:
-                *   Trim any whitespace from the code.
-                *   Check the code against these exact conditions IN THIS ORDER:
-                    *   If the code is 'STD', '000', or 'XXX', increment the 'onTime' counter.
-                    *   If the code is 'SUB', 'DBT', or 'LSS', increment the 'default' counter.
-                    *   Otherwise, try to parse the code as an integer. If it's a valid number:
-                        *   If the number is between 1 and 30 (inclusive), increment the 'late30' counter.
-                        *   If the number is between 31 and 60 (inclusive), increment the 'late60' counter.
-                        *   If the number is between 61 and 90 (inclusive), increment the 'late90' counter.
-                        *   If the number is greater than 90, increment the 'late90Plus' counter.
-        *   After iterating through all payment codes for all accounts, populate the final dpdSummary object with the final values of your six counters. This is the ONLY way you should calculate this summary. The final numbers MUST perfectly match the sum of the codes in the payment history strings.
 
 3.  **All Accounts (allAccounts):**
     *   Go to the "ACCOUNT INFORMATION" section. Iterate through EVERY account.
