@@ -4,7 +4,10 @@ import { initializeApp, getApps, getApp, FirebaseOptions } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
-import dotenv from 'dotenv';
+import { config } from 'dotenv';
+
+// Load environment variables from .env file
+config();
 
 // Your web app's Firebase configuration is injected by the build process
 const firebaseConfig: FirebaseOptions = {
