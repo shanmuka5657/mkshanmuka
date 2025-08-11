@@ -61,6 +61,8 @@ const getStatusIcon = (status: string) => {
         case 'Match': return <CheckCircle2 className="text-green-500" />;
         case 'Mismatch': return <XCircle className="text-red-500" />;
         case 'Partial Match': return <AlertCircle className="text-yellow-500" />;
+        case 'Consistent': return <CheckCircle2 className="text-green-500" />;
+        case 'Inconsistent': return <XCircle className="text-red-500" />;
         default: return <FileClock className="text-gray-500" />;
     }
 }
@@ -70,6 +72,8 @@ const getStatusColor = (status: string) => {
         case 'Match': return 'border-green-500 bg-green-50 dark:bg-green-900/10';
         case 'Mismatch': return 'border-red-500 bg-red-50 dark:bg-red-900/10';
         case 'Partial Match': return 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/10';
+        case 'Consistent': return 'border-green-500 bg-green-50 dark:bg-green-900/10';
+        case 'Inconsistent': return 'border-red-500 bg-red-50 dark:bg-red-900/10';
         default: return 'border-gray-300 bg-gray-50 dark:bg-muted/20';
     }
 }
@@ -265,14 +269,6 @@ export default function CrossVerifyPage() {
 
   return (
     <div className="bg-background font-body text-foreground">
-      <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm no-print">
-        <div className="container flex h-16 items-center">
-          <div className="mr-4 flex items-center">
-            <Logo />
-          </div>
-        </div>
-      </header>
-      
       <main className="container mx-auto p-4 md:p-8 printable-area">
         <div className="text-center mb-12 no-print">
           <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">Document Cross-Verification</h1>
@@ -378,7 +374,7 @@ export default function CrossVerifyPage() {
                             <VerificationField field={verificationResult.address} label="Address" />
                              <div className={cn("border p-4 rounded-lg", getStatusColor(verificationResult.income.status))}>
                                 <h4 className="font-semibold flex items-center gap-2">
-                                     {verificationResult.income.status === 'Consistent' ? <CheckCircle2 className="text-green-500" /> : <XCircle className="text-red-500" />}
+                                     {getStatusIcon(verificationResult.income.status)}
                                      Income Verification <span className="text-sm font-normal text-muted-foreground">({verificationResult.income.status})</span>
                                 </h4>
                                 <p className="text-xs text-muted-foreground mt-1 mb-3">{verificationResult.income.details}</p>
