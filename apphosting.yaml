@@ -7,3 +7,17 @@ runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 1
+  # Pass the GEMINI_API_KEY secret to the backend as an environment variable.
+  # The value of this secret is managed by Google Secret Manager.
+  # https://firebase.google.com/docs/app-hosting/manage-secrets
+  env:
+    - variable: GOOGLE_API_KEY
+      secret: GEMINI_API_KEY
+
+# Serve all traffic from the Next.js server.
+# https://firebase.google.com/docs/app-hosting/configure-nextjs
+headers:
+  - source: /
+    headers:
+      - key: Cache-Control
+        value: 'private, max-age=0'
