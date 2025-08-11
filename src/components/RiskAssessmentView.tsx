@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Loader2, Shield, AlertTriangle, CheckCircle, Lightbulb } from "lucide-react";
+import { ArrowLeft, Loader2, Shield, AlertTriangle, CheckCircle, Lightbulb, Sparkles } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -177,6 +177,26 @@ export function RiskAssessmentView({ analysisResult, onBack }: RiskAssessmentVie
                 ))}
                 </div>
             </AnalysisCard>
+            
+            <Card className="bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
+                <CardHeader className="flex-row items-center gap-4 space-y-0">
+                    <Sparkles className="h-8 w-8 text-blue-500 flex-shrink-0" />
+                    <div>
+                        <CardTitle className="text-blue-900 dark:text-blue-300">How It Works</CardTitle>
+                        <CardDescription className="text-blue-700 dark:text-blue-400">
+                           The AI Risk Assessment analyzes your entire credit report to calculate a technical risk score. It focuses on these key areas:
+                        </CardDescription>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <ul className="list-disc pl-5 space-y-1 text-sm text-blue-700 dark:text-blue-400">
+                        <li><strong>Payment History:</strong> Checks for on-time payments, late payments (delinquencies), and their frequency.</li>
+                        <li><strong>Debt Load & Utilization:</strong> Measures total debt, the mix of secured vs. unsecured loans, and how much of your available credit you are using.</li>
+                        <li><strong>Credit Inquiries:</strong> Notes the number of recent applications for new credit, which can indicate risk.</li>
+                        <li><strong>Negative Marks:</strong> Identifies adverse account statuses like 'Written-Off' or 'Settled', which significantly impact the risk score.</li>
+                    </ul>
+                </CardContent>
+            </Card>
 
         </CardContent>
       </Card>
