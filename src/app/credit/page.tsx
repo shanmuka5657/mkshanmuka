@@ -374,10 +374,10 @@ export default function CreditPage() {
 
         // Save summary to Firestore after successful analysis
         try {
-            await saveCreditAnalysisSummary(output, creditScore);
+            const docId = await saveCreditAnalysisSummary(output, creditScore);
             toast({
-                title: "Report Saved",
-                description: "A summary has been saved to the database.",
+                title: "Report Saved to Database",
+                description: `A summary of this analysis (ID: ${docId.substring(0,6)}...) has been saved.`,
                 variant: 'default',
                 className: 'bg-green-100 text-green-800'
             });
@@ -741,10 +741,16 @@ export default function CreditPage() {
                   
                   <Card>
                       <CardHeader>
-                          <CardTitle className="flex items-center text-xl">
-                            <LayoutGrid className="mr-3 h-6 w-6 text-primary" />
-                            Analysis Dashboard
-                          </CardTitle>
+                          <div className="flex justify-between items-center">
+                            <CardTitle className="flex items-center text-xl">
+                                <LayoutGrid className="mr-3 h-6 w-6 text-primary" />
+                                Analysis Dashboard
+                            </CardTitle>
+                            <Button variant="outline" onClick={handlePrint} className="no-print">
+                                <Printer className="mr-2"/>
+                                Print Report
+                            </Button>
+                          </div>
                           <CardDescription>
                            Select a section to view its detailed analysis. Some sections require previous steps to be completed.
                           </CardDescription>
@@ -789,11 +795,11 @@ export default function CreditPage() {
                                       <TableHeader>
                                         <TableRow>
                                           <TableHead>Type</TableHead>
-                                          <TableHead>Status</TableHead>
+                                          <TableHead>Ownership</TableHead>
+                                          <TableHead>Status / Date</TableHead>
                                           <TableHead>Sanctioned</TableHead>
                                           <TableHead>Outstanding</TableHead>
                                           <TableHead>EMI</TableHead>
-                                          <TableHead>Opened</TableHead>
                                           <TableHead>Payment History</TableHead>
                                         </TableRow>
                                       </TableHeader>
@@ -801,15 +807,18 @@ export default function CreditPage() {
                                         {analysisResult.allAccounts.map((account, index) => (
                                           <TableRow key={index}>
                                             <TableCell className="font-semibold">{account.type}</TableCell>
+                                            <TableCell>{account.ownership}</TableCell>
                                             <TableCell>
-                                              <Badge variant={cn(account.status.toLowerCase().includes('open') ? 'default' : account.status.toLowerCase().includes('closed') ? 'secondary' : 'destructive') as any}>
-                                                {account.status}
-                                              </Badge>
+                                                <Badge variant={cn(account.status.toLowerCase().includes('open') ? 'default' : account.status.toLowerCase().includes('closed') ? 'secondary' : 'destructive') as any}>
+                                                    {account.status}
+                                                </Badge>
+                                                <div className="text-xs text-muted-foreground mt-1">
+                                                    {account.status.toLowerCase().includes('closed') ? `Closed: ${account.closed}` : `Opened: ${account.opened}`}
+                                                </div>
                                             </TableCell>
                                             <TableCell>{account.sanctioned}</TableCell>
                                             <TableCell>{account.outstanding}</TableCell>
                                             <TableCell>{account.emi}</TableCell>
-                                            <TableCell>{account.opened}</TableCell>
                                             <TableCell className="text-xs truncate max-w-xs">{account.paymentHistory}</TableCell>
                                           </TableRow>
                                         ))}
@@ -847,10 +856,6 @@ export default function CreditPage() {
                                       <div className="flex gap-4">
                                           <Button variant="outline" onClick={() => setShowRawText(!showRawText)}>
                                               {showRawText ? 'Hide Raw Text' : 'Show Raw Text'}
-                                          </Button>
-                                          <Button variant="outline" onClick={handlePrint}>
-                                              <Printer className="mr-2"/>
-                                              Print Report
                                           </Button>
                                       </div>
                                       {showRawText && (
