@@ -13,10 +13,10 @@ const DashboardButton = ({ icon: Icon, title, disabled, onClick }: { icon: React
     <button 
         onClick={onClick}
         disabled={disabled}
-        className={`p-4 border rounded-lg text-center flex flex-col items-center justify-center gap-2 ${disabled ? 'bg-muted/50 text-muted-foreground cursor-not-allowed' : 'bg-background hover:bg-muted cursor-pointer'}`}
+        className={`p-4 border rounded-lg text-center flex flex-col items-center justify-center gap-2 transition-all duration-200 ease-in-out ${disabled ? 'bg-muted/50 text-muted-foreground cursor-not-allowed opacity-60' : 'bg-background hover:bg-muted hover:shadow-md transform hover:-translate-y-1 cursor-pointer'}`}
     >
-        <Icon className="h-6 w-6" />
-        <span className="text-xs font-medium">{title}</span>
+        <Icon className={`h-6 w-6 ${disabled ? 'text-muted-foreground' : 'text-primary'}`} />
+        <span className="text-xs font-semibold">{title}</span>
     </button>
 )
 
@@ -35,12 +35,12 @@ export function AnalysisDashboard({ rawText, analysisResult, onSelectView }: Ana
             <CardContent>
                 <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     <DashboardButton icon={BarChart} title="Credit Summary" disabled={!isReady} onClick={() => onSelectView('summary')} />
-                    <DashboardButton icon={Shield} title="AI Risk Assessment" disabled={!isReady} />
-                    <DashboardButton icon={Calculator} title="AI Credit Meter" disabled={!isReady} />
-                    <DashboardButton icon={Wallet} title="Financials" disabled={!isReady} />
-                    <DashboardButton icon={Scale} title="Loan Eligibility" disabled={!isReady} />
-                    <DashboardButton icon={Briefcase} title="Financial Risk" disabled={!isReady} />
-                    <DashboardButton icon={UserCheck} title="Underwriting" disabled={!isReady} />
+                    <DashboardButton icon={Shield} title="AI Risk Assessment" disabled={!isReady} onClick={() => onSelectView('risk')} />
+                    <DashboardButton icon={Calculator} title="AI Credit Meter" disabled={!isReady} onClick={() => onSelectView('rating')} />
+                    <DashboardButton icon={Wallet} title="Financials" disabled={!isReady} onClick={() => onSelectView('financials')} />
+                    <DashboardButton icon={Scale} title="Loan Eligibility" disabled={!isReady} onClick={() => onSelectView('eligibility')} />
+                    <DashboardButton icon={Briefcase} title="Financial Risk" disabled={!isReady} onClick={() => onSelectView('financialRisk')} />
+                    <DashboardButton icon={UserCheck} title="Underwriting" disabled={!isReady} onClick={() => onSelectView('underwriting')} />
                 </div>
             </CardContent>
         </Card>

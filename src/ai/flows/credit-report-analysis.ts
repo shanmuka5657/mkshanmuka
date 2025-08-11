@@ -103,7 +103,11 @@ const AnalyzeCreditReportOutputSchema = z.object({
 export type AnalyzeCreditReportOutput = z.infer<typeof AnalyzeCreditReportOutputSchema>;
 
 export async function analyzeCreditReport(input: AnalyzeCreditReportInput): Promise<{ output: AnalyzeCreditReportOutput, usage: FlowUsage }> {
-  return analyzeCreditReportFlow(input);
+  const {output, usage} = await analyzeCreditReportFlow(input);
+  if (!output) {
+      throw new Error("AI failed to analyze the report.");
+  }
+  return { output, usage };
 }
 
 const prompt = ai.definePrompt({
@@ -126,18 +130,22 @@ const prompt = ai.definePrompt({
         *   Calculate "Credit Utilization" and "Debt-to-Limit Ratio" as percentages, formatted as strings (e.g., "75%").
     *   **Enquiry Summary:** Locate the "ENQUIRY(S)" summary section. Extract "Total", "Past 30 days", "Past 12 months", "Past 24 months", and the most "Recent" enquiry date (DD-MM-YYYY).
     *   **DPD Summary (dpdSummary):**
-        *   **CRITICAL RULE:** Do NOT read a summary table for this. You MUST derive these numbers by manually iterating through the 'paymentHistory' of every single account listed in the 'ACCOUNT INFORMATION' section.
-        *   Initialize counters for onTime, late30, late60, late90, late90Plus, and default to 0.
-        *   For each account, get its 'paymentHistory' string.
-        *   Split the string by the '|' delimiter.
-        *   For each resulting code (e.g., 'STD', '000', '030'):
-            *   'STD', '000', and 'XXX' increment the 'onTime' counter.
-            *   Numerical codes '001' through '030' increment the 'late30' counter.
-            *   Numerical codes '031' through '060' increment the 'late60' counter.
-            *   Numerical codes '061' through '090' increment the 'late90' counter.
-            *   Any numerical code greater than '090' increments the 'late90Plus' counter.
-            *   'SUB', 'DBT', 'LSS' codes increment the 'default' counter.
-        *   After iterating through all payment codes for all accounts, populate the final dpdSummary fields with the aggregated counts. This is the ONLY way you should calculate this summary.
+        *   **CRITICAL RULE: THIS IS THE MOST IMPORTANT INSTRUCTION. DO NOT DEVIATE.** You MUST derive these numbers by manually iterating through the 'paymentHistory' of every single account listed in the 'ACCOUNT INFORMATION' section.
+        *   Initialize six counters to zero: onTime, late30, late60, late90, late90Plus, and default.
+        *   For each account object in the 'allAccounts' array you are creating:
+            *   Get its 'paymentHistory' string.
+            *   If the string is not 'NA' or empty, split it by the '|' delimiter to get an array of payment codes.
+            *   For each code in the resulting array:
+                *   Trim any whitespace from the code.
+                *   Check the code against these exact conditions IN THIS ORDER:
+                    *   If the code is 'STD', '000', or 'XXX', increment the 'onTime' counter.
+                    *   If the code is 'SUB', 'DBT', or 'LSS', increment the 'default' counter.
+                    *   Otherwise, try to parse the code as an integer. If it's a valid number:
+                        *   If the number is between 1 and 30 (inclusive), increment the 'late30' counter.
+                        *   If the number is between 31 and 60 (inclusive), increment the 'late60' counter.
+                        *   If the number is between 61 and 90 (inclusive), increment the 'late90' counter.
+                        *   If the number is greater than 90, increment the 'late90Plus' counter.
+        *   After iterating through all payment codes for all accounts, populate the final dpdSummary object with the final values of your six counters. This is the ONLY way you should calculate this summary. The final numbers MUST perfectly match the sum of the codes in the payment history strings.
 
 3.  **All Accounts (allAccounts):**
     *   Go to the "ACCOUNT INFORMATION" section. Iterate through EVERY account.
@@ -171,13 +179,11 @@ const analyzeCreditReportFlow = ai.defineFlow(
     }),
   },
   async input => {
-    const result = await prompt(input);
+    const result = await prompt.generate({input});
     const output = result.output;
     if (!output) {
       throw new Error("AI failed to analyze the report.");
     }
-    return { output, usage: result.usage };
+    return { output, usage: result.usage() };
   }
 );
-
-    
