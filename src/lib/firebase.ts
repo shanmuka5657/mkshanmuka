@@ -6,9 +6,6 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import dotenv from 'dotenv';
 
-// Load environment variables from .env file for local development
-dotenv.config();
-
 // Your web app's Firebase configuration is injected by the build process
 const firebaseConfig: FirebaseOptions = {
   "projectId": "creditwise-ai-nd7s0",
