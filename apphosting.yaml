@@ -20,4 +20,5 @@ headers:
   - source: /
     headers:
       - key: Cache-Control
-        value: 'private, max-age=0'
+        value: 'private, max-age=0, no-store, must-revalidate'
+
