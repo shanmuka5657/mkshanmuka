@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
+import { getDocument, GlobalWorkerOptions, version } from 'pdfjs-dist';
 import {
   UploadCloud,
   FileText,
@@ -209,7 +209,7 @@ export default function CreditPage() {
 
   useEffect(() => {
     // Set workerSrc for pdfjs-dist
-    GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${'4.4.168'}/build/pdf.worker.min.mjs`;
+    GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.mjs`;
   }, []);
 
     // Effect to recalculate total EMI whenever loan details change
