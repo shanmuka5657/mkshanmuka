@@ -31,12 +31,12 @@ export type AiRatingInput = {
 };
 
 const AiRatingOutputSchema = z.object({
-  aiScore: z
+  riskScore: z
     .number()
-    .min(300)
-    .max(900)
+    .min(0)
+    .max(100)
     .describe(
-      'A holistic score from 300 to 900, similar to a standard credit score, based on all available data.'
+      'A technical risk score from 0 to 100, where 100 is the HIGHEST risk.'
     ),
   rating: z
     .string()
@@ -54,6 +54,7 @@ const AiRatingOutputSchema = z.object({
   negativeFactors: z
     .array(z.string())
     .describe('A list of 2-3 key weaknesses and areas for improvement that are hurting the score.'),
+  scoreExplanation: z.string().describe("A detailed, multi-sentence explanation of how the risk score was calculated, referencing specific data points and the weight given to each.")
 });
 export type AiRatingOutput = z.infer<typeof AiRatingOutputSchema>;
 
@@ -73,9 +74,10 @@ const prompt = ai.definePrompt({
 Analyze the user's structured credit data and the pre-calculated risk factors. Then, generate a comprehensive score, a final rating, a summary, and lists of the most important positive and negative factors.
 
 **CRITICAL RULES:**
-- The final 'aiScore' MUST be a number between 300 and 900, where 900 is a perfect score. This should feel like a real-world credit score.
+- The final 'riskScore' MUST be a number between 0 and 100, where 100 is the HIGHEST risk. This is not a CIBIL score.
 - The 'summary' should be easy to understand for a non-expert.
 - The 'positiveFactors' and 'negativeFactors' lists should be distinct from each other and highlight the MOST impactful items. Do not just list every negative item.
+- The 'scoreExplanation' must be detailed and explain the logic behind the score, referencing specific data points.
 
 **Structured Credit Report Data:**
 \`\`\`json

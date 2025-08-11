@@ -17,7 +17,7 @@ import type { AnalyzeCreditReportOutput } from './credit-report-analysis';
 const LoanEligibilityInputSchema = z.object({
   aiScore: z
     .number()
-    .describe('The AI-generated credit score, ranging from 0 to 100.'),
+    .describe('The AI-generated credit risk score, ranging from 0 to 100 (100 is highest risk).'),
   rating: z.string().describe('The overall credit rating (e.g., Excellent, Good, Fair, Poor).'),
   monthlyIncome: z.number().describe('The estimated monthly income of the user in INR.'),
   totalMonthlyEMI: z.number().describe('The user\'s total existing monthly EMI payments in INR.'),
@@ -71,7 +71,7 @@ const prompt = ai.definePrompt({
   prompt: `You are an expert loan officer at a digital bank in India. Your task is to perform a holistic and realistic estimation of a user's eligibility for a personal loan and provide actionable, non-generic advice. Use the provided structured data, not raw text.
 
 **User's Financial Profile:**
-- **AI Credit Score:** {{aiScore}}/100
+- **AI Credit Risk Score:** {{aiScore}}/100 (Higher is riskier)
 - **Credit Rating:** {{rating}}
 - **Estimated Monthly Income:** ₹{{monthlyIncome}}
 - **Total Existing Monthly EMI:** ₹{{totalMonthlyEMI}}
@@ -84,10 +84,10 @@ const prompt = ai.definePrompt({
 **Your Task (Follow these steps precisely):**
 
 1.  **Determine a Safe DTI Ratio:** Based on the user's AI score and risk factors evident in the structured data, determine a safe Debt-to-Income (DTI) ratio.
-    - **Excellent (85-100):** 55%
-    - **Good (70-84):** 50%
-    - **Fair (55-69):** 45%
-    - **Poor (<55):** 35%
+    - **Excellent (Risk Score 0-15):** 55%
+    - **Good (Risk Score 16-30):** 50%
+    - **Fair (Risk Score 31-45):** 45%
+    - **Poor (Risk Score >45):** 35%
     - **ADJUSTMENT:** If the data shows significant negative marks (e.g., a written-off account, more than two 30+ DPD in the last year), reduce the determined DTI by 5%.
 
 2.  **Calculate Repayment Capacity:** Use a strict formula.
@@ -97,10 +97,10 @@ const prompt = ai.definePrompt({
 3.  **Calculate Eligible Loan Amount:** Based on the calculated 'repaymentCapacity', determine a realistic personal loan amount. Assume a standard personal loan tenure of 48 months. Use the 'repaymentCapacity' as the EMI to calculate the principal amount. If Repayment Capacity is 0, the loan amount must also be 0.
 
 4.  **Estimate Interest Rate:** Provide a realistic interest rate range based on their AI score and overall risk profile.
-    - Excellent (85-100): 10.5% - 12.5%
-    - Good (70-84): 12.5% - 15.0%
-    - Fair (55-69): 15.0% - 20.0%
-    - Poor (<55): Likely ineligible, but if eligible, >20.0%.
+    - Excellent (Risk Score 0-15): 10.5% - 12.5%
+    - Good (Risk Score 16-30): 12.5% - 15.0%
+    - Fair (Risk Score 31-45): 15.0% - 20.0%
+    - Poor (Risk Score >45): Likely ineligible, but if eligible, >20.0%.
 
 5.  **Write a Detailed, Justified Summary:** Your summary must clearly explain *why* you arrived at your calculated 'eligibleLoanAmount'. For example: "Based on your consistent on-time payments and a determined safe DTI of 55%, we calculated you can manage an additional EMI of ₹{{repaymentCapacity}}. This makes you eligible for a loan of approximately ₹{{eligibleLoanAmount}}." OR "Although your income is high, your data shows a high credit utilization of 90% and a recent late payment. This reduced your safe DTI to 40% and limits your repayment capacity to ₹{{repaymentCapacity}}, resulting in a lower eligible amount of ₹{{eligibleLoanAmount}}."
 
