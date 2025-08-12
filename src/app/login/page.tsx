@@ -8,6 +8,7 @@ import {
   signInWithEmailAndPassword,
   onAuthStateChanged,
   signInWithPopup,
+  GoogleAuthProvider,
   User
 } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
@@ -39,7 +40,6 @@ const GoogleIcon = () => (
         />
     </svg>
 );
-
 
 export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'signup'>('login');

@@ -105,5 +105,3 @@ export async function getReportsForUser(uid: string): Promise<CreditReportSummar
 
   return reports;
 }
-
-    
