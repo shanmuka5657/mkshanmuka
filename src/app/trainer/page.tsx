@@ -106,14 +106,6 @@ export default function ModelTrainerPage() {
 
   return (
     <div className="bg-background font-body text-foreground">
-       <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm">
-        <div className="container flex h-16 items-center">
-            <div className="mr-4 flex items-center">
-              <Logo />
-            </div>
-        </div>
-      </header>
-
       <main className="container mx-auto p-4 md:p-8">
         <div className="text-center mb-12">
           <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
@@ -217,78 +209,6 @@ export default function ModelTrainerPage() {
                 {approvedCount === 0 && <p className="text-sm text-muted-foreground">You must approve at least one candidate to enable training.</p>}
             </CardFooter>
         </Card>
-        
-        <div className="capabilities-dashboard">
-          <h2 className="font-bold text-2xl col-span-full">PWA Capabilities Status</h2>
-          
-          <div className="capability">
-            <span className="badge active">Active</span>
-            <h3>Service Worker</h3>
-            <p>Offline support & background sync</p>
-          </div>
-
-          <div className="capability">
-            <span className="badge active">Active</span>
-            <h3>File Handlers</h3>
-            <p>PDF & JSON file processing</p>
-          </div>
-
-          <div className="capability">
-            <span className="badge active">Active</span>
-            <h3>Protocol Handler</h3>
-            <p>creditwise:// links</p>
-          </div>
-
-          <div className="capability">
-            <span className="badge active">Active</span>
-            <h3>Share Target</h3>
-            <p>Receive shared content</p>
-          </div>
-        </div>
-
-        <style jsx>{`
-          .capabilities-dashboard {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 12px;
-            margin-top: 2rem;
-          }
-          .dark .capabilities-dashboard {
-            background: hsl(var(--muted));
-          }
-          .capability {
-            background: hsl(var(--card));
-            padding: 1.5rem;
-            border-radius: 8px;
-            border: 1px solid hsl(var(--border));
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-          }
-          .capability h3 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-          }
-           .capability p {
-            font-size: 0.9rem;
-            color: hsl(var(--muted-foreground));
-          }
-          .badge {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-            font-size: 0.75rem;
-            display: inline-block;
-            margin-bottom: 0.75rem;
-          }
-          .badge.active {
-            background: #4caf50;
-            color: white;
-          }
-        `}</style>
-
       </main>
     </div>
   );
