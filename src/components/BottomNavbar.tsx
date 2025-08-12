@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -27,7 +28,7 @@ export function BottomNavbar() {
   }, []);
   
   // Don't show the navbar if the user isn't authenticated yet or on the login page.
-  if (!user || pathname === '/') {
+  if (!user || pathname === '/' || pathname === '/login') {
     return null;
   }
   
