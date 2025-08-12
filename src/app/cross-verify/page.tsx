@@ -138,7 +138,7 @@ export default function CrossVerifyPage() {
       if (user) {
         setFirebaseUser(user);
       } else {
-        router.replace('/login');
+        router.replace('/');
       }
     });
 

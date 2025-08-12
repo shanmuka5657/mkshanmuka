@@ -140,7 +140,7 @@ export default function CreditPage() {
       if (user) {
         setFirebaseUser(user);
       } else {
-        router.replace('/login');
+        router.replace('/');
       }
     });
     return () => unsubscribe();

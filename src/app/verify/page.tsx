@@ -72,7 +72,7 @@ export default function VerifyPdfPage() {
       if (user) {
         setFirebaseUser(user);
       } else {
-        router.replace('/login');
+        router.replace('/');
       }
     });
 

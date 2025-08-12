@@ -39,7 +39,7 @@ export default function DashboardPage() {
         setUser(currentUser);
         fetchReports(currentUser.uid);
       } else {
-        router.replace('/login');
+        router.replace('/');
       }
     });
     return () => unsubscribe();

@@ -31,7 +31,7 @@ export default function ModelTrainerPage() {
         // Load candidates from our simulated store
         setCandidates(getTrainingCandidates());
       } else {
-        router.replace('/login');
+        router.replace('/');
       }
     });
 

@@ -28,7 +28,7 @@ export function BottomNavbar() {
   }, []);
   
   // Don't show the navbar if the user isn't authenticated yet or on the login page.
-  if (!user || pathname === '/login') {
+  if (!user || pathname === '/') {
     return null;
   }
   
