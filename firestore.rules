@@ -1,20 +1,16 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    // By default, deny all reads and writes
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // Allow users to read and write their own 'credit_reports'
+    // Only allow authenticated users to read or write documents.
+    // Users can only access documents where their userId matches the document's userId field.
     match /credit_reports/{reportId} {
-      allow read, create, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
     }
     
-    // Allow users to read a list of their own reports
+    // Allow users to create documents in the 'credit_reports' collection
+    // as long as the new document's userId matches their own.
     match /credit_reports/{reportId} {
-        allow list: if request.auth != null && request.auth.uid == request.query.where[0][2];
+        allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
     }
   }
 }
