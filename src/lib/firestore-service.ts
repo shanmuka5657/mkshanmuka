@@ -13,7 +13,6 @@ export interface CreditReportSummary {
   cibilScore: number | null;
   totalEmi: number;
   activeLoanCount: number;
-  closedLoanCount: number;
   createdAt: Timestamp;
 }
 
@@ -47,15 +46,11 @@ export async function saveCreditAnalysisSummary(
         !acc.status.toLowerCase().includes('settled')
     ).length;
 
-    const closedLoans = allAccounts.length - activeLoans;
-
     const reportData = {
       // User and Personal Info
       userId: user.uid,
       name: customerDetails.name,
-      phoneNumber: customerDetails.mobileNumber,
       pan: customerDetails.pan,
-      address: customerDetails.address,
 
       // Scores & Core Metrics
       cibilScore: cibilScore,
@@ -63,7 +58,6 @@ export async function saveCreditAnalysisSummary(
       
       // Loan Counts
       activeLoanCount: activeLoans,
-      closedLoanCount: closedLoans,
 
       // Timestamps
       createdAt: serverTimestamp(),

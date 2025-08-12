@@ -116,6 +116,7 @@ export default function DashboardPage() {
                             <TableHeader>
                             <TableRow>
                                 <TableHead>Name</TableHead>
+                                <TableHead>PAN</TableHead>
                                 <TableHead>CIBIL Score</TableHead>
                                 <TableHead>Total EMI</TableHead>
                                 <TableHead>Active Loans</TableHead>
@@ -126,6 +127,7 @@ export default function DashboardPage() {
                             {reports.map((report) => (
                                 <TableRow key={report.id}>
                                 <TableCell className="font-medium">{report.name}</TableCell>
+                                <TableCell>{report.pan}</TableCell>
                                 <TableCell>{getRiskBadge(report.cibilScore)}</TableCell>
                                 <TableCell>₹{report.totalEmi.toLocaleString('en-IN')}</TableCell>
                                 <TableCell>{report.activeLoanCount}</TableCell>
