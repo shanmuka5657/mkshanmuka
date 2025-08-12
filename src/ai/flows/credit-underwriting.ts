@@ -183,8 +183,7 @@ const creditUnderwritingFlow = ai.defineFlow(
     }),
   },
   async (input) => {
-    const result = await prompt(input);
-    const output = result.output;
+    const {output, usage} = await prompt(input);
 
     if (!output) {
       throw new Error("AI failed to provide an underwriting analysis.");
@@ -198,6 +197,6 @@ const creditUnderwritingFlow = ai.defineFlow(
     output.exposureAtDefault = riskAssessment.exposureAtDefault;
     output.expectedLoss = riskAssessment.expectedLoss;
 
-    return { output, usage: result.usage };
+    return { output, usage };
   }
 );
