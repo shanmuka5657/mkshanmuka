@@ -6,3 +6,5 @@ steps:
 - name: 'gcr.io/cloud-builders/npm'
   args: ['run', 'build']
 serviceAccount: 'projects/creditwise-ai-nd7s0/serviceAccounts/firebase-app-hosting-build@creditwise-ai-nd7s0.iam.gserviceaccount.com'
+options:
+  logging: CLOUD_LOGGING_ONLY
