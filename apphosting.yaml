@@ -28,6 +28,8 @@ runConfig:
     - variable: FIREBASE_ADMIN_SDK_CONFIG
       secret: FIREBASE_ADMIN_SDK_CONFIG
 
+logging: CLOUD_LOGGING_ONLY
+
 # Serve all traffic from the Next.js server.
 # https://firebase.google.com/docs/app-hosting/configure-nextjs
 headers:
