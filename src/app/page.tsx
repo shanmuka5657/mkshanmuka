@@ -119,7 +119,7 @@ export default function LoginPage() {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-background">
             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Connecting to Firebase...</p>
+            <p className="text-muted-foreground">Connecting...</p>
         </div>
     );
   }

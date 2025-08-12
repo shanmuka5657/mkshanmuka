@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getDocument, GlobalWorkerOptions, version } from 'pdfjs-dist';
 import {
   UploadCloud,
@@ -100,11 +100,6 @@ const initialAnalysis: AnalyzeCreditReportOutput = {
 
 const PIE_CHART_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF'];
 
-
-const parseCurrency = (currencyString: string): number => {
-    if (typeof currencyString !== 'string' || currencyString === '₹NaN') return 0;
-    return Number(currencyString.replace(/[^0-9.-]+/g,""));
-}
 
 const SummaryBox = ({ title, value, isLoading = false, valueClassName = '' }: { title: string; value: string | number; isLoading?: boolean; valueClassName?: string }) => (
   <Card className="text-center p-3 bg-muted/30">
@@ -326,7 +321,7 @@ export default function CreditPage() {
                                 AI-Powered Credit Summary
                             </CardTitle>
                             <CardDescription>
-                                This is a detailed summary of your credit profile, with calculations performed client-side for accuracy.
+                                This is a detailed summary of your credit profile.
                             </CardDescription>
                         </div>
                          <Button variant="outline" onClick={handleDownload} className="no-print ml-auto">
