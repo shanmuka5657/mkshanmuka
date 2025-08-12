@@ -25,13 +25,21 @@ const googleProvider = new GoogleAuthProvider();
 // Connect to emulators in development if the flag is set
 if (process.env.NEXT_PUBLIC_USE_EMULATORS === 'true') {
     try {
-        // Ensure we don't connect to emulators multiple times
-        // @ts-ignore - _isInitialized is a private property but useful here
-        if (!auth._isInitialized) {
+        // Ensure we don't connect to emulators multiple times.
+        // @ts-ignore - _isInitialized is a private property but useful here to prevent re-connecting.
+        if (!auth.emulatorConfig) {
             connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+            console.log("Connected to Auth Emulator");
+        }
+        // @ts-ignore
+        if (!db.INTERNAL.settings.host.includes('127.0.0.1')) {
             connectFirestoreEmulator(db, "127.0.0.1", 8080);
+            console.log("Connected to Firestore Emulator");
+        }
+        // @ts-ignore
+        if (!storage.emulator) {
             connectStorageEmulator(storage, "127.0.0.1", 9199);
-            console.log("Connected to Firebase Emulators");
+            console.log("Connected to Storage Emulator");
         }
     } catch (error) {
         console.error("Error connecting to Firebase emulators:", error);
