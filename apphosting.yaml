@@ -25,8 +25,6 @@ runConfig:
       value: "492248595221"
     - variable: NEXT_PUBLIC_FIREBASE_APP_ID
       value: "1:492248595221:web:3fe409487b8848d4a6071c"
-    - variable: FIREBASE_ADMIN_SDK_CONFIG
-      secret: FIREBASE_ADMIN_SDK_CONFIG
 
 logging: CLOUD_LOGGING_ONLY
 
