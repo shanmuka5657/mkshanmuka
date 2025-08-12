@@ -30,7 +30,7 @@ if (process.env.NEXT_PUBLIC_USE_EMULATORS === 'true') {
         if (!auth._isInitialized) {
             connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
             connectFirestoreEmulator(db, "127.0.0.1", 8080);
-            // connectStorageEmulator(storage, "127.0.0.1", 9199);
+            connectStorageEmulator(storage, "127.0.0.1", 9199);
             console.log("Connected to Firebase Emulators");
         }
     } catch (error) {
