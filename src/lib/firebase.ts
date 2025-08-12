@@ -22,14 +22,17 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
 
-// Connect to emulators in development
-if (process.env.NODE_ENV === 'development') {
+// Connect to emulators in development if the flag is set
+if (process.env.NEXT_PUBLIC_USE_EMULATORS === 'true') {
     try {
-        connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
-        connectFirestoreEmulator(db, "127.0.0.1", 8080);
-        // Note: Storage emulator connection can be added here if needed in the future
-        // connectStorageEmulator(storage, "127.0.0.1", 9199);
-        console.log("Connected to Firebase Emulators");
+        // Ensure we don't connect to emulators multiple times
+        // @ts-ignore - _isInitialized is a private property but useful here
+        if (!auth._isInitialized) {
+            connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+            connectFirestoreEmulator(db, "127.0.0.1", 8080);
+            // connectStorageEmulator(storage, "127.0.0.1", 9199);
+            console.log("Connected to Firebase Emulators");
+        }
     } catch (error) {
         console.error("Error connecting to Firebase emulators:", error);
     }
