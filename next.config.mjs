@@ -1,13 +1,15 @@
 /** @type {import('next').NextConfig} */
-import withPWA from 'next-pwa';
-
-const nextConfig = withPWA({
-  dest: 'public',
-  register: true,
-  skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development',
-})({
-  reactStrictMode: true,
-});
+const nextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'storage.googleapis.com',
+        port: '',
+        pathname: '**',
+      },
+    ],
+  },
+};
 
 export default nextConfig;
