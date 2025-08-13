@@ -1,3 +1,4 @@
+
 steps:
 # Install dependencies
 - name: 'gcr.io/cloud-builders/npm'
