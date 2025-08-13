@@ -34,7 +34,6 @@ import { AiRatingView } from '@/components/AiRatingView';
 import { getAiRating } from '@/ai/flows/ai-rating';
 import { getRiskAssessment } from '@/ai/flows/risk-assessment';
 import { FinancialsView } from '@/components/FinancialsView';
-import { UnderwritingView } from '@/components/UnderwritingView';
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -234,8 +233,6 @@ export default function CreditPage() {
         return <AiRatingView analysisResult={analysisResult} onBack={() => setActiveView(null)} />;
       case 'financials':
         return <FinancialsView onBack={() => setActiveView(null)} />;
-      case 'underwriting':
-        return <UnderwritingView analysisResult={analysisResult} onBack={() => setActiveView(null)} />;
       default:
         return null;
     }
