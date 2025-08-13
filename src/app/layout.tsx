@@ -8,8 +8,8 @@ import { Logo } from '@/components/ui/logo';
 import { UserNav } from '@/components/UserNav';
 
 export const metadata: Metadata = {
-  title: 'MkCreditWise.com - AI Credit Analysis',
-  description: 'Advanced AI Credit Score Analyzer & ML Model Trainer by MkCreditWise.com',
+  title: 'CreditWise AI - AI Credit Analysis',
+  description: 'Advanced AI Credit Score Analyzer & ML Model Trainer by CreditWise AI',
   manifest: '/manifest.json',
 };
 
