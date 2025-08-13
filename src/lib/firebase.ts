@@ -1,3 +1,4 @@
+
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp, FirebaseOptions } from "firebase/app";
 import { getAuth, GoogleAuthProvider, connectAuthEmulator } from "firebase/auth";
@@ -27,7 +28,8 @@ if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
         console.log("Connecting to Firebase Emulators...");
         // Point to the emulators
         connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
-        connectFirestoreEmulator(db, "127.0.0.1", 8080);
+        // Use port 9150 for WebSocket-based communication from the web client
+        connectFirestoreEmulator(db, "127.0.0.1", 9150);
         connectStorageEmulator(storage, "127.0.0.1", 9199);
         console.log("Successfully connected to Firebase Emulators.");
     } catch (error) {
