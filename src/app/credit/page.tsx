@@ -31,10 +31,6 @@ import { AnalysisDashboard } from '@/components/AnalysisDashboard';
 import { CreditSummaryView } from '@/components/CreditSummaryView';
 import { RiskAssessmentView } from '@/components/RiskAssessmentView';
 import { AiRatingView } from '@/components/AiRatingView';
-import { FinancialsView } from '@/components/FinancialsView';
-import { LoanEligibilityView } from '@/components/LoanEligibilityView';
-import { FinancialRiskView } from '@/components/FinancialRiskView';
-import { UnderwritingView } from '@/components/UnderwritingView';
 import { getAiRating } from '@/ai/flows/ai-rating';
 import { getRiskAssessment } from '@/ai/flows/risk-assessment';
 
@@ -234,14 +230,6 @@ export default function CreditPage() {
         return <RiskAssessmentView analysisResult={analysisResult} onBack={() => setActiveView(null)} />;
       case 'rating':
         return <AiRatingView analysisResult={analysisResult} onBack={() => setActiveView(null)} />;
-      case 'financials':
-        return <FinancialsView onBack={() => setActiveView(null)} />;
-      case 'eligibility':
-        return <LoanEligibilityView analysisResult={analysisResult} onBack={() => setActiveView(null)} />;
-      case 'financialRisk':
-        return <FinancialRiskView analysisResult={analysisResult} onBack={() => setActiveView(null)} />;
-      case 'underwriting':
-        return <UnderwritingView analysisResult={analysisResult} onBack={() => setActiveView(null)} />;
       default:
         return null;
     }
