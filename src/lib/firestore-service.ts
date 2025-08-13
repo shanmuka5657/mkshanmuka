@@ -117,7 +117,9 @@ export async function getReportsForUser(uid: string): Promise<CreditReportSummar
   }
 
   const reportsCol = collection(db, 'credit_reports');
-  const q = query(reportsCol, where("userId", "==", uid), orderBy("createdAt", "desc"));
+  // The query for an index on userId and createdAt was failing.
+  // We will query only by userId and sort the results on the client.
+  const q = query(reportsCol, where("userId", "==", uid));
 
   const querySnapshot = await getDocs(q);
   const reports: CreditReportSummary[] = [];

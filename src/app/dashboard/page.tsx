@@ -49,7 +49,9 @@ export default function DashboardPage() {
     setIsLoading(true);
     try {
       const userReports = await getReportsForUser(uid);
-      setReports(userReports);
+      // Sort reports on the client-side to avoid needing a composite index in Firestore
+      const sortedReports = userReports.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
+      setReports(sortedReports);
     } catch (error) {
       console.error('Error fetching reports:', error);
       // Optionally show a toast message here
