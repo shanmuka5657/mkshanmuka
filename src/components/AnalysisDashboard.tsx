@@ -4,7 +4,6 @@ import { BarChart, Briefcase, Calculator, Crosshair, Scale, Shield, UserCheck, W
 import { AnalyzeCreditReportOutput } from "@/ai/flows/credit-report-analysis"
 
 interface AnalysisDashboardProps {
-    rawText: string | null
     analysisResult: AnalyzeCreditReportOutput | null
     onSelectView: (view: string) => void
 }
@@ -20,8 +19,8 @@ const DashboardButton = ({ icon: Icon, title, disabled, onClick }: { icon: React
     </button>
 )
 
-export function AnalysisDashboard({ rawText, analysisResult, onSelectView }: AnalysisDashboardProps) {
-    const isReady = !!rawText && !!analysisResult;
+export function AnalysisDashboard({ analysisResult, onSelectView }: AnalysisDashboardProps) {
+    const isReady = !!analysisResult;
     
     return (
         <Card>

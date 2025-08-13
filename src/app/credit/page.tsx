@@ -11,7 +11,6 @@ import {
   ClipboardCheck,
   BarChart,
   User,
-  ArrowLeft,
   Sparkles
 } from 'lucide-react';
 
@@ -23,7 +22,7 @@ import { useToast } from "@/hooks/use-toast"
 import { analyzeCreditReport, AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
 import { AiAgentChat } from '@/components/CreditChat';
 import { cn } from '@/lib/utils';
-import { saveCreditAnalysisSummary } from '@/lib/firestore-service';
+import { saveCreditAnalysisSummary, saveTrainingCandidate } from '@/lib/firestore-service';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
@@ -32,6 +31,12 @@ import { AnalysisDashboard } from '@/components/AnalysisDashboard';
 import { CreditSummaryView } from '@/components/CreditSummaryView';
 import { RiskAssessmentView } from '@/components/RiskAssessmentView';
 import { AiRatingView } from '@/components/AiRatingView';
+import { FinancialsView } from '@/components/FinancialsView';
+import { LoanEligibilityView } from '@/components/LoanEligibilityView';
+import { FinancialRiskView } from '@/components/FinancialRiskView';
+import { UnderwritingView } from '@/components/UnderwritingView';
+import { getAiRating } from '@/ai/flows/ai-rating';
+import { getRiskAssessment } from '@/ai/flows/risk-assessment';
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -183,13 +188,23 @@ export default function CreditPage() {
     }
     setIsAnalyzing(true);
     try {
-        const { output } = await analyzeCreditReport({ creditReportText: rawText });
+        const { output, usage } = await analyzeCreditReport({ creditReportText: rawText });
         setAnalysisResult(output);
         
         toast({ title: "Credit Report Analysis Complete", description: "Your AI-powered summary is ready." });
 
         if(firebaseUser && output) {
            await saveCreditAnalysisSummary(output, cibilScore);
+           
+           // Also save a training candidate record silently
+           const { output: riskAssessment } = await getRiskAssessment({ analysisResult: output });
+           const { output: aiRating } = await getAiRating({ analysisResult: output, riskAssessment: riskAssessment.assessmentWithGuarantor });
+           
+           await saveTrainingCandidate({
+               creditReportAnalysis: output,
+               aiRating: aiRating,
+           });
+
             toast({
                 title: "Report Saved",
                 description: `A summary of this analysis has been saved to your dashboard.`,
@@ -219,6 +234,14 @@ export default function CreditPage() {
         return <RiskAssessmentView analysisResult={analysisResult} onBack={() => setActiveView(null)} />;
       case 'rating':
         return <AiRatingView analysisResult={analysisResult} onBack={() => setActiveView(null)} />;
+      case 'financials':
+        return <FinancialsView onBack={() => setActiveView(null)} />;
+      case 'eligibility':
+        return <LoanEligibilityView analysisResult={analysisResult} onBack={() => setActiveView(null)} />;
+      case 'financialRisk':
+        return <FinancialRiskView analysisResult={analysisResult} onBack={() => setActiveView(null)} />;
+      case 'underwriting':
+        return <UnderwritingView analysisResult={analysisResult} onBack={() => setActiveView(null)} />;
       default:
         return null;
     }
@@ -367,7 +390,6 @@ export default function CreditPage() {
             </Card>
 
             <AnalysisDashboard 
-                rawText={rawText} 
                 analysisResult={analysisResult} 
                 onSelectView={setActiveView}
             />

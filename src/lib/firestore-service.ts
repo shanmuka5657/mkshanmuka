@@ -2,6 +2,7 @@
 import { db, auth } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp, FieldValue, query, where, getDocs, orderBy, Timestamp } from 'firebase/firestore';
 import type { AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
+import type { AiRatingOutput } from '@/ai/flows/ai-rating';
 
 // NOTE: This file no longer uses 'use server'. It's a client-side module.
 
@@ -14,6 +15,39 @@ export interface CreditReportSummary {
   totalEmi: number;
   activeLoanCount: number;
   createdAt: Timestamp;
+}
+
+export type TrainingCandidateData = {
+    creditReportAnalysis: AnalyzeCreditReportOutput;
+    aiRating: AiRatingOutput;
+    // Add other analyses here as they are created
+};
+
+/**
+ * Saves a training candidate to Firestore for later review.
+ * This is intended to be called after a successful analysis.
+ * @param data - The data payload for the training candidate.
+ * @returns The ID of the newly created document.
+ */
+export async function saveTrainingCandidate(data: TrainingCandidateData): Promise<string> {
+  const user = auth?.currentUser;
+  if (!user) {
+    throw new Error("User is not authenticated. Cannot save training candidate.");
+  }
+  if (!db) {
+    throw new Error("Firestore is not initialized.");
+  }
+
+  const candidateData = {
+    userId: user.uid,
+    status: 'pending_review', // Default status for new candidates
+    createdAt: serverTimestamp(),
+    ...data,
+  };
+
+  const docRef = await addDoc(collection(db, 'training_candidates'), candidateData);
+  console.log('Training candidate saved with ID: ', docRef.id);
+  return docRef.id;
 }
 
 
