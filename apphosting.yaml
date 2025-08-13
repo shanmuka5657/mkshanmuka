@@ -22,6 +22,7 @@ resources:
 env:
   # App Hosting automatically sets the PORT environment variable.
   # Your Next.js app should listen on this port.
+  # The GEMINI_API_KEY secret is temporarily commented out to allow for successful deployment.
   # - variable: GEMINI_API_KEY
   #   secret: GEMINI_API_KEY
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY
