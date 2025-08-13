@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { BarChart, Calculator, Crosshair, Shield } from "lucide-react"
+import { BarChart, Calculator, Crosshair, Shield, Landmark } from "lucide-react"
 import { AnalyzeCreditReportOutput } from "@/ai/flows/credit-report-analysis"
 
 interface AnalysisDashboardProps {
@@ -36,6 +36,7 @@ export function AnalysisDashboard({ analysisResult, onSelectView }: AnalysisDash
                     <DashboardButton icon={BarChart} title="Credit Summary" disabled={!isReady} onClick={() => onSelectView('summary')} />
                     <DashboardButton icon={Shield} title="AI Risk Assessment" disabled={!isReady} onClick={() => onSelectView('risk')} />
                     <DashboardButton icon={Calculator} title="AI Credit Meter" disabled={!isReady} onClick={() => onSelectView('rating')} />
+                    <DashboardButton icon={Landmark} title="Financials" disabled={!isReady} onClick={() => onSelectView('financials')} />
                 </div>
             </CardContent>
         </Card>
