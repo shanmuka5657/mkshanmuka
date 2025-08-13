@@ -12,7 +12,7 @@ steps:
     - 'apphosting'
     - 'backends'
     - 'update'
-    - 'pwa' # This should match the backend ID you created
+    - 'pwa'
     - '--region=us-central1'
     - '--project=creditwise-ai-nd7s0'
 serviceAccount: 'projects/creditwise-ai-nd7s0/serviceAccounts/firebase-app-hosting-build@creditwise-ai-nd7s0.iam.gserviceaccount.com'
