@@ -46,3 +46,4 @@ scaling:
   maxInstances: 2
   # The number of concurrent requests to route to each instance.
   concurrency: 80
+}
