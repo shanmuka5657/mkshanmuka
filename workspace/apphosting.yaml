@@ -1,22 +1,23 @@
-{# Settings to manage and configure a Firebase App Hosting backend.
+# Settings to manage and configure a Firebase App Hosting backend.
 # https://firebase.google.com/docs/app-hosting/configure-nextjs
-
-# The version of the App Hosting configuration schema.
 version: 1
 
 # The command that starts the Next.js server.
 run: npm run start
 
-# Optional: The command that builds the Next.js application.
-# If you specify a build command, App Hosting runs it before deploying your app.
+# The command that builds the Next.js application.
 build: npm run build
 
 # Firebase-managed infrastructure for your Next.js app.
 resources:
-  # The amount of CPU to allocate to each instance of your app.
   cpu: 0.5
-  # The amount of memory to allocate to each instance of your app.
   memoryMiB: 1024
+
+# Automatic scaling settings for your Next.js app.
+scaling:
+  minInstances: 0
+  maxInstances: 2
+  concurrency: 80
 
 # Environment variables and secrets for your Next.js app.
 # Your Next.js app should listen on the PORT environment variable, which is automatically set by App Hosting.
@@ -24,13 +25,3 @@ resources:
 # env:
 #  - variable: GEMINI_API_KEY
 #    secret: GEMINI_API_KEY
-
-# Automatic scaling settings for your Next.js app.
-scaling:
-  # The minimum number of instances to keep running at all times.
-  minInstances: 0
-  # The maximum number of instances to scale up to.
-  maxInstances: 2
-  # The number of concurrent requests to route to each instance.
-  concurrency: 80
-}
