@@ -2,7 +2,6 @@
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
-import Script from 'next/script';
 import { BottomNavbar } from '@/components/BottomNavbar';
 import { Logo } from '@/components/ui/logo';
 import { UserNav } from '@/components/UserNav';
@@ -43,7 +42,6 @@ export default function RootLayout({
           <BottomNavbar />
         </div>
         <Toaster />
-        <Script src="/register-sw.js" defer />
       </body>
     </html>
   );
