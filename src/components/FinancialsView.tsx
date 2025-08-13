@@ -8,14 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { useToast } from "@/hooks/use-toast";
 import { analyzeBankStatement, BankStatementAnalysisOutput } from "@/ai/flows/bank-statement-analysis";
 import { analyzeSalarySlips, SalarySlipAnalysisOutput } from "@/ai/flows/salary-slip-analysis";
-import * as pdfjsLib from 'pdfjs-dist';
+import { getDocument, GlobalWorkerOptions, version } from 'pdfjs-dist';
 import { Input } from "./ui/input";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
 import { Badge } from "./ui/badge";
 
 // PDFJS worker setup
 if (typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+  GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.mjs`;
 }
 
 interface FinancialsViewProps {
@@ -69,15 +69,19 @@ export function FinancialsView({ onBack }: FinancialsViewProps) {
             const reader = new FileReader();
             const textContent = await new Promise<string>((resolve, reject) => {
                 reader.onload = async (e) => {
-                    const buffer = new Uint8Array(e.target?.result as ArrayBuffer);
-                    const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
-                    let text = '';
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const content = await page.getTextContent();
-                        text += content.items.map(item => 'str' in item ? item.str : '').join(' ');
+                    const buffer = e.target?.result as ArrayBuffer;
+                    if (buffer) {
+                        const pdf = await getDocument({ data: buffer }).promise;
+                        let text = '';
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const content = await page.getTextContent();
+                            text += content.items.map(item => 'str' in item ? item.str : '').join(' ');
+                        }
+                        resolve(text);
+                    } else {
+                        reject(new Error("Failed to read file buffer."));
                     }
-                    resolve(text);
                 };
                 reader.onerror = reject;
                 reader.readAsArrayBuffer(bankStatement);
