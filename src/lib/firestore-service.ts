@@ -11,6 +11,7 @@ export interface CreditReportSummary {
   userId: string;
   name: string;
   pan: string;
+  mobileNumber: string;
   cibilScore: number | null;
   totalEmi: number;
   activeLoanCount: number;
@@ -85,6 +86,7 @@ export async function saveCreditAnalysisSummary(
       userId: user.uid,
       name: customerDetails.name,
       pan: customerDetails.pan,
+      mobileNumber: customerDetails.mobileNumber,
 
       // Scores & Core Metrics
       cibilScore: cibilScore,

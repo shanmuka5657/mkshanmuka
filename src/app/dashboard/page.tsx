@@ -60,12 +60,20 @@ export default function DashboardPage() {
     }
   };
 
-  const getRiskBadge = (score: number | null) => {
-    if (score === null || isNaN(score)) return <Badge variant="secondary">N/A</Badge>;
-    if (score >= 750) return <Badge className="bg-green-500 hover:bg-green-600 text-white">Excellent</Badge>;
-    if (score >= 700) return <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white">Good</Badge>;
-    if (score >= 650) return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white">Fair</Badge>
-    return <Badge variant="destructive">Poor</Badge>;
+  const getRiskBadgeVariant = (score: number | null) => {
+    if (score === null || isNaN(score)) return 'secondary';
+    if (score >= 750) return 'success';
+    if (score >= 700) return 'default';
+    if (score >= 650) return 'outline';
+    return 'destructive';
+  };
+
+  const getRiskBadgeText = (score: number | null) => {
+    if (score === null || isNaN(score)) return 'N/A';
+    if (score >= 750) return 'Excellent';
+    if (score >= 700) return 'Good';
+    if (score >= 650) return 'Fair';
+    return 'Poor';
   };
 
   if (isLoading || !user) {
@@ -119,6 +127,7 @@ export default function DashboardPage() {
                             <TableRow>
                                 <TableHead>Name</TableHead>
                                 <TableHead>PAN</TableHead>
+                                <TableHead>Mobile</TableHead>
                                 <TableHead>CIBIL Score</TableHead>
                                 <TableHead>Total EMI</TableHead>
                                 <TableHead>Active Loans</TableHead>
@@ -130,7 +139,13 @@ export default function DashboardPage() {
                                 <TableRow key={report.id}>
                                 <TableCell className="font-medium">{report.name}</TableCell>
                                 <TableCell>{report.pan}</TableCell>
-                                <TableCell>{getRiskBadge(report.cibilScore)}</TableCell>
+                                <TableCell>{report.mobileNumber}</TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-semibold">{report.cibilScore ?? 'N/A'}</span>
+                                    <Badge variant={getRiskBadgeVariant(report.cibilScore)}>{getRiskBadgeText(report.cibilScore)}</Badge>
+                                  </div>
+                                </TableCell>
                                 <TableCell>₹{report.totalEmi.toLocaleString('en-IN')}</TableCell>
                                 <TableCell>{report.activeLoanCount}</TableCell>
                                 <TableCell>{new Date(report.createdAt.seconds * 1000).toLocaleDateString()}</TableCell>
