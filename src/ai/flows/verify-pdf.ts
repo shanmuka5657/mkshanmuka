@@ -71,7 +71,6 @@ const prompt = ai.definePrompt({
     name: 'verifyPdfPrompt',
     input: {schema: VerifyPdfInputSchema},
     output: {schema: VerifyPdfOutputSchema},
-    model: 'googleai/gemini-pro',
     prompt: `You are a world-class forensic document analyst. Your task is to conduct a thorough forensic analysis of the provided PDF and return your findings in a structured JSON format. The confidence score must be a direct reflection of the detailed forensic report.
 
 **Analysis Instructions:**
