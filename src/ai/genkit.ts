@@ -9,7 +9,8 @@ const plugins = [];
 // This check ensures the app doesn't crash if the API key is missing during deployment.
 if (process.env.GEMINI_API_KEY) {
     plugins.push(googleAI({
-        apiKey: process.env.GEMINI_API_KEY
+        apiKey: process.env.GEMINI_API_KEY,
+        apiVersion: 'v1beta', // Using v1beta for broader model compatibility
     }));
 } else {
     // This warning will appear in your server logs.
