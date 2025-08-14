@@ -1,3 +1,9 @@
+
+'use client';
+
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+
 export default function HomePage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-24">
@@ -6,7 +12,7 @@ export default function HomePage() {
           Welcome to CreditWise AI
         </h1>
         <p className="mt-6 text-lg leading-8 text-muted-foreground">
-          This is a new, clean project. You can start building your application here.
+          Your project is ready. You can start building your application here.
         </p>
       </div>
     </main>
