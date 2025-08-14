@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FileText, Fingerprint, FileCheck2, Home, BrainCircuit } from 'lucide-react';
+import { FileText, Home, BrainCircuit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -12,8 +12,6 @@ import { auth } from '@/lib/firebase';
 const allNavItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/credit', label: 'Credit', icon: FileText },
-  { href: '/verify', label: 'Verify', icon: Fingerprint },
-  { href: '/cross-verify', label: 'Cross-Verify', icon: FileCheck2 },
   { href: '/trainer', label: 'Trainer', icon: BrainCircuit },
 ];
 
@@ -37,7 +35,7 @@ export function BottomNavbar() {
 
   return (
     <div className="fixed bottom-0 left-0 z-50 w-full h-20 bg-background border-t border-border no-print">
-      <div className={`grid h-full max-w-lg grid-cols-5 mx-auto font-medium`}>
+      <div className={`grid h-full max-w-lg grid-cols-3 mx-auto font-medium`}>
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
           return (
