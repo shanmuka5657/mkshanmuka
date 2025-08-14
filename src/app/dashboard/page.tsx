@@ -88,7 +88,7 @@ export default function DashboardPage() {
     <div className="bg-background font-body text-foreground">
        <main className="container mx-auto p-4 md:p-8">
             <div className="text-center mb-12">
-                <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">Welcome to your Dashboard</h1>
+                <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">Welcome to CreditWise AI</h1>
                 <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
                     View your past credit report analyses or start a new one.
                 </p>
