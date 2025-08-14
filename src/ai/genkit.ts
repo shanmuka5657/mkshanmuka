@@ -10,7 +10,7 @@ const plugins = [];
 if (process.env.GEMINI_API_KEY) {
     plugins.push(googleAI({
         apiKey: process.env.GEMINI_API_KEY,
-        apiVersion: 'v1beta', // Using v1beta for broader model compatibility
+        apiVersion: 'v1beta', // Using v1beta for broader compatibility
     }));
 } else {
     // This warning will appear in your server logs.
