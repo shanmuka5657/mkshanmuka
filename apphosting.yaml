@@ -1,4 +1,3 @@
-
 # Settings to manage and configure a Firebase App Hosting backend.
 # https://firebase.google.com/docs/app-hosting/configure
 
@@ -8,21 +7,6 @@ runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 1
-  # Pass secrets and environment variables to the backend.
-  # https://firebase.google.com/docs/app-hosting/manage-secrets
-  env:
-    - variable: NEXT_PUBLIC_FIREBASE_API_KEY
-      value: "AIzaSyAeIyY3IH-zAkV8FSmmKyR1b32pCa46fQg"
-    - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-      value: "creditwise-ai-nd7s0.firebaseapp.com"
-    - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-      value: "creditwise-ai-nd7s0"
-    - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-      value: "creditwise-ai-nd7s0.firebasestorage.app"
-    - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-      value: "492248595221"
-    - variable: NEXT_PUBLIC_FIREBASE_APP_ID
-      value: "1:492248595221:web:3fe409487b8848d4a6071c"
 
 logging: CLOUD_LOGGING_ONLY
 
@@ -33,4 +17,3 @@ headers:
     headers:
       - key: Cache-Control
         value: 'private, max-age=0, no-store, must-revalidate'
-

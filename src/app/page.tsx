@@ -1,34 +1,14 @@
-
-'use client';
-
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { Loader2 } from 'lucide-react';
-
 export default function HomePage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        // User is signed in, redirect to the dashboard.
-        router.replace('/dashboard');
-      } else {
-        // User is signed out, redirect to the login page.
-        router.replace('/login');
-      }
-    });
-
-    // Cleanup subscription on unmount
-    return () => unsubscribe();
-  }, [router]);
-
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background">
-      <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-      <p className="text-muted-foreground">Loading...</p>
-    </div>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-background p-24">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-6xl">
+          Welcome to CreditWise AI
+        </h1>
+        <p className="mt-6 text-lg leading-8 text-muted-foreground">
+          This is a new, clean project. You can start building your application here.
+        </p>
+      </div>
+    </main>
   );
 }
