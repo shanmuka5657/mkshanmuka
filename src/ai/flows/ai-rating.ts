@@ -67,6 +67,7 @@ export async function getAiRating(
 
 const prompt = ai.definePrompt({
   name: 'aiRatingPrompt',
+  model: 'googleai/gemini-1.5-flash-preview',
   input: {schema: AiRatingInputSchema},
   output: {schema: AiRatingOutputSchema},
   prompt: `You are an expert credit analyst. Your task is to provide a holistic AI-powered credit rating based on the provided structured credit report data and a pre-calculated risk assessment. Do NOT simply repeat the risk assessment. Your output should be a high-level, user-friendly summary.

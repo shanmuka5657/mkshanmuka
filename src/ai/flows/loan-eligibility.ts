@@ -66,6 +66,7 @@ export async function getLoanEligibility(
 
 const prompt = ai.definePrompt({
   name: 'loanEligibilityPrompt',
+  model: 'googleai/gemini-1.5-flash-preview',
   input: { schema: LoanEligibilityInputSchema },
   output: { schema: LoanEligibilityOutputSchema },
   prompt: `You are an expert loan officer at a digital bank in India. Your task is to perform a holistic and realistic estimation of a user's eligibility for a personal loan and provide actionable, non-generic advice. Use the provided structured data, not raw text.
@@ -128,6 +129,6 @@ const loanEligibilityFlow = ai.defineFlow(
     if (!result.output) {
       throw new Error("AI failed to calculate loan eligibility.");
     }
-    return { output: result.output, usage: result.usage };
+    return { output, usage: result.usage };
   }
 );
