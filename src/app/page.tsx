@@ -1,7 +1,7 @@
 'use client';
 
-import LoginPage from './login/page';
+import DashboardPage from './dashboard/page';
 
 export default function HomePage() {
-  return <LoginPage />;
+  return <DashboardPage />;
 }

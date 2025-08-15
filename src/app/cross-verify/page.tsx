@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
@@ -39,9 +38,6 @@ import { analyzeBankStatement, BankStatementAnalysisOutput } from '@/ai/flows/ba
 import { analyzeSalarySlips, SalarySlipAnalysisOutput } from '@/ai/flows/salary-slip-analysis';
 import { crossVerifyDocuments, CrossVerificationInput, CrossVerificationOutput } from '@/ai/flows/cross-verification';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 
 // PDFJS worker setup
 if (typeof window !== 'undefined') {
@@ -124,26 +120,12 @@ export default function CrossVerifyPage() {
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [verificationResult, setVerificationResult] = useState<CrossVerificationOutput | null>(null);
-  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
 
   const cibilInputRef = useRef<HTMLInputElement>(null);
   const bankInputRef = useRef<HTMLInputElement>(null);
   const salaryInputRef = useRef<HTMLInputElement>(null);
   
   const { toast } = useToast();
-  const router = useRouter();
-  
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setFirebaseUser(user);
-      } else {
-        router.replace('/');
-      }
-    });
-
-    return () => unsubscribe();
-  }, [router]);
 
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -258,14 +240,6 @@ export default function CrossVerifyPage() {
   }
 
   const hasFiles = cibilFile.file || bankStatementFile.file || salarySlips.length > 0;
-  
-  if (!firebaseUser) {
-    return (
-        <div className="flex items-center justify-center min-h-screen">
-            <Loader2 className="h-12 w-12 animate-spin text-primary"/>
-        </div>
-    );
-  }
 
   return (
     <div className="bg-background font-body text-foreground">

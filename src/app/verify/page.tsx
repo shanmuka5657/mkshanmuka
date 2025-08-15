@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -44,12 +43,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from '@/components/ui/badge';
-import Link from 'next/link';
-import { Logo } from '@/components/ui/logo';
-import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-
 
 if (typeof window !== 'undefined') {
   pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
@@ -61,24 +54,9 @@ export default function VerifyPdfPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [analysisResult, setAnalysisResult] = useState<VerifyPdfOutput | null>(null);
-  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const router = useRouter();
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setFirebaseUser(user);
-      } else {
-        router.replace('/');
-      }
-    });
-
-    return () => unsubscribe();
-  }, [router]);
-
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -183,14 +161,6 @@ export default function VerifyPdfPage() {
 
   const handleDownload = () => {
     window.print();
-  }
-
-  if (!firebaseUser) {
-    return (
-        <div className="flex items-center justify-center min-h-screen">
-            <Loader2 className="h-12 w-12 animate-spin text-primary"/>
-        </div>
-    );
   }
 
   return (

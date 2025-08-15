@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -22,9 +21,6 @@ import { useToast } from "@/hooks/use-toast"
 import { analyzeCreditReport, AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
 import { AiAgentChat } from '@/components/CreditChat';
 import { cn } from '@/lib/utils';
-import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { useRouter } from 'next/navigation';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { AnalysisDashboard } from '@/components/AnalysisDashboard';
 import { CreditSummaryView } from '@/components/CreditSummaryView';
@@ -87,27 +83,12 @@ export default function CreditPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [cibilScore, setCibilScore] = useState<number | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(null);
-  const [isClient, setIsClient] = useState(false);
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [activeView, setActiveView] = useState<string | null>(null);
   const [isTextExtracted, setIsTextExtracted] = useState(false);
 
   const { toast } = useToast()
   const creditFileInputRef = useRef<HTMLInputElement>(null);
-  const router = useRouter();
   
-  useEffect(() => {
-    setIsClient(true);
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setFirebaseUser(user);
-      } else {
-        router.replace('/');
-      }
-    });
-    return () => unsubscribe();
-  }, [router]);
-
   useEffect(() => {
     GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.mjs`;
   }, []);
@@ -219,15 +200,6 @@ export default function CreditPage() {
   const { customerDetails, reportSummary } = analysisResult || initialAnalysis;
   const isAnalysisComplete = !!analysisResult;
   const isReadyForAnalysis = isTextExtracted && !isAnalyzing && !isAnalysisComplete;
-  
-  if (!isClient || !firebaseUser) {
-    return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-background">
-            <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Loading...</p>
-        </div>
-    );
-  }
   
   if (activeView && analysisResult) {
       return (

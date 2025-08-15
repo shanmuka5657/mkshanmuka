@@ -1,10 +1,7 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import { Loader2, FileText, PlusCircle } from 'lucide-react';
 import {
   Card,
@@ -24,42 +21,36 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { getReportsForUser, CreditReportSummary } from '@/lib/firestore-service';
+
+// Mock data since we have no user
+const mockReports = [
+    {
+        id: '1',
+        name: 'John Doe',
+        pan: 'ABCDE1234F',
+        mobileNumber: '******1234',
+        cibilScore: 780,
+        totalEmi: 25000,
+        activeLoanCount: 2,
+        createdAt: { seconds: Math.floor(Date.now() / 1000) - 86400 } // 1 day ago
+    },
+    {
+        id: '2',
+        name: 'Jane Smith',
+        pan: 'FGHIJ5678K',
+        mobileNumber: '******5678',
+        cibilScore: 680,
+        totalEmi: 15000,
+        activeLoanCount: 3,
+        createdAt: { seconds: Math.floor(Date.now() / 1000) - 172800 } // 2 days ago
+    }
+];
 
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [reports, setReports] = useState<CreditReportSummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        fetchReports(currentUser.uid);
-      } else {
-        router.replace('/');
-      }
-    });
-    return () => unsubscribe();
-  }, [router]);
-
-  const fetchReports = async (uid: string) => {
-    setIsLoading(true);
-    try {
-      const userReports = await getReportsForUser(uid);
-      // Sort reports on the client-side to avoid needing a composite index in Firestore
-      const sortedReports = userReports.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
-      setReports(sortedReports);
-    } catch (error) {
-      console.error('Error fetching reports:', error);
-      // Optionally show a toast message here
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  const [reports, setReports] = useState(mockReports);
+  const [isLoading, setIsLoading] = useState(false);
+  
   const getRiskBadgeVariant = (score: number | null) => {
     if (score === null || isNaN(score)) return 'secondary';
     if (score >= 750) return 'success';
@@ -76,7 +67,7 @@ export default function DashboardPage() {
     return 'Poor';
   };
 
-  if (isLoading || !user) {
+  if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />

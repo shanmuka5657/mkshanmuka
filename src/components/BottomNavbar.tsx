@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -6,8 +5,6 @@ import { usePathname } from 'next/navigation';
 import { FileText, Fingerprint, FileCheck2, Home, BrainCircuit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 
 const allNavItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
@@ -19,20 +16,6 @@ const allNavItems = [
 
 export function BottomNavbar() {
   const pathname = usePathname();
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-    return () => unsubscribe();
-  }, []);
-  
-  // Don't show the navbar if the user isn't authenticated yet or on the login page.
-  if (!user || pathname === '/' || pathname === '/login') {
-    return null;
-  }
-  
   const navItems = allNavItems;
 
   return (
