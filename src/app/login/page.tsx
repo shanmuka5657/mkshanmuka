@@ -1,11 +1,12 @@
+
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  User,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  User,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
@@ -42,7 +43,6 @@ export default function LoginPage() {
       const { error } = await response.json();
       throw new Error(error || 'Failed to create session.');
     }
-    return response.json();
   };
 
   const handleAuthSuccess = (user: User) => {

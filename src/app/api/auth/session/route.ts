@@ -18,10 +18,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'ID token is required.' }, { status: 400 });
     }
 
-    // Verify the ID token and get user data.
-    const decodedToken = await adminAuth.verifyIdToken(idToken);
-    const uid = decodedToken.uid;
-
     // Set session cookie
     const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days
     const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
@@ -33,12 +29,13 @@ export async function POST(request: NextRequest) {
       secure: process.env.NODE_ENV === 'production',
     };
     
-    const response = NextResponse.json({ status: 'success', uid }, { status: 200 });
+    const response = NextResponse.json({ status: 'success' }, { status: 200 });
     response.cookies.set(options);
     
     return response;
 
   } catch (error: any) {
+    console.error("Session creation error:", error);
     const errorMessage = error.code ? error.code.replace('auth/', '').replace(/-/g, ' ') : 'An unknown error occurred.';
     return NextResponse.json({ error: errorMessage }, { status: 401 });
   }
