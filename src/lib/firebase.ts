@@ -42,11 +42,11 @@ function getFirebaseServices(): FirebaseServices {
     // Use a flag on the window object to avoid reconnecting on hot reloads
     if (!(window as any).firebaseEmulatorsConnected) {
       try {
-        console.log("Connecting to Firebase emulators...");
-        // Use 'localhost' instead of '127.0.0.1' for better compatibility in some dev environments
-        connectAuthEmulator(auth, "http://localhost:9099", { disableWarnings: true });
-        connectFirestoreEmulator(db, "localhost", 9150);
-        connectStorageEmulator(storage, "localhost", 9199);
+        console.log("Connecting to Firebase emulators using IP address...");
+        // Use '127.0.0.1' which is more reliable in some containerized environments
+        connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+        connectFirestoreEmulator(db, "127.0.0.1", 9150);
+        connectStorageEmulator(storage, "127.0.0.1", 9199);
         (window as any).firebaseEmulatorsConnected = true;
         console.log("Firebase emulators connected for local development.");
       } catch (error) {
