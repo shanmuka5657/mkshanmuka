@@ -17,32 +17,21 @@ const firebaseConfig: FirebaseOptions = {
 
 // Initialize Firebase for client-side using a singleton pattern
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-
-// Initialize Firestore with auth integration
-const db = initializeFirestore(app, {
-    localCache: memoryLocalCache(),
-});
-
 const auth = getAuth(app);
 const storage = getStorage(app);
+const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 
 // Connect to emulators in development
-if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
-    // Check if emulators are already connected to prevent re-initialization
-    if (!(auth as any)._isEmulated) {
-        connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
-    }
-    // Firestore emulator connection check is handled internally by the SDK after first connect
-    try {
-        connectFirestoreEmulator(db, 'localhost', 9150);
-    } catch (e) {
-        // Ignore errors if already connected
-    }
-    if (!(storage as any)._isEmulated) {
-        connectStorageEmulator(storage, 'localhost', 9199);
+// NOTE: This check is for client-side only and will not run on the server.
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+    // Use a flag on the window object to avoid reconnecting on hot reloads
+    if (!(window as any).firebaseEmulatorsConnected) {
+        connectAuthEmulator(auth, "http://localhost:9099");
+        connectFirestoreEmulator(db, "localhost", 9150);
+        connectStorageEmulator(storage, "localhost", 9199);
+        (window as any).firebaseEmulatorsConnected = true;
     }
 }
-
 
 export { app, auth, db, storage, googleProvider };
