@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -171,9 +172,13 @@ export default function CreditPage() {
     } catch (error: any) {
         console.error('Error analyzing report:', error);
         const errorMessage = error.message || "An unknown error occurred. Please try again.";
-        const userFriendlyMessage = errorMessage.includes('503') || errorMessage.includes('overloaded')
-            ? "The AI service is currently busy. Please try again in a moment."
-            : errorMessage;
+        let userFriendlyMessage = errorMessage;
+
+        if (errorMessage.includes('429')) {
+            userFriendlyMessage = "You've made too many requests. Please wait a moment before trying again.";
+        } else if (errorMessage.includes('503') || errorMessage.includes('overloaded')) {
+            userFriendlyMessage = "The AI service is currently busy. Please try again in a moment.";
+        }
 
          toast({
             variant: "destructive",

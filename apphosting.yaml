@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 version: 1
 run: npm run start
 build: npm run build
@@ -11,3 +12,27 @@ scaling:
 env:
   - variable: GEMINI_API_KEY
     secret: GEMINI_API_KEY
+=======
+# Settings to manage and configure a Firebase App Hosting backend.
+# https://firebase.google.com/docs/app-hosting/configure
+
+runConfig:
+  # By setting minInstances to 0, you allow the app to scale to zero
+  # when it's not receiving traffic, which can reduce costs.
+  minInstances: 0
+  # Allow public, unauthenticated access to the backend.
+  ingress: all
+  # Increase this value if you'd like to automatically spin up
+  # more instances in response to increased traffic.
+  maxInstances: 1
+
+logging: CLOUD_LOGGING_ONLY
+
+# Serve all traffic from the Next.js server.
+# https://firebase.google.com/docs/app-hosting/configure-nextjs
+headers:
+  - source: /
+    headers:
+      - key: Cache-Control
+        value: 'private, max-age=0, no-store, must-revalidate'
+>>>>>>> 4806fcfc5ab332d1c61871cdfdbe9836972303fa
