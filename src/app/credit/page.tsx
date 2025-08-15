@@ -28,6 +28,8 @@ import { CreditSummaryView } from '@/components/CreditSummaryView';
 import { RiskAssessmentView } from '@/components/RiskAssessmentView';
 import { AiRatingView } from '@/components/AiRatingView';
 import { FinancialsView } from '@/components/FinancialsView';
+import { useAuth } from '@/hooks/useAuth';
+import { saveReportForUser } from '@/lib/firestore-service';
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -86,7 +88,8 @@ export default function CreditPage() {
   const [analysisResult, setAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(null);
   const [activeView, setActiveView] = useState<string | null>(null);
   const [isTextExtracted, setIsTextExtracted] = useState(false);
-
+  
+  const { user } = useAuth();
   const { toast } = useToast()
   const creditFileInputRef = useRef<HTMLInputElement>(null);
   
@@ -165,9 +168,26 @@ export default function CreditPage() {
     setIsAnalyzing(true);
     try {
         const { output, usage } = await analyzeCreditReport({ creditReportText: rawText });
-        setAnalysisResult(output);
-        
-        toast({ title: "Credit Report Analysis Complete", description: "Your AI-powered summary is ready." });
+        if (output) {
+            setAnalysisResult(output);
+            
+            // Save the report summary to Firestore if the user is logged in
+            if (user) {
+                try {
+                    await saveReportForUser(user.uid, output, cibilScore);
+                    toast({ title: "Credit Report Analysis Complete & Saved", description: "Your AI-powered summary is ready and saved to your dashboard." });
+                } catch (dbError) {
+                    console.error("Error saving report:", dbError);
+                    // Still show success for analysis, but warn about saving
+                    toast({ title: "Credit Report Analysis Complete", description: "Could not save the report to your dashboard." });
+                }
+            } else {
+                toast({ title: "Credit Report Analysis Complete", description: "Your AI-powered summary is ready. Log in to save future reports." });
+            }
+        } else {
+             throw new Error("AI returned an empty response.");
+        }
+
 
     } catch (error: any) {
         console.error('Error analyzing report:', error);
@@ -372,5 +392,3 @@ export default function CreditPage() {
     </div>
   );
 }
-
-    

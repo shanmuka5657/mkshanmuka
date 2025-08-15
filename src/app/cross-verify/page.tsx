@@ -52,6 +52,8 @@ type FileState = {
   status: 'pending' | 'processing' | 'done' | 'error';
 };
 
+const initialFileState: FileState = { file: null, text: '', dataUri: '', status: 'pending' };
+
 const getStatusIcon = (status: string) => {
     switch (status) {
         case 'Match': return <CheckCircle2 className="text-green-500" />;
@@ -113,8 +115,8 @@ const VerificationField = ({ field, label, forPrint = false }: { field: CrossVer
 };
 
 export default function CrossVerifyPage() {
-  const [cibilFile, setCibilFile] = useState<FileState>({ file: null, text: '', dataUri: '', status: 'pending' });
-  const [bankStatementFile, setBankStatementFile] = useState<FileState>({ file: null, text: '', dataUri: '', status: 'pending' });
+  const [cibilFile, setCibilFile] = useState<FileState>(initialFileState);
+  const [bankStatementFile, setBankStatementFile] = useState<FileState>(initialFileState);
   const [salarySlips, setSalarySlips] = useState<File[]>([]);
   const [salarySlipAnalysis, setSalarySlipAnalysis] = useState<SalarySlipAnalysisOutput | null>(null);
 
@@ -132,7 +134,12 @@ export default function CrossVerifyPage() {
     fileType: 'cibil' | 'bank' | 'salary'
   ) => {
     const files = event.target.files;
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0) {
+        if (fileType === 'cibil') setCibilFile(initialFileState);
+        if (fileType === 'bank') setBankStatementFile(initialFileState);
+        if (fileType === 'salary') setSalarySlips([]);
+        return;
+    }
 
     if (fileType === 'salary') {
         setSalarySlips(Array.from(files));
@@ -158,7 +165,7 @@ export default function CrossVerifyPage() {
   };
 
   const handleAnalyze = async () => {
-    if (!cibilFile.file && !bankStatementFile.file && salarySlips.length === 0) {
+    if (!cibilFile?.file && !bankStatementFile?.file && salarySlips.length === 0) {
       toast({ variant: 'destructive', title: 'No Files Selected', description: 'Please upload at least one document to analyze.' });
       return;
     }
@@ -224,8 +231,8 @@ export default function CrossVerifyPage() {
   };
   
   const resetAll = () => {
-      setCibilFile({ file: null, text: '', dataUri: '', status: 'pending' });
-      setBankStatementFile({ file: null, text: '', dataUri: '', status: 'pending' });
+      setCibilFile(initialFileState);
+      setBankStatementFile(initialFileState);
       setSalarySlips([]);
       setSalarySlipAnalysis(null);
       setVerificationResult(null);
