@@ -34,35 +34,37 @@ export default function LoginPage() {
       description: type === 'login' ? 'Welcome back!' : 'Your account has been created.',
     });
     router.push('/dashboard');
-    router.refresh();
+    router.refresh(); // Ensures the server-side state is updated
   };
 
   const handleAuthError = (error: any) => {
     let description = 'An unexpected error occurred. Please try again.';
-    const errorCode = error.code;
-
-    switch (errorCode) {
-      case 'auth/user-not-found':
-      case 'auth/wrong-password':
-      case 'auth/invalid-credential':
-        description = 'Invalid email or password. Please try again.';
-        break;
-      case 'auth/email-already-in-use':
-      case 'auth/email-already-exists':
-        description = 'This email address is already in use by another account.';
-        break;
-      case 'auth/weak-password':
-        description = 'The password is too weak. Please choose a stronger password (at least 6 characters).';
-        break;
-      case 'auth/invalid-email':
-        description = 'Please enter a valid email address.';
-        break;
-      case 'auth/network-request-failed':
-        description = 'Network error. Please check your internet connection and try again.';
-        break;
-      default:
-        description = `An unexpected error occurred. Please try again. Code: ${errorCode}`;
-        break;
+    // Firebase errors have a `code` property
+    if (error && typeof error.code === 'string') {
+      const errorCode = error.code;
+      switch (errorCode) {
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+          description = 'Invalid email or password. Please try again.';
+          break;
+        case 'auth/email-already-in-use':
+        case 'auth/email-already-exists':
+          description = 'This email address is already in use by another account.';
+          break;
+        case 'auth/weak-password':
+          description = 'The password is too weak. Please choose a stronger password (at least 6 characters).';
+          break;
+        case 'auth/invalid-email':
+          description = 'Please enter a valid email address.';
+          break;
+        case 'auth/network-request-failed':
+          description = 'Network error. Please check your internet connection and try again.';
+          break;
+        default:
+          description = `An unexpected error occurred. Please try again. Code: ${errorCode}`;
+          break;
+      }
     }
 
     toast({
@@ -85,6 +87,7 @@ export default function LoginPage() {
       const userCredential = await authFn(auth, email, password);
       const idToken = await userCredential.user.getIdToken();
 
+      // Send the ID token to the server to create a session cookie
       const response = await fetch('/api/auth/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
