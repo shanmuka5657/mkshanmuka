@@ -207,7 +207,7 @@ export default function CreditPage() {
       case 'rating':
         return <AiRatingView analysisResult={analysisResult} onBack={() => setActiveView(null)} />;
       case 'financials':
-        return <FinancialsView onBack={() => setActiveView(null)} />;
+        return <FinancialsView analysisResult={analysisResult} onBack={() => setActiveView(null)} />;
       default:
         return null;
     }
@@ -372,3 +372,5 @@ export default function CreditPage() {
     </div>
   );
 }
+
+    
