@@ -92,7 +92,7 @@ export default function CreditPage() {
   
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/legacy/build/pdf.worker.min.mjs`;
+      GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${"4.4.168"}/legacy/build/pdf.worker.min.mjs`;
     }
   }, []);
 
@@ -169,7 +169,24 @@ export default function CreditPage() {
         const { output, usage } = await analyzeCreditReport({ creditReportText: rawText });
         if (output) {
             setAnalysisResult(output);
-            toast({ title: "Credit Report Analysis Complete", description: "Your AI-powered summary is ready." });
+            
+            // Automatically save extracted details to local storage for the dashboard
+            try {
+                const userDetails = {
+                    name: output.customerDetails.name,
+                    mobile: output.customerDetails.mobileNumber,
+                    pan: output.customerDetails.pan,
+                    cibilScore: cibilScore || '',
+                    totalEmi: output.emiDetails.totalEmi,
+                    address: output.customerDetails.address,
+                };
+                localStorage.setItem('userDetails', JSON.stringify(userDetails));
+                toast({ title: "Details Updated!", description: "Your information has been automatically updated on the dashboard." });
+            } catch (e) {
+                console.error("Failed to save to local storage", e);
+                toast({ variant: 'destructive', title: 'Could not save to dashboard', description: 'There was an issue saving the extracted details.' });
+            }
+
         } else {
              throw new Error("AI returned an empty response.");
         }

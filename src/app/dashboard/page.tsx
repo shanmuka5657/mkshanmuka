@@ -71,6 +71,25 @@ export default function DashboardPage() {
         }
     }, []);
 
+    // Effect to listen for changes in local storage from other tabs/pages
+    useEffect(() => {
+        const handleStorageChange = () => {
+            try {
+                const savedDetails = localStorage.getItem('userDetails');
+                if (savedDetails) {
+                    setDetails(JSON.parse(savedDetails));
+                }
+            } catch (error) {
+                console.error("Failed to update details from storage change", error);
+            }
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+        };
+    }, []);
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { id, value } = e.target;
         setDetails(prev => ({ ...prev, [id]: value }));
@@ -115,32 +134,32 @@ export default function DashboardPage() {
                     </Button>
                 )}
             </div>
-            <CardDescription>This information is saved securely on your device's local storage.</CardDescription>
+            <CardDescription>This information is automatically populated from your last analysis and saved on your device.</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
              <div>
                 <Label htmlFor="name">Name</Label>
-                <Input id="name" value={details.name} onChange={handleInputChange} disabled={!isEditing} placeholder="Your full name" />
+                <Input id="name" value={details.name} onChange={handleInputChange} disabled={!isEditing} placeholder="Populated from report" />
             </div>
              <div>
                 <Label htmlFor="mobile">Mobile Number</Label>
-                <Input id="mobile" value={details.mobile} onChange={handleInputChange} disabled={!isEditing} placeholder="Your 10-digit mobile number" />
+                <Input id="mobile" value={details.mobile} onChange={handleInputChange} disabled={!isEditing} placeholder="Populated from report" />
             </div>
             <div>
                 <Label htmlFor="pan">PAN Card Number</Label>
-                <Input id="pan" value={details.pan} onChange={handleInputChange} disabled={!isEditing} placeholder="Your PAN ID" />
+                <Input id="pan" value={details.pan} onChange={handleInputChange} disabled={!isEditing} placeholder="Populated from report" />
             </div>
             <div>
                 <Label htmlFor="cibilScore">CIBIL Score</Label>
-                <Input id="cibilScore" type="number" value={details.cibilScore} onChange={handleInputChange} disabled={!isEditing} placeholder="e.g., 750" />
+                <Input id="cibilScore" type="number" value={details.cibilScore} onChange={handleInputChange} disabled={!isEditing} placeholder="Populated from report" />
             </div>
              <div>
                 <Label htmlFor="totalEmi">Total Monthly EMI (₹)</Label>
-                <Input id="totalEmi" type="number" value={details.totalEmi} onChange={handleInputChange} disabled={!isEditing} placeholder="e.g., 25000" />
+                <Input id="totalEmi" type="number" value={details.totalEmi} onChange={handleInputChange} disabled={!isEditing} placeholder="Populated from report" />
             </div>
             <div>
                 <Label htmlFor="address">Address</Label>
-                <Input id="address" value={details.address} onChange={handleInputChange} disabled={!isEditing} placeholder="Your current address" />
+                <Input id="address" value={details.address} onChange={handleInputChange} disabled={!isEditing} placeholder="Populated from report" />
             </div>
         </CardContent>
         {isEditing && (
