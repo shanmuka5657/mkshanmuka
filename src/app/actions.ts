@@ -6,6 +6,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { cookies } from 'next/headers';
 import type { AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
+import { FirebaseError } from 'firebase-admin';
 
 // Initialize Firebase Admin SDK
 // This ensures that we have a single instance of the app.
@@ -21,7 +22,7 @@ const adminDb = getFirestore();
 
 /**
  * Creates a custom sign-in token for the given UID.
- * This is called from the login action after server-side validation.
+ * This is used after a user is authenticated on the server.
  * @param uid The user's ID.
  * @returns A promise that resolves to a custom token.
  */
@@ -34,7 +35,6 @@ export async function createCustomToken(uid: string) {
         return { error: 'Failed to create session token.' };
     }
 }
-
 
 /**
  * Saves a new credit report analysis summary to Firestore using the Admin SDK.
