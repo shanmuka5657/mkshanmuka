@@ -1,6 +1,7 @@
+
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { getAuth, connectAuthEmulator, Auth } from "firebase/auth";
+import { getAuth, connectAuthEmulator, Auth, initializeAuth, indexedDBLocalPersistence } from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator, Firestore } from "firebase/firestore";
 import { getStorage, connectStorageEmulator, FirebaseStorage } from "firebase/storage";
 
@@ -32,27 +33,33 @@ function getFirebaseServices(): FirebaseServices {
   }
 
   const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-  const auth = getAuth(app);
+  
+  // Use initializeAuth for server-side environments if needed, getAuth for client
+  const auth = typeof window === 'undefined' 
+    ? initializeAuth(app, { persistence: indexedDBLocalPersistence }) 
+    : getAuth(app);
+
   const db = getFirestore(app);
   const storage = getStorage(app);
 
   // Connect to emulators in development.
-  // This check is crucial to ensure emulators are only used locally.
-  if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
-    // Use a flag on the window object to avoid reconnecting on hot reloads
-    if (!(window as any).firebaseEmulatorsConnected) {
-      try {
-        console.log("Connecting to Firebase emulators using IP address...");
-        // Use '127.0.0.1' which is more reliable in some containerized environments
-        connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
-        connectFirestoreEmulator(db, "127.0.0.1", 9150);
-        connectStorageEmulator(storage, "127.0.0.1", 9199);
-        (window as any).firebaseEmulatorsConnected = true;
-        console.log("Firebase emulators connected for local development.");
-      } catch (error) {
-        console.error("Error connecting to Firebase emulators:", error);
+  if (process.env.NODE_ENV === 'development') {
+      // Check if running on the server to avoid window errors
+      if (typeof window !== 'undefined') {
+          // Use a flag on the window object to avoid reconnecting on hot reloads
+          if (!(window as any).firebaseEmulatorsConnected) {
+              try {
+                  console.log("Connecting to Firebase client-side emulators...");
+                  connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+                  connectFirestoreEmulator(db, "127.0.0.1", 9150);
+                  connectStorageEmulator(storage, "127.0.0.1", 9199);
+                  (window as any).firebaseEmulatorsConnected = true;
+                  console.log("Firebase client-side emulators connected.");
+              } catch (error) {
+                  console.error("Error connecting to client-side emulators:", error);
+              }
+          }
       }
-    }
   }
 
   firebaseServices = { app, auth, db, storage };
