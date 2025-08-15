@@ -14,3 +14,4 @@ import '@/ai/flows/salary-slip-analysis.ts';
 import '@/ai/flows/cross-verification.ts';
 import '@/ai/flows/verify-pdf.ts';
 import '@/ai/flows/calculate-total-emi.ts';
+import '@/ai/flows/text-to-speech.ts';

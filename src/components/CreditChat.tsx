@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Bot, Send, User, X, Loader2, Paperclip, ArrowDown } from 'lucide-react';
+import { Bot, Send, User, X, Loader2, Paperclip, ArrowDown, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,7 @@ export function AiAgentChat({ cibilReportAvailable, bankStatementAvailable = fal
   const [history, setHistory] = useState<AiAgentChatHistory[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showScrollDown, setShowScrollDown] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -85,6 +86,11 @@ export function AiAgentChat({ cibilReportAvailable, bankStatementAvailable = fal
         content: [{ text: output.answer }],
       };
       setHistory(prev => [...prev, modelResponse]);
+
+      if (output.audioDataUri && audioRef.current) {
+          audioRef.current.src = output.audioDataUri;
+          audioRef.current.play().catch(e => console.error("Audio playback failed:", e));
+      }
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -202,6 +208,7 @@ export function AiAgentChat({ cibilReportAvailable, bankStatementAvailable = fal
           </form>
         </div>
       </CardContent>
+      <audio ref={audioRef} className="hidden" />
     </Card>
   );
 }
