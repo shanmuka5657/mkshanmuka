@@ -1,4 +1,3 @@
-
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, connectAuthEmulator, Auth } from "firebase/auth";
@@ -38,12 +37,12 @@ function getFirebaseServices(): FirebaseServices {
   const storage = getStorage(app);
 
   // Connect to emulators in development.
-  // This logic will be tree-shaken in production builds.
   if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
     // Use a flag on the window object to avoid reconnecting on hot reloads
     if (!(window as any).firebaseEmulatorsConnected) {
       try {
         console.log("Connecting to Firebase emulators...");
+        // THIS IS THE CRUCIAL FIX: Connect the client-side auth to the emulator
         connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
         connectFirestoreEmulator(db, "127.0.0.1", 9150);
         connectStorageEmulator(storage, "127.0.0.1", 9199);
