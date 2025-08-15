@@ -17,7 +17,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Logo } from '@/components/ui/logo';
-import { emailLoginAction, emailSignupAction } from '@/app/actions';
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+} from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -38,22 +42,22 @@ export default function LoginPage() {
     const password = formData.get('password') as string;
 
     try {
-      const action = type === 'login' ? emailLoginAction : emailSignupAction;
-      const result = await action({ email, password });
+      const userCredential =
+        type === 'login'
+          ? await signInWithEmailAndPassword(auth, email, password)
+          : await createUserWithEmailAndPassword(auth, email, password);
 
-      if (result.error) {
-        throw new Error(result.error);
-      }
+      const idToken = await userCredential.user.getIdToken();
 
-      if (!result.idToken) {
-        throw new Error('Failed to get ID token from server.');
+      if (!idToken) {
+        throw new Error('Failed to get ID token from Firebase.');
       }
 
       // Send the ID token to the server to create a session cookie
       const response = await fetch('/api/auth/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken: result.idToken }),
+        body: JSON.stringify({ idToken }),
       });
 
       if (!response.ok) {
@@ -68,10 +72,36 @@ export default function LoginPage() {
       handleAuthSuccess();
 
     } catch (error: any) {
+        let userFriendlyMessage = 'An unexpected error occurred.';
+        // Map Firebase Auth error codes to user-friendly messages
+        switch (error.code) {
+            case 'auth/invalid-email':
+                userFriendlyMessage = 'Please enter a valid email address.';
+                break;
+            case 'auth/user-disabled':
+                userFriendlyMessage = 'This account has been disabled.';
+                break;
+            case 'auth/user-not-found':
+            case 'auth/wrong-password':
+            case 'auth/invalid-credential':
+                 userFriendlyMessage = 'Invalid email or password. Please try again.';
+                break;
+            case 'auth/email-already-in-use':
+                userFriendlyMessage = 'This email address is already in use by another account.';
+                break;
+            case 'auth/weak-password':
+                userFriendlyMessage = 'The password is too weak. Please choose a stronger password.';
+                break;
+            case 'auth/network-request-failed':
+                userFriendlyMessage = 'Network error. Please check your internet connection and try again.';
+                break;
+            default:
+                userFriendlyMessage = error.message;
+        }
       toast({
         variant: 'destructive',
         title: 'Authentication Failed',
-        description: error.message || 'An unexpected error occurred.',
+        description: userFriendlyMessage,
       });
     } finally {
       setIsLoading(false);
