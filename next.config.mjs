@@ -1,16 +1,5 @@
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'storage.googleapis.com',
-        port: '',
-        pathname: '/**',
-      },
-    ],
-  },
   async redirects() {
     return [
       {
@@ -20,6 +9,7 @@ const nextConfig = {
       },
     ]
   },
+  // Your other Next.js config options here
 };
 
 export default nextConfig;

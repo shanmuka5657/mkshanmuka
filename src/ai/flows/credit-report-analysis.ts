@@ -87,6 +87,7 @@ const LoanDetailSchema = z.object({
 
 // Main output schema that consolidates everything
 const AnalyzeCreditReportOutputSchema = z.object({
+  cibilScore: z.number().describe('The consumer\'s primary CIBIL score. Return 0 if not found.'),
   customerDetails: CustomerDetailsSchema,
   reportSummary: ReportSummarySchema,
   allAccounts: z.array(AccountDetailSchema).describe("A complete list of every account found in the report with all details."),
@@ -115,25 +116,27 @@ const prompt = ai.definePrompt({
 
 **Extraction Tasks:**
 
-1.  **Consumer Details (customerDetails):**
+1.  **CIBIL Score (cibilScore):** Find the primary CIBIL score in the report. It's often labeled "CIBIL SCORE" or "CREDITVISION SCORE". Extract the 3-digit number. If not found, you MUST return 0.
+
+2.  **Consumer Details (customerDetails):**
     *   Find the "PERSONAL INFORMATION" or similar section.
     *   Extract Name, Date of Birth (DD-MM-YYYY), PAN, Gender, Mobile Number, and the primary Address.
     *   If a field is missing, you MUST return "N/A".
 
-2.  **Report Summary (reportSummary):**
+3.  **Report Summary (reportSummary):**
     *   **Account Summary:** Iterate through all accounts to calculate and extract these fields. DO NOT just look for a summary table.
         *   Count the number of accounts for each status: "Total", "Active"/"Open", "Closed", "Settled", "Written-Off", "Doubtful".
         *   Calculate the SUM for "High Credit/Sanc. Amt.", "Current" balance, and "Overdue" amount across all accounts. Format currency as "₹X,XX,XXX". If 0, use "₹0".
         *   Calculate "Credit Utilization" and "Debt-to-Limit Ratio" as percentages, formatted as strings (e.g., "75%").
     *   **Enquiry Summary:** Locate the "ENQUIRY(S)" summary section. Extract "Total", "Past 30 days", "Past 12 months", "Past 24 months", and the most "Recent" enquiry date (DD-MM-YYYY).
 
-3.  **All Accounts (allAccounts):**
+4.  **All Accounts (allAccounts):**
     *   Go to the "ACCOUNT INFORMATION" section. Iterate through EVERY account.
     *   For each account, extract all fields defined in the AccountDetailSchema.
     *   **Monthly Payment History (monthlyPaymentHistory):** For each account, look for the payment history string which often has a date header (e.g., "Dec '23 | Nov '23 ..."). Parse this string. For each month-year-status triplet, create a structured object and add it to the 'monthlyPaymentHistory' array. If the date header is missing, you must infer the dates starting from the most recent month and going backwards. If the payment history is 'NA', this array MUST be empty.
     *   **CRITICAL FORMATTING:** Currency fields MUST be "₹X,XXX,XXX" (use "₹NaN" if not applicable). Dates MUST be "DD-MM-YYYY" (use "NA" if not applicable). 'paymentHistory' must be the raw, unaltered string.
 
-4.  **EMI Calculation (emiDetails):**
+5.  **EMI Calculation (emiDetails):**
     *   While iterating through all accounts for the task above, identify all **active loans**.
     *   For each active loan, extract the details required by the LoanDetailSchema. Convert currency amounts to numbers.
     *   **Special Rule for Credit Cards:** For 'Credit Card' accounts, if a specific 'EMI Amount' is not present, use the 'Minimum Amount Due' as the 'emi'. If neither is present, use 0.

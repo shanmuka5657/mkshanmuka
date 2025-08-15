@@ -7,7 +7,7 @@ import { FileText, Fingerprint, FileCheck2, Home, BrainCircuit } from 'lucide-re
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 
-const allNavItems = [
+const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/', label: 'Credit', icon: FileText },
   { href: '/verify', label: 'Verify', icon: Fingerprint },
@@ -17,13 +17,12 @@ const allNavItems = [
 
 export function BottomNavbar() {
   const pathname = usePathname();
-  const navItems = allNavItems;
 
   return (
     <div className="fixed bottom-0 left-0 z-50 w-full h-20 bg-background border-t border-border no-print">
       <div className={`grid h-full max-w-lg grid-cols-5 mx-auto font-medium`}>
         {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href === '/dashboard' && pathname === '/');
+          const isActive = pathname === item.href;
           return (
             <Link
               key={item.href}

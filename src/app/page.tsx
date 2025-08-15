@@ -31,6 +31,7 @@ import { FinancialsView } from '@/components/FinancialsView';
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
+  cibilScore: 0,
   customerDetails: {
     name: 'N/A',
     dateOfBirth: 'N/A',
@@ -82,7 +83,6 @@ export default function CreditPage() {
   const [rawText, setRawText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [cibilScore, setCibilScore] = useState<number | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(null);
   const [activeView, setActiveView] = useState<string | null>(null);
   const [isTextExtracted, setIsTextExtracted] = useState(false);
@@ -116,7 +116,6 @@ export default function CreditPage() {
     setIsProcessing(false);
     setAnalysisResult(null);
     setIsAnalyzing(false);
-    setCibilScore(null);
     setActiveView(null);
     setIsTextExtracted(false);
     if (creditFileInputRef.current) {
@@ -139,10 +138,6 @@ export default function CreditPage() {
             textContent += text.items.map(item => 'str' in item ? item.str : '').join(' ');
           }
           setRawText(textContent);
-          
-          const scoreMatch = textContent.match(/(?:CIBIL (?:TRANSUNION )?SCORE|CREDITVISION. SCORE)\s*(\d{3})/i);
-          const extractedScore = scoreMatch ? parseInt(scoreMatch[1], 10) : null;
-          setCibilScore(extractedScore);
           setIsTextExtracted(true);
         }
       };
@@ -176,7 +171,7 @@ export default function CreditPage() {
                     name: output.customerDetails.name,
                     mobile: output.customerDetails.mobileNumber,
                     pan: output.customerDetails.pan,
-                    cibilScore: cibilScore || '',
+                    cibilScore: output.cibilScore || '',
                     totalEmi: output.emiDetails.totalEmi,
                     address: output.customerDetails.address,
                 };
@@ -236,7 +231,7 @@ export default function CreditPage() {
     }
   }
 
-  const { customerDetails, reportSummary } = analysisResult || initialAnalysis;
+  const { customerDetails, reportSummary, cibilScore } = analysisResult || initialAnalysis;
   const isAnalysisComplete = !!analysisResult;
   const isReadyForAnalysis = isTextExtracted && !isAnalyzing && !isAnalysisComplete;
   
@@ -321,8 +316,8 @@ export default function CreditPage() {
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="flex flex-col items-center justify-center p-4">
                     <p className="text-sm text-muted-foreground">Official CIBIL Score</p>
-                    <h2 className="text-6xl font-bold text-primary my-2">{cibilScore ?? 'N/A'}</h2>
-                    {cibilScore && <Progress value={cibilScore} maxValue={900} />}
+                    <h2 className="text-6xl font-bold text-primary my-2">{cibilScore > 0 ? cibilScore : 'N/A'}</h2>
+                    {cibilScore > 0 && <Progress value={cibilScore} maxValue={900} />}
                 </div>
                 <div>
                     <h3 className="font-semibold mb-3">AI-Extracted Consumer Information</h3>
