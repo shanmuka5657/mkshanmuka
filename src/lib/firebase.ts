@@ -7,12 +7,12 @@ import { getStorage } from "firebase/storage";
 // Your web app's Firebase configuration is read from environment variables
 // This is more secure and flexible than hardcoding values.
 const firebaseConfig: FirebaseOptions = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: "AIzaSyCrBPP288-XP7WiC2FH8k6ldEoIY4zU9zw",
+  authDomain: "creditwise-ai-nd7s0.firebaseapp.com",
+  projectId: "creditwise-ai-nd7s0",
+  storageBucket: "creditwise-ai-nd7s0.appspot.com",
+  messagingSenderId: "56946356736",
+  appId: "1:56946356736:web:2d31294de43a89e9fed1f5",
 };
 
 // Initialize Firebase for client-side using a singleton pattern
