@@ -1,7 +1,7 @@
 
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { getAuth, connectAuthEmulator, Auth, initializeAuth, indexedDBLocalPersistence } from "firebase/auth";
+import { getAuth, connectAuthEmulator, Auth } from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator, Firestore } from "firebase/firestore";
 import { getStorage, connectStorageEmulator, FirebaseStorage } from "firebase/storage";
 
@@ -16,56 +16,41 @@ const firebaseConfig = {
   measurementId: "G-097G54H5P7"
 };
 
-// --- Robust Singleton Pattern for Firebase Initialization ---
 
-interface FirebaseServices {
-  app: FirebaseApp;
-  auth: Auth;
-  db: Firestore;
-  storage: FirebaseStorage;
+// --- Robust Singleton Pattern for Firebase Initialization ---
+let app: FirebaseApp;
+let auth: Auth;
+let db: Firestore;
+let storage: FirebaseStorage;
+
+if (getApps().length) {
+  app = getApp();
+} else {
+  app = initializeApp(firebaseConfig);
 }
 
-let firebaseServices: FirebaseServices | null = null;
+auth = getAuth(app);
+db = getFirestore(app);
+storage = getStorage(app);
 
-function getFirebaseServices(): FirebaseServices {
-  if (firebaseServices) {
-    return firebaseServices;
-  }
-
-  const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-  
-  // Use initializeAuth for server-side environments if needed, getAuth for client
-  const auth = typeof window === 'undefined' 
-    ? initializeAuth(app, { persistence: indexedDBLocalPersistence }) 
-    : getAuth(app);
-
-  const db = getFirestore(app);
-  const storage = getStorage(app);
-
-  // Connect to emulators in development.
-  if (process.env.NODE_ENV === 'development') {
-      // Check if running on the server to avoid window errors
-      if (typeof window !== 'undefined') {
-          // Use a flag on the window object to avoid reconnecting on hot reloads
-          if (!(window as any).firebaseEmulatorsConnected) {
-              try {
-                  console.log("Connecting to Firebase client-side emulators...");
-                  connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
-                  connectFirestoreEmulator(db, "127.0.0.1", 9150);
-                  connectStorageEmulator(storage, "127.0.0.1", 9199);
-                  (window as any).firebaseEmulatorsConnected = true;
-                  console.log("Firebase client-side emulators connected.");
-              } catch (error) {
-                  console.error("Error connecting to client-side emulators:", error);
-              }
-          }
+// Connect to emulators in development.
+// The `if (typeof window !== 'undefined')` check is crucial for Next.js to
+// avoid trying to connect on the server-side, which would throw an error.
+if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
+  // Use a flag on the window object to avoid reconnecting on hot reloads
+  if (!(window as any).firebaseEmulatorsConnected) {
+      try {
+          console.log("Connecting to Firebase client-side emulators...");
+          // Use 127.0.0.1 instead of localhost to avoid potential DNS resolution issues in some environments
+          connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+          connectFirestoreEmulator(db, "127.0.0.1", 9150);
+          connectStorageEmulator(storage, "127.0.0.1", 9199);
+          (window as any).firebaseEmulatorsConnected = true;
+          console.log("Firebase client-side emulators connected.");
+      } catch (error) {
+          console.error("Error connecting to client-side emulators:", error);
       }
   }
-
-  firebaseServices = { app, auth, db, storage };
-  return firebaseServices;
 }
-
-const { app, auth, db, storage } = getFirebaseServices();
 
 export { app, auth, db, storage };
