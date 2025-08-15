@@ -23,7 +23,7 @@ const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 
 // Connect to emulators in development
-// NOTE: This check is for client-side only and will not run on the server.
+// This code will only run in the browser and in development mode
 if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
     // Use a flag on the window object to avoid reconnecting on hot reloads
     if (!(window as any).firebaseEmulatorsConnected) {
@@ -31,6 +31,7 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
         connectFirestoreEmulator(db, "localhost", 9150);
         connectStorageEmulator(storage, "localhost", 9199);
         (window as any).firebaseEmulatorsConnected = true;
+        console.log("Firebase emulators connected.");
     }
 }
 
