@@ -38,6 +38,7 @@ export default function LoginPage() {
   const handleAuthError = (errorCode: string) => {
     let description = 'An unexpected error occurred. Please try again.';
     
+    // Check for specific error codes from Firebase client SDK
     switch (errorCode) {
         case 'auth/user-not-found':
         case 'auth/wrong-password':
@@ -55,6 +56,10 @@ export default function LoginPage() {
             break;
         case 'auth/network-request-failed':
              description = 'Network error. Please check your internet connection and try again.';
+             break;
+        // Add cases for Admin SDK errors if they are different and passed through
+        case 'auth/invalid-password': // Example if admin SDK had this
+             description = 'The password provided is invalid.';
              break;
         default:
              // Keep the generic message for unknown codes
