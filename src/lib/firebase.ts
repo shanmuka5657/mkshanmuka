@@ -9,10 +9,10 @@ const firebaseConfig = {
   apiKey: "AIzaSyAeIyY3IH-zAkV8FSmmKyR1b32pCa46fQg",
   authDomain: "creditwise-ai-nd7s0.firebaseapp.com",
   projectId: "creditwise-ai-nd7s0",
-  storageBucket: "creditwise-ai-nd7s0.appspot.com",
+  storageBucket: "creditwise-ai-nd7s0.firebasestorage.app",
   messagingSenderId: "492248595221",
-  appId: "1:492248595221:web:3fe409487b8848d4a6071c",
-  measurementId: "G-8LLWXP1RJP"
+  appId: "1:492248595221:web:e4cd8882c947d66aa6071c",
+  measurementId: "G-097G54H5P7"
 };
 
 // --- Robust Singleton Pattern for Firebase Initialization ---
