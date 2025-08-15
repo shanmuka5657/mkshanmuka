@@ -5,8 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  FirebaseError
+  createUserWithEmailAndPassword
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
@@ -45,7 +44,8 @@ export default function LoginPage() {
     console.error("Authentication Error:", error);
     let description = 'An unexpected error occurred. Please try again.';
     
-    if (error instanceof FirebaseError) {
+    // Check for Firebase error by looking for the 'code' property
+    if (error && typeof error === 'object' && 'code' in error) {
         switch (error.code) {
             case 'auth/user-not-found':
             case 'auth/wrong-password':
