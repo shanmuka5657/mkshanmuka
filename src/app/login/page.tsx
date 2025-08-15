@@ -18,7 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Logo } from '@/components/ui/logo';
-import { auth } from '@/lib/firebase';
+import { auth } from '@/lib/firebase-client';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -40,7 +40,7 @@ const mapFirebaseError = (errorCode: string): string => {
         case 'auth/invalid-credential':
              return 'Invalid email or password. Please try again.';
         case 'auth/invalid-id-token':
-            return 'The user\'s credential is no longer valid. The user must sign in again.';
+            return 'The user\\'s credential is no longer valid. The user must sign in again.';
         case 'auth/user-disabled':
             return 'This account has been disabled by an administrator.';
         case 'auth/network-request-failed':

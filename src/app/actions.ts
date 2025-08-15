@@ -1,23 +1,9 @@
 
 'use server';
 
-import { initializeApp, getApps, App } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
+import { adminDb, adminAuth } from '@/lib/firebase-admin';
 import { cookies } from 'next/headers';
 import type { AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
-
-// --- Robust Singleton Pattern for Firebase Admin Initialization ---
-let adminApp: App;
-if (!getApps().length) {
-  adminApp = initializeApp();
-} else {
-  adminApp = getApps()[0];
-}
-
-const adminAuth = getAuth(adminApp);
-const adminDb = getFirestore(adminApp);
-
 
 /**
  * Saves a new credit report analysis summary to Firestore using the Admin SDK.
@@ -30,7 +16,7 @@ export async function saveReportSummaryAction(
   cibilScore: number | null
 ): Promise<void> {
   // 1. Verify user authentication using the session cookie
-  const sessionCookie = cookies().get('__session')?.value || '';
+  const sessionCookie = cookies().get('session')?.value || '';
   
   if (!sessionCookie) {
       throw new Error('User is not authenticated.');

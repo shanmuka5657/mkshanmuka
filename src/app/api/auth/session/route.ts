@@ -1,17 +1,6 @@
 
 import {NextRequest, NextResponse} from 'next/server';
-import {initializeApp, getApps, App} from 'firebase-admin/app';
-import {getAuth} from 'firebase-admin/auth';
-
-// --- Robust Singleton Pattern for Firebase Admin Initialization ---
-let adminApp: App;
-if (!getApps().length) {
-  adminApp = initializeApp();
-} else {
-  adminApp = getApps()[0];
-}
-const adminAuth = getAuth(adminApp);
-
+import { adminAuth } from '@/lib/firebase-admin';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,10 +13,9 @@ export async function POST(request: NextRequest) {
 
     const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days
 
-    // This route now correctly expects a real ID Token from the client.
     const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
     const options = {
-      name: '__session',
+      name: 'session',
       value: sessionCookie,
       maxAge: expiresIn,
       httpOnly: true,
@@ -49,7 +37,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
     const options = {
-        name: '__session',
+        name: 'session',
         value: '',
         maxAge: -1,
         path: '/',
