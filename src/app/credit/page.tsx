@@ -368,7 +368,7 @@ export default function CreditPage() {
               </AccordionItem>
             </Accordion>
       </main>
-      <AiAgentChat cibilReportText={rawText} />
+      <AiAgentChat cibilReportAvailable={!!rawText} />
     </div>
   );
 }
