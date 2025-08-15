@@ -3,11 +3,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  User,
-} from 'firebase/auth';
+import { signInWithCustomToken } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Logo } from '@/components/ui/logo';
+import { createCustomToken } from '@/app/actions';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -32,7 +29,11 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const createSession = async (idToken: string) => {
+  const createSession = async (token: string) => {
+    // With the custom token from the server, sign in on the client
+    const userCredential = await signInWithCustomToken(auth, token);
+    const idToken = await userCredential.user.getIdToken();
+
     const response = await fetch('/api/auth/session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -45,10 +46,10 @@ export default function LoginPage() {
     }
   };
 
-  const handleAuthSuccess = (user: User) => {
+  const handleAuthSuccess = () => {
     toast({
       title: 'Success!',
-      description: `Welcome, ${user.email}`,
+      description: `Welcome back!`,
     });
     router.push('/dashboard');
     router.refresh(); // Important to refresh server-side state
@@ -56,29 +57,27 @@ export default function LoginPage() {
 
   const handleAuthError = (error: any) => {
     console.error("Authentication Error:", error);
-    const errorMessage = error.code
-      ? error.code.replace('auth/', '').replace(/-/g, ' ')
-      : error.message;
     toast({
       variant: 'destructive',
       title: 'Authentication Failed',
-      description: errorMessage || 'An unknown error occurred.',
+      description: error.message || 'An unknown error occurred.',
     });
   };
 
   const handleEmailAuth = async (type: 'login' | 'signup') => {
     setIsLoading(true);
     try {
-      let userCredential;
-      if (type === 'login') {
-        userCredential = await signInWithEmailAndPassword(auth, email, password);
-      } else {
-        userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      // Server Action handles login/signup and returns a custom token
+      const result = await createCustomToken(type, email, password);
+
+      if (result.error || !result.token) {
+        throw new Error(result.error || 'Failed to get authentication token.');
       }
       
-      const idToken = await userCredential.user.getIdToken();
-      await createSession(idToken);
-      handleAuthSuccess(userCredential.user);
+      // Use the custom token to create a client-side session
+      await createSession(result.token);
+      
+      handleAuthSuccess();
 
     } catch (error: any) {
       handleAuthError(error);
