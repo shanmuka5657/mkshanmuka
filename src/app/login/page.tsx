@@ -18,7 +18,37 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Logo } from '@/components/ui/logo';
-import { emailLoginAction, emailSignupAction } from '@/app/actions';
+import { auth } from '@/lib/firebase';
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  type AuthError,
+} from 'firebase/auth';
+
+
+// Helper function to map Firebase error codes to user-friendly messages
+const mapFirebaseError = (errorCode: string): string => {
+    switch (errorCode) {
+        case 'auth/email-already-in-use':
+            return 'This email address is already in use by another account.';
+        case 'auth/operation-not-allowed':
+            return 'Password sign-in is not enabled for this project.';
+        case 'auth/weak-password':
+            return 'The password is too weak.';
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+             return 'Invalid email or password. Please try again.';
+        case 'auth/invalid-id-token':
+            return 'The user\'s credential is no longer valid. The user must sign in again.';
+        case 'auth/user-disabled':
+            return 'This account has been disabled by an administrator.';
+        case 'auth/network-request-failed':
+            return 'A network error occurred. Please check your connection and try again.';
+        default:
+            return 'An unexpected authentication error occurred. Please try again.';
+    }
+};
 
 
 export default function LoginPage() {
@@ -40,13 +70,15 @@ export default function LoginPage() {
     const password = formData.get('password') as string;
 
     try {
-      const { idToken, error } =
+      const userCredential =
         type === 'login'
-          ? await emailLoginAction({ email, password })
-          : await emailSignupAction({ email, password });
+          ? await signInWithEmailAndPassword(auth, email, password)
+          : await createUserWithEmailAndPassword(auth, email, password);
 
-      if (error || !idToken) {
-        throw new Error(error || 'An unknown error occurred during authentication.');
+      const idToken = await userCredential.user.getIdToken();
+
+      if (!idToken) {
+          throw new Error('Failed to retrieve ID token from Firebase.');
       }
       
       // Send the ID token to the server to create a session cookie
@@ -68,7 +100,8 @@ export default function LoginPage() {
       handleAuthSuccess();
 
     } catch (error: any) {
-        let userFriendlyMessage = error.message || 'An unexpected error occurred.';
+        const authError = error as AuthError;
+        let userFriendlyMessage = mapFirebaseError(authError.code);
          toast({
             variant: 'destructive',
             title: 'Authentication Failed',
