@@ -36,21 +36,29 @@ storage = getStorage(app);
 // Connect to emulators in development.
 // The `if (typeof window !== 'undefined')` check is crucial for Next.js to
 // avoid trying to connect on the server-side, which would throw an error.
-if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
-  // Use a flag on the window object to avoid reconnecting on hot reloads
-  if (!(window as any).firebaseEmulatorsConnected) {
-      try {
-          console.log("Connecting to Firebase client-side emulators...");
-          // Use 127.0.0.1 instead of localhost to avoid potential DNS resolution issues in some environments
-          connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
-          connectFirestoreEmulator(db, "127.0.0.1", 9150);
-          connectStorageEmulator(storage, "127.0.0.1", 9199);
-          (window as any).firebaseEmulatorsConnected = true;
-          console.log("Firebase client-side emulators connected.");
-      } catch (error) {
-          console.error("Error connecting to client-side emulators:", error);
-      }
-  }
+if (process.env.NODE_ENV === 'development') {
+    // Check if we are on the server or the client to avoid connecting from both
+    if (typeof window === 'undefined') {
+        // Server-side: Use the Admin SDK initialization in actions.ts
+        // No need to connect client SDK here.
+    } else {
+        // Client-side: Connect to emulators
+        // Use a flag on the window object to avoid reconnecting on hot reloads
+        if (!(window as any).firebaseEmulatorsConnected) {
+            try {
+                console.log("Connecting to Firebase client-side emulators...");
+                // Use 127.0.0.1 instead of localhost to avoid potential DNS resolution issues
+                connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+                connectFirestoreEmulator(db, "127.0.0.1", 9150);
+                connectStorageEmulator(storage, "127.0.0.1", 9199);
+                (window as any).firebaseEmulatorsConnected = true;
+                console.log("Firebase client-side emulators connected.");
+            } catch (error) {
+                console.error("Error connecting to client-side emulators:", error);
+            }
+        }
+    }
 }
+
 
 export { app, auth, db, storage };

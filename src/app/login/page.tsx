@@ -18,11 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Logo } from '@/components/ui/logo';
-import { auth } from '@/lib/firebase';
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-} from 'firebase/auth';
+import { emailLoginAction, emailSignupAction } from '@/app/actions';
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -38,32 +34,32 @@ export default function LoginPage() {
     router.refresh(); 
   };
 
-  const handleAuthError = (error: any) => {
+  const handleAuthError = (errorCode: string) => {
     let description = 'An unexpected error occurred. Please try again.';
     
-    if (error && error.code) {
-        switch (error.code) {
-            case 'auth/user-not-found':
-            case 'auth/wrong-password':
-            case 'auth/invalid-credential':
-                description = 'Invalid email or password. Please try again.';
-                break;
-            case 'auth/email-already-in-use':
-                description = 'This email address is already in use by another account.';
-                break;
-            case 'auth/weak-password':
-                description = 'The password is too weak. Please choose a stronger password (at least 6 characters).';
-                break;
-            case 'auth/invalid-email':
-                description = 'Please enter a valid email address.';
-                break;
-            case 'auth/network-request-failed':
-                 description = 'Network error. Please check your internet connection and try again.';
-                 break;
-            default:
-                 description = error.message || 'An unexpected error occurred.';
-                 break;
-        }
+    // Firebase Auth error codes (client and admin SDKs can have different formats)
+    switch (errorCode) {
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+             description = 'Invalid email or password. Please try again.';
+            break;
+        case 'auth/email-already-in-use':
+        case 'auth/email-already-exists':
+            description = 'This email address is already in use by another account.';
+            break;
+        case 'auth/weak-password':
+            description = 'The password is too weak. Please choose a stronger password (at least 6 characters).';
+            break;
+        case 'auth/invalid-email':
+            description = 'Please enter a valid email address.';
+            break;
+        case 'auth/network-request-failed':
+             description = 'Network error. Please check your internet connection and try again.';
+             break;
+        default:
+             description = `An unexpected error occurred. Please try again. Code: ${errorCode}`;
+             break;
     }
     
     toast({
@@ -78,18 +74,19 @@ export default function LoginPage() {
     setIsLoading(true);
 
     const formData = new FormData(event.currentTarget);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
+    const authAction = type === 'login' ? emailLoginAction : emailSignupAction;
 
     try {
-        const authFn = type === 'login' ? signInWithEmailAndPassword : createUserWithEmailAndPassword;
-        const userCredential = await authFn(auth, email, password);
-        const idToken = await userCredential.user.getIdToken();
+        const result = await authAction(formData);
+
+        if (result.error) {
+            throw new Error(result.error);
+        }
 
         const response = await fetch('/api/auth/session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idToken }),
+            body: JSON.stringify({ idToken: result.idToken }),
         });
 
         if (!response.ok) {
@@ -99,7 +96,7 @@ export default function LoginPage() {
         
         handleAuthSuccess(type);
     } catch (error: any) {
-      handleAuthError(error);
+      handleAuthError(error.message);
     } finally {
       setIsLoading(false);
     }
