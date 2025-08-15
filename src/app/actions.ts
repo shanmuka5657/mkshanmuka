@@ -1,3 +1,4 @@
+
 'use server';
 
 import { initializeApp, getApps, App } from 'firebase-admin/app';
@@ -16,6 +17,70 @@ if (!getApps().length) {
 
 const adminAuth = getAuth(adminApp);
 const adminDb = getFirestore(adminApp);
+
+// Helper function to map Firebase error codes to user-friendly messages
+const mapFirebaseError = (errorCode: string): string => {
+    switch (errorCode) {
+        case 'EMAIL_EXISTS':
+            return 'This email address is already in use by another account.';
+        case 'OPERATION_NOT_ALLOWED':
+            return 'Password sign-in is not enabled for this project.';
+        case 'TOO_MANY_ATTEMPTS_TRY_LATER':
+            return 'We have blocked all requests from this device due to unusual activity. Try again later.';
+        case 'EMAIL_NOT_FOUND':
+        case 'INVALID_PASSWORD':
+        case 'INVALID_LOGIN_CREDENTIALS':
+            return 'Invalid email or password. Please try again.';
+        case 'INVALID_ID_TOKEN':
+            return 'The user\'s credential is no longer valid. The user must sign in again.';
+        case 'USER_DISABLED':
+            return 'This account has been disabled by an administrator.';
+        default:
+            return 'An unexpected authentication error occurred. Please try again.';
+    }
+};
+
+
+async function getFirebaseIdToken(endpoint: string, body: object): Promise<{ idToken?: string; error?: string }> {
+    const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+    if (!apiKey) {
+        return { error: 'Firebase API key is not configured on the server.' };
+    }
+
+    const url = `${endpoint}?key=${apiKey}`;
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...body, returnSecureToken: true }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            const errorMessage = data.error?.message || 'UNKNOWN_ERROR';
+            return { error: mapFirebaseError(errorMessage) };
+        }
+
+        return { idToken: data.idToken };
+    } catch (networkError) {
+        console.error('Network error during Firebase auth:', networkError);
+        return { error: 'A network error occurred. Please check your connection and try again.' };
+    }
+}
+
+
+export async function emailSignupAction({ email, password }: Record<string, string>): Promise<{ idToken?: string, error?: string }> {
+    const SIGNUP_ENDPOINT = 'https://identitytoolkit.googleapis.com/v1/accounts:signUp';
+    return getFirebaseIdToken(SIGNUP_ENDPOINT, { email, password });
+}
+
+
+export async function emailLoginAction({ email, password }: Record<string, string>): Promise<{ idToken?: string, error?: string }> {
+    const SIGNIN_ENDPOINT = 'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword';
+    return getFirebaseIdToken(SIGNIN_ENDPOINT, { email, password });
+}
 
 
 /**

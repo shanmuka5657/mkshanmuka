@@ -1,8 +1,9 @@
+
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { getAuth, Auth, connectAuthEmulator } from "firebase/auth";
-import { getFirestore, Firestore, connectFirestoreEmulator } from "firebase/firestore";
-import { getStorage, FirebaseStorage, connectStorageEmulator } from "firebase/storage";
+import { getAuth, Auth } from "firebase/auth";
+import { getFirestore, Firestore } from "firebase/firestore";
+import { getStorage, FirebaseStorage } from "firebase/storage";
 
 // Your web app's Firebase configuration
 // Ensure these environment variables are set in your deployment environment
@@ -32,13 +33,10 @@ auth = getAuth(app);
 db = getFirestore(app);
 storage = getStorage(app);
 
-// Connect to emulators in development
-if (process.env.NODE_ENV === 'development') {
-    // Use 127.0.0.1 instead of localhost to avoid potential networking issues
-    connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
-    connectFirestoreEmulator(db, '127.0.0.1', 9150);
-    connectStorageEmulator(storage, '127.0.0.1', 9199);
-}
-
+// NOTE: We are intentionally not connecting to emulators here on the client-side
+// because the new server-side authentication flow makes it unnecessary and removes
+// the source of the network errors. The Admin SDK on the server will connect
+// to the emulators automatically based on the FIRESTORE_EMULATOR_HOST, etc.
+// environment variables set by the development environment.
 
 export { app, auth, db, storage };
