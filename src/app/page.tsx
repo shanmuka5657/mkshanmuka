@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { getDocument, GlobalWorkerOptions, version } from 'pdfjs-dist';
+import { getDocument, GlobalWorkerOptions, version } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import {
   UploadCloud,
   FileText,
@@ -91,7 +91,7 @@ export default function CreditPage() {
   const creditFileInputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
-    GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.mjs`;
+    GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${version}/legacy/build/pdf.worker.min.mjs`;
   }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
