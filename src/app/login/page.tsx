@@ -46,10 +46,10 @@ export default function LoginPage() {
     }
   };
 
-  const handleAuthSuccess = () => {
+  const handleAuthSuccess = (type: 'login' | 'signup') => {
     toast({
       title: 'Success!',
-      description: `Welcome back!`,
+      description: type === 'login' ? 'Welcome back!' : 'Your account has been created.',
     });
     router.push('/dashboard');
     router.refresh(); // Important to refresh server-side state
@@ -57,10 +57,16 @@ export default function LoginPage() {
 
   const handleAuthError = (error: any) => {
     console.error("Authentication Error:", error);
+    let description = 'An unknown error occurred. Please try again.';
+    // Use the user-friendly message from the server action if available
+    if (error.message) {
+        description = error.message.replace('Firebase: ', '').replace(`(${error.code})`, '');
+    }
+    
     toast({
       variant: 'destructive',
       title: 'Authentication Failed',
-      description: error.message || 'An unknown error occurred.',
+      description: description,
     });
   };
 
@@ -77,7 +83,7 @@ export default function LoginPage() {
       // Use the custom token to create a client-side session
       await createSession(result.token);
       
-      handleAuthSuccess();
+      handleAuthSuccess(type);
 
     } catch (error: any) {
       handleAuthError(error);

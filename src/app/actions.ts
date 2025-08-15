@@ -49,7 +49,7 @@ export async function createCustomToken(
     console.error('Error in createCustomToken:', error);
     // Provide user-friendly error messages
     const errorMessage = error.code?.includes('auth/') 
-      ? error.code.replace('auth/', '').replace(/-/g, ' ') 
+      ? error.message 
       : 'An unexpected error occurred.';
     return { error: errorMessage };
   }
