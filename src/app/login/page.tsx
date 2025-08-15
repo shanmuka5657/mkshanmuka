@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -18,7 +17,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Logo } from '@/components/ui/logo';
-import { emailLoginAction, emailSignupAction } from '@/app/actions';
+import { auth } from '@/lib/firebase';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+} from 'firebase/auth';
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -31,77 +34,75 @@ export default function LoginPage() {
       description: type === 'login' ? 'Welcome back!' : 'Your account has been created.',
     });
     router.push('/dashboard');
-    router.refresh(); 
+    router.refresh();
   };
 
-  const handleAuthError = (errorCode: string) => {
+  const handleAuthError = (error: any) => {
     let description = 'An unexpected error occurred. Please try again.';
-    
-    // Firebase Auth error codes (client and admin SDKs can have different formats)
+    const errorCode = error.code;
+
     switch (errorCode) {
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-        case 'auth/invalid-credential':
-             description = 'Invalid email or password. Please try again.';
-            break;
-        case 'auth/email-already-in-use':
-        case 'auth/email-already-exists':
-            description = 'This email address is already in use by another account.';
-            break;
-        case 'auth/weak-password':
-            description = 'The password is too weak. Please choose a stronger password (at least 6 characters).';
-            break;
-        case 'auth/invalid-email':
-            description = 'Please enter a valid email address.';
-            break;
-        case 'auth/network-request-failed':
-             description = 'Network error. Please check your internet connection and try again.';
-             break;
-        default:
-             description = `An unexpected error occurred. Please try again. Code: ${errorCode}`;
-             break;
+      case 'auth/user-not-found':
+      case 'auth/wrong-password':
+      case 'auth/invalid-credential':
+        description = 'Invalid email or password. Please try again.';
+        break;
+      case 'auth/email-already-in-use':
+      case 'auth/email-already-exists':
+        description = 'This email address is already in use by another account.';
+        break;
+      case 'auth/weak-password':
+        description = 'The password is too weak. Please choose a stronger password (at least 6 characters).';
+        break;
+      case 'auth/invalid-email':
+        description = 'Please enter a valid email address.';
+        break;
+      case 'auth/network-request-failed':
+        description = 'Network error. Please check your internet connection and try again.';
+        break;
+      default:
+        description = `An unexpected error occurred. Please try again. Code: ${errorCode}`;
+        break;
     }
-    
+
     toast({
       variant: 'destructive',
       title: 'Authentication Failed',
       description: description,
     });
   };
-  
+
   const handleAuth = async (type: 'login' | 'signup', event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsLoading(true);
 
     const formData = new FormData(event.currentTarget);
-    const authAction = type === 'login' ? emailLoginAction : emailSignupAction;
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
 
     try {
-        const result = await authAction(formData);
+      const authFn = type === 'login' ? signInWithEmailAndPassword : createUserWithEmailAndPassword;
+      const userCredential = await authFn(auth, email, password);
+      const idToken = await userCredential.user.getIdToken();
 
-        if (result.error) {
-            throw new Error(result.error);
-        }
+      const response = await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
 
-        const response = await fetch('/api/auth/session', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idToken: result.idToken }),
-        });
+      if (!response.ok) {
+        const { error } = await response.json();
+        throw new Error(error || 'Failed to create session.');
+      }
 
-        if (!response.ok) {
-            const { error } = await response.json();
-            throw new Error(error || 'Failed to create session.');
-        }
-        
-        handleAuthSuccess(type);
+      handleAuthSuccess(type);
     } catch (error: any) {
-      handleAuthError(error.message);
+      handleAuthError(error);
     } finally {
       setIsLoading(false);
     }
   };
-
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted/30">
