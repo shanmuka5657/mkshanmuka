@@ -79,7 +79,7 @@ const aiAgentChatFlow = ai.defineFlow(
     If the user provides an image or document in their message, use it as additional context for your answer.`
     
     const llmResponse = await ai.generate({
-      model: 'googleai/gemini-1.5-flash-preview',
+      model: 'googleai/gemini-1.5-flash',
       messages: history,
       system: systemPrompt,
     });
