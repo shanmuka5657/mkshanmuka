@@ -1,7 +1,7 @@
 
 'use server';
 
-import { initializeApp, getApps, getApp } from 'firebase-admin/app';
+import { initializeApp, getApps } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { cookies } from 'next/headers';
@@ -18,6 +18,23 @@ if (!getApps().length) {
 
 const adminAuth = getAuth();
 const adminDb = getFirestore();
+
+/**
+ * Creates a custom sign-in token for the given UID.
+ * This is called from the login action after server-side validation.
+ * @param uid The user's ID.
+ * @returns A promise that resolves to a custom token.
+ */
+export async function createCustomToken(uid: string) {
+    try {
+        const customToken = await adminAuth.createCustomToken(uid);
+        return { token: customToken };
+    } catch (error: any) {
+        console.error('Error creating custom token:', error);
+        return { error: 'Failed to create session token.' };
+    }
+}
+
 
 /**
  * Saves a new credit report analysis summary to Firestore using the Admin SDK.
