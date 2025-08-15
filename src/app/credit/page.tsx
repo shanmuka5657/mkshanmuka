@@ -171,18 +171,24 @@ export default function CreditPage() {
 
     } catch (error: any) {
         console.error('Error analyzing report:', error);
-        const errorMessage = error.message || "An unknown error occurred. Please try again.";
-        let userFriendlyMessage = errorMessage;
+        const errorMessage = error.message || "An unknown error occurred.";
+        let errorTitle = "An Error Occurred";
+        let userFriendlyMessage = "Something went wrong. Please try again.";
 
         if (errorMessage.includes('429')) {
-            userFriendlyMessage = "You've made too many requests. Please wait a moment before trying again.";
+            errorTitle = "Rate Limit Reached";
+            userFriendlyMessage = "You've made too many requests in a short time. Please wait a moment before trying again.";
         } else if (errorMessage.includes('503') || errorMessage.includes('overloaded')) {
-            userFriendlyMessage = "The AI service is currently busy. Please try again in a moment.";
+            errorTitle = "AI Service Busy";
+            userFriendlyMessage = "The AI service is currently experiencing high traffic. Please try again in a moment.";
+        } else if (errorMessage.includes('API key not valid')) {
+            errorTitle = "Invalid API Key";
+            userFriendlyMessage = "The AI service API key is not configured correctly. Please contact support.";
         }
 
          toast({
             variant: "destructive",
-            title: "An Error Occurred",
+            title: errorTitle,
             description: userFriendlyMessage,
         });
     } finally {
