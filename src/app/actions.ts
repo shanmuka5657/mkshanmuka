@@ -15,45 +15,6 @@ if (!getApps().length) {
 const adminAuth = getAuth();
 const adminDb = getFirestore();
 
-/**
- * Creates or retrieves a user and returns a custom token for client-side sign-in.
- * This is a Server Action and runs only on the server.
- * @param type 'login' or 'signup'
- * @param email The user's email.
- * @param password The user's password.
- * @returns A promise that resolves to a custom token or an error.
- */
-export async function createCustomToken(
-  type: 'login' | 'signup',
-  email: string,
-  password: string
-): Promise<{ token?: string; error?: string }> {
-  let uid: string;
-  try {
-    if (type === 'signup') {
-      const userRecord = await adminAuth.createUser({ email, password });
-      uid = userRecord.uid;
-    } else {
-      // For login, we need to verify the user exists.
-      // The Admin SDK doesn't have a direct 'signIn' method,
-      // so we get the user by email. The actual password check is handled
-      // implicitly by the client SDK when it uses the custom token.
-      // A more secure way would involve a custom verification step if needed.
-      const userRecord = await adminAuth.getUserByEmail(email);
-      uid = userRecord.uid;
-      // In a real app, you'd verify password here using a custom system or a different flow
-    }
-    const customToken = await adminAuth.createCustomToken(uid);
-    return { token: customToken };
-  } catch (error: any) {
-    console.error('Error in createCustomToken:', error);
-    // Provide user-friendly error messages
-    const errorMessage = error.code?.includes('auth/') 
-      ? error.message 
-      : 'An unexpected error occurred.';
-    return { error: errorMessage };
-  }
-}
 
 /**
  * Saves a new credit report analysis summary to Firestore using the Admin SDK.

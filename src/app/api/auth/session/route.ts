@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
       maxAge: expiresIn,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
+      path: '/',
     };
     
     const response = NextResponse.json({ status: 'success' }, { status: 200 });
@@ -46,6 +47,7 @@ export async function DELETE(request: NextRequest) {
         name: '__session',
         value: '',
         maxAge: -1,
+        path: '/',
     };
 
     const response = NextResponse.json({ status: 'success' }, { status: 200 });

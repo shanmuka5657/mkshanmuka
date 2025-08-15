@@ -3,7 +3,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithCustomToken } from 'firebase/auth';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  FirebaseError
+} from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,7 +24,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Logo } from '@/components/ui/logo';
-import { createCustomToken } from '@/app/actions';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -29,38 +32,42 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const createSession = async (token: string) => {
-    // With the custom token from the server, sign in on the client
-    const userCredential = await signInWithCustomToken(auth, token);
-    const idToken = await userCredential.user.getIdToken();
-
-    const response = await fetch('/api/auth/session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idToken }),
-    });
-
-    if (!response.ok) {
-      const { error } = await response.json();
-      throw new Error(error || 'Failed to create session.');
-    }
-  };
-
   const handleAuthSuccess = (type: 'login' | 'signup') => {
     toast({
       title: 'Success!',
       description: type === 'login' ? 'Welcome back!' : 'Your account has been created.',
     });
     router.push('/dashboard');
-    router.refresh(); // Important to refresh server-side state
+    router.refresh();
   };
 
   const handleAuthError = (error: any) => {
     console.error("Authentication Error:", error);
     let description = 'An unexpected error occurred. Please try again.';
-    // Use the user-friendly message from the server action if available
-    if (error.message) {
-        description = error.message.replace('Firebase: ', '').replace(/ \(auth\/[a-z-]+/,'');
+    
+    if (error instanceof FirebaseError) {
+        switch (error.code) {
+            case 'auth/user-not-found':
+            case 'auth/wrong-password':
+            case 'auth/invalid-credential':
+                description = 'Invalid email or password. Please try again.';
+                break;
+            case 'auth/email-already-in-use':
+                description = 'This email address is already in use by another account.';
+                break;
+            case 'auth/weak-password':
+                description = 'The password is too weak. Please choose a stronger password.';
+                break;
+            case 'auth/invalid-email':
+                description = 'Please enter a valid email address.';
+                break;
+            case 'auth/network-request-failed':
+                description = 'Network error. Please check your internet connection and try again.';
+                break;
+            default:
+                description = error.message.replace('Firebase: ', '');
+                break;
+        }
     }
     
     toast({
@@ -73,15 +80,23 @@ export default function LoginPage() {
   const handleEmailAuth = async (type: 'login' | 'signup') => {
     setIsLoading(true);
     try {
-      // Server Action handles login/signup and returns a custom token
-      const result = await createCustomToken(type, email, password);
-
-      if (result.error || !result.token) {
-        throw new Error(result.error || 'Failed to get authentication token.');
-      }
+      const userCredential =
+        type === 'login'
+          ? await signInWithEmailAndPassword(auth, email, password)
+          : await createUserWithEmailAndPassword(auth, email, password);
       
-      // Use the custom token to create a client-side session
-      await createSession(result.token);
+      const idToken = await userCredential.user.getIdToken();
+
+      const response = await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
+
+      if (!response.ok) {
+        const { error } = await response.json();
+        throw new Error(error || 'Failed to create session.');
+      }
       
       handleAuthSuccess(type);
 
