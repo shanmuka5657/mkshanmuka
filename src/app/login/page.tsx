@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -6,6 +7,8 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   User,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
 } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
@@ -31,76 +34,69 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
 
+  const createSession = async (idToken: string, type: 'google' | 'email' = 'email') => {
+    const response = await fetch('/api/auth/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken, type }),
+    });
+
+    if (!response.ok) {
+      const { error } = await response.json();
+      throw new Error(error || 'Failed to create session.');
+    }
+  };
+
   const handleAuthSuccess = (user: User) => {
     toast({
       title: 'Success!',
       description: `Welcome, ${user.email}`,
     });
     router.push('/dashboard');
-    // We also need to trigger a router refresh to ensure the new auth state is picked up by server components/layouts
     router.refresh();
   };
 
   const handleAuthError = (error: any) => {
     console.error("Authentication Error:", error);
+    const errorMessage = error.code ? error.code.replace('auth/', '').replace(/-/g, ' ') : error.message;
     toast({
       variant: 'destructive',
       title: 'Authentication Failed',
-      description: error.message || 'An unknown error occurred.',
+      description: errorMessage || 'An unknown error occurred.',
     });
   };
 
-  const handleApiAuth = async (endpoint: 'login' | 'signup') => {
-      setIsLoading(true);
-      try {
-          const response = await fetch(`/api/auth/session`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email, password, type: endpoint }),
-          });
-
-          const { user, error } = await response.json();
-
-          if (!response.ok || error) {
-              throw new Error(error || 'An unknown error occurred.');
-          }
-          
-          if (user) {
-              handleAuthSuccess(user);
-          } else {
-              throw new Error('Authentication failed, please try again.');
-          }
-
-      } catch (error: any) {
-          handleAuthError(error);
-      } finally {
-          setIsLoading(false);
+  const handleEmailAuth = async (type: 'login' | 'signup') => {
+    setIsLoading(true);
+    try {
+      let userCredential;
+      if (type === 'login') {
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
+      } else {
+        userCredential = await createUserWithEmailAndPassword(auth, email, password);
       }
-  }
+      
+      const idToken = await userCredential.user.getIdToken();
+      await createSession(idToken);
+      handleAuthSuccess(userCredential.user);
 
-  const handleLogin = () => handleApiAuth('login');
-  const handleSignUp = () => handleApiAuth('signup');
+    } catch (error: any) {
+      handleAuthError(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLogin = () => handleEmailAuth('login');
+  const handleSignUp = () => handleEmailAuth('signup');
   
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
         const result = await signInWithPopup(auth, googleProvider);
         const idToken = await result.user.getIdToken();
-        
-        // Use the session API for Google sign-in as well to get the cookie
-        const response = await fetch('/api/auth/session', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idToken, type: 'google' }),
-        });
-
-        if (!response.ok) {
-            const { error } = await response.json();
-            throw new Error(error || "Google sign-in failed.");
-        }
-
+        await createSession(idToken, 'google');
         handleAuthSuccess(result.user);
-
     } catch (error) {
         handleAuthError(error);
     } finally {

@@ -2,11 +2,6 @@
 import {NextRequest, NextResponse} from 'next/server';
 import {initializeApp, getApps} from 'firebase-admin/app';
 import {getAuth} from 'firebase-admin/auth';
-import {auth} from '@/lib/firebase'; // Client-side auth
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-} from 'firebase/auth';
 
 // Initialize Firebase Admin SDK
 if (!getApps().length) {
@@ -17,32 +12,15 @@ const adminAuth = getAuth();
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { type } = body;
+    const { idToken } = body;
 
-    let idToken;
-    let user;
-
-    if (type === 'google') {
-        idToken = body.idToken;
-        user = (await adminAuth.verifyIdToken(idToken)).uid;
-    } else {
-        const { email, password } = body;
-        if (!email || !password) {
-            return NextResponse.json({ error: 'Email and password are required.' }, { status: 400 });
-        }
-        
-        let userCredential;
-        if (type === 'login') {
-            userCredential = await signInWithEmailAndPassword(auth, email, password);
-        } else if (type === 'signup') {
-            userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        } else {
-            return NextResponse.json({ error: 'Invalid authentication type.' }, { status: 400 });
-        }
-        
-        user = userCredential.user;
-        idToken = await userCredential.user.getIdToken();
+    if (!idToken) {
+        return NextResponse.json({ error: 'ID token is required.' }, { status: 400 });
     }
+
+    // Verify the ID token and get user data.
+    const decodedToken = await adminAuth.verifyIdToken(idToken);
+    const uid = decodedToken.uid;
 
     // Set session cookie
     const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days
@@ -55,7 +33,7 @@ export async function POST(request: NextRequest) {
       secure: process.env.NODE_ENV === 'production',
     };
     
-    const response = NextResponse.json({ status: 'success', user }, { status: 200 });
+    const response = NextResponse.json({ status: 'success', uid }, { status: 200 });
     response.cookies.set(options);
     
     return response;
