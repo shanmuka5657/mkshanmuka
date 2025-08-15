@@ -29,7 +29,7 @@ import { RiskAssessmentView } from '@/components/RiskAssessmentView';
 import { AiRatingView } from '@/components/AiRatingView';
 import { FinancialsView } from '@/components/FinancialsView';
 import { useAuth } from '@/hooks/useAuth';
-import { saveReportForUser } from '@/lib/firestore-service';
+import { saveReportSummaryAction } from '@/app/actions';
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -174,12 +174,11 @@ export default function CreditPage() {
             // Save the report summary to Firestore if the user is logged in
             if (user) {
                 try {
-                    await saveReportForUser(user.uid, output, cibilScore);
+                    await saveReportSummaryAction(output, cibilScore);
                     toast({ title: "Credit Report Analysis Complete & Saved", description: "Your AI-powered summary is ready and saved to your dashboard." });
-                } catch (dbError) {
+                } catch (dbError: any) {
                     console.error("Error saving report:", dbError);
-                    // Still show success for analysis, but warn about saving
-                    toast({ title: "Credit Report Analysis Complete", description: "Could not save the report to your dashboard." });
+                    toast({ variant: "destructive", title: "Failed to Save Report", description: "Analysis complete, but failed to save report: " + dbError.message });
                 }
             } else {
                 toast({ title: "Credit Report Analysis Complete", description: "Your AI-powered summary is ready. Log in to save future reports." });
