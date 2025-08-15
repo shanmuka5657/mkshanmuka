@@ -88,6 +88,9 @@ export async function emailSignupAction({ email, password }: { email: string, pa
     // The Admin SDK alone cannot generate an ID token directly.
     // We will call the REST API from the server to get the ID token.
     const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+    if (!apiKey) {
+      throw new Error('Firebase API key is not configured. Please set NEXT_PUBLIC_FIREBASE_API_KEY.');
+    }
     const restApiUrl = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${apiKey}`;
 
     const res = await fetch(restApiUrl, {
@@ -117,6 +120,9 @@ export async function emailLoginAction({ email, password }: { email: string, pas
     // The Admin SDK cannot verify passwords directly.
     // The standard way to achieve this server-side is to use the Firebase REST API.
     const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+    if (!apiKey) {
+      throw new Error('Firebase API key is not configured. Please set NEXT_PUBLIC_FIREBASE_API_KEY.');
+    }
     const restApiUrl = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`;
     
     const res = await fetch(restApiUrl, {
