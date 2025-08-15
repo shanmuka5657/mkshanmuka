@@ -28,7 +28,7 @@ import { CreditSummaryView } from '@/components/CreditSummaryView';
 import { RiskAssessmentView } from '@/components/RiskAssessmentView';
 import { AiRatingView } from '@/components/AiRatingView';
 import { FinancialsView } from '@/components/FinancialsView';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, AuthProvider } from '@/hooks/useAuth';
 import { saveReportSummaryAction } from '@/app/actions';
 
 
@@ -78,7 +78,7 @@ const SummaryBox = ({ title, value, isLoading = false, valueClassName = '' }: { 
   </Card>
 );
 
-export default function CreditPage() {
+function CreditPageContent() {
   const [creditFile, setCreditFile] = useState<File | null>(null);
   const [creditFileName, setCreditFileName] = useState('');
   const [rawText, setRawText] = useState('');
@@ -390,4 +390,12 @@ export default function CreditPage() {
       <AiAgentChat cibilReportAvailable={!!rawText} />
     </div>
   );
+}
+
+export default function CreditPage() {
+    return (
+        <AuthProvider>
+            <CreditPageContent />
+        </AuthProvider>
+    )
 }

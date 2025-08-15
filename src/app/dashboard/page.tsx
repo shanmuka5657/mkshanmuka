@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth'; // We'll create this hook
+import { useAuth, AuthProvider } from '@/hooks/useAuth'; 
 import { Loader2, FileText, PlusCircle } from 'lucide-react';
 import {
   Card,
@@ -24,8 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { getReportsForUser, CreditReportSummary } from '@/lib/firestore-service';
 
-
-export default function DashboardPage() {
+function DashboardContent() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [reports, setReports] = useState<CreditReportSummary[]>([]);
@@ -178,4 +178,12 @@ export default function DashboardPage() {
        </main>
     </div>
   );
+}
+
+export default function DashboardPage() {
+    return (
+        <AuthProvider>
+            <DashboardContent />
+        </AuthProvider>
+    )
 }

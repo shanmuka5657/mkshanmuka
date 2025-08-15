@@ -1,3 +1,4 @@
+
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
@@ -27,14 +28,15 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body className="font-body antialiased">
-        <AuthProvider>
           <div className="relative flex flex-col min-h-screen">
               <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur-sm no-print">
                   <div className="container flex h-16 items-center justify-between">
                       <div className="mr-4 flex items-center">
                         <Logo />
                       </div>
-                      <UserNav />
+                       <AuthProvider>
+                         <UserNav />
+                       </AuthProvider>
                   </div>
               </header>
             <main className="flex-1 pb-20">
@@ -43,7 +45,6 @@ export default function RootLayout({
             <BottomNavbar />
           </div>
           <Toaster />
-        </AuthProvider>
       </body>
     </html>
   );
