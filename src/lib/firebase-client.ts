@@ -1,16 +1,17 @@
 
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
-import { getFirestore, Firestore } from "firebase/firestore";
+import { getFirestore, Firestore } from "firestore";
 import { getStorage, FirebaseStorage } from "firebase/storage";
 
 const clientConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: "AIzaSyAeIyY3IH-zAkV8FSmmKyR1b32pCa46fQg",
+  authDomain: "creditwise-ai-nd7s0.firebaseapp.com",
+  projectId: "creditwise-ai-nd7s0",
+  storageBucket: "creditwise-ai-nd7s0.firebasestorage.app",
+  messagingSenderId: "492248595221",
+  appId: "1:492248595221:web:3fe409487b8848d4a6071c",
+  measurementId: "G-8LLWXP1RJP"
 };
 
 let app: FirebaseApp;
