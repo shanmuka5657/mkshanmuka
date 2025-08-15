@@ -11,7 +11,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import type { FlowUsage } from 'genkit/flow';
+import type { FlowUsage } from 'genkit';
 import { textToSpeech } from './text-to-speech';
 
 // Define the structure for a single message in the history
@@ -63,10 +63,12 @@ const aiAgentChatFlow = ai.defineFlow(
     
     let contextPrompt = '';
     if (cibilReportAvailable) {
-      contextPrompt += `\nThe user has uploaded their CIBIL credit report. You have access to this document. Use this as a source of truth to answer questions. Do NOT ask them to upload it again.`;
+      contextPrompt += `
+The user has uploaded their CIBIL credit report. You have access to this document. Use this as a source of truth to answer questions. Do NOT ask them to upload it again.`;
     }
     if (bankStatementAvailable) {
-        contextPrompt += `\nThe user has uploaded their bank statement. You have access to this document. Use this as a source of truth to answer questions. Do NOT ask them to upload it again.`;
+        contextPrompt += `
+The user has uploaded their bank statement. You have access to this document. Use this as a source of truth to answer questions. Do NOT ask them to upload it again.`;
     }
 
     if (!contextPrompt) {

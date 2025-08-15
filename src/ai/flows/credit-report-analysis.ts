@@ -12,7 +12,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { FlowUsage } from 'genkit/flow';
+import { FlowUsage } from 'genkit';
 
 const AnalyzeCreditReportInputSchema = z.object({
   creditReportText: z.string().describe('The text extracted from the credit report.'),

@@ -1,15 +1,19 @@
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  async redirects() {
-    return [
-      {
-        source: '/',
-        destination: '/dashboard',
-        permanent: true,
-      },
-    ]
-  },
-  // Your other Next.js config options here
+    webpack: (config, { isServer }) => {
+        config.module.noParse = /(require-in-the-middle|handlebars)/;
+        return config;
+    },
+    async redirects() {
+        return [
+          {
+            source: '/',
+            destination: '/dashboard',
+            permanent: true,
+          },
+        ]
+    },
 };
 
 export default nextConfig;
