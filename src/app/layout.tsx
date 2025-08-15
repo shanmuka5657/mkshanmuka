@@ -4,7 +4,6 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { BottomNavbar } from '@/components/BottomNavbar';
 import { Logo } from '@/components/ui/logo';
-import { UserNav } from '@/components/UserNav';
 
 export const metadata: Metadata = {
   title: 'CreditWise AI - AI Credit Analysis',
@@ -31,7 +30,6 @@ export default function RootLayout({
                     <div className="mr-4 flex items-center">
                       <Logo />
                     </div>
-                    {/* <UserNav /> */}
                 </div>
             </header>
           <main className="flex-1 pb-20">
