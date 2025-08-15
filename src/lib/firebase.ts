@@ -1,8 +1,8 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp, FirebaseOptions } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+import { getAuth, GoogleAuthProvider, connectAuthEmulator } from "firebase/auth";
+import { getFirestore, connectFirestoreEmulator, initializeFirestore, memoryLocalCache } from "firebase/firestore";
+import { getStorage, connectStorageEmulator } from "firebase/storage";
 
 // Your web app's Firebase configuration
 const firebaseConfig: FirebaseOptions = {
@@ -17,10 +17,23 @@ const firebaseConfig: FirebaseOptions = {
 
 // Initialize Firebase for client-side using a singleton pattern
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+
+// Initialize Firestore with auth integration
+const db = initializeFirestore(app, {
+    localCache: memoryLocalCache(),
+});
+
 const auth = getAuth(app);
-const db = getFirestore(app);
 const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
+
+// Connect to emulators in development
+if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined' && !(auth as any)._isEmulated) {
+    // Point to the emulators running on localhost.
+    // connectAuthEmulator(auth, 'http://localhost:9099');
+    // connectFirestoreEmulator(db, 'localhost', 9150);
+    // connectStorageEmulator(storage, 'localhost', 9199);
+}
 
 
 export { app, auth, db, storage, googleProvider };
