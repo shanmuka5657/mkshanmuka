@@ -28,8 +28,6 @@ import { CreditSummaryView } from '@/components/CreditSummaryView';
 import { RiskAssessmentView } from '@/components/RiskAssessmentView';
 import { AiRatingView } from '@/components/AiRatingView';
 import { FinancialsView } from '@/components/FinancialsView';
-import { useAuth, AuthProvider } from '@/hooks/useAuth';
-import { saveReportSummaryAction } from '@/app/actions';
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -78,7 +76,7 @@ const SummaryBox = ({ title, value, isLoading = false, valueClassName = '' }: { 
   </Card>
 );
 
-function CreditPageContent() {
+export default function CreditPage() {
   const [creditFile, setCreditFile] = useState<File | null>(null);
   const [creditFileName, setCreditFileName] = useState('');
   const [rawText, setRawText] = useState('');
@@ -89,7 +87,6 @@ function CreditPageContent() {
   const [activeView, setActiveView] = useState<string | null>(null);
   const [isTextExtracted, setIsTextExtracted] = useState(false);
   
-  const { user } = useAuth();
   const { toast } = useToast()
   const creditFileInputRef = useRef<HTMLInputElement>(null);
   
@@ -170,19 +167,7 @@ function CreditPageContent() {
         const { output, usage } = await analyzeCreditReport({ creditReportText: rawText });
         if (output) {
             setAnalysisResult(output);
-            
-            // Save the report summary to Firestore if the user is logged in
-            if (user) {
-                try {
-                    await saveReportSummaryAction(output, cibilScore);
-                    toast({ title: "Credit Report Analysis Complete & Saved", description: "Your AI-powered summary is ready and saved to your dashboard." });
-                } catch (dbError: any) {
-                    console.error("Error saving report:", dbError);
-                    toast({ variant: "destructive", title: "Failed to Save Report", description: "Analysis complete, but failed to save report: " + dbError.message });
-                }
-            } else {
-                toast({ title: "Credit Report Analysis Complete", description: "Your AI-powered summary is ready. Log in to save future reports." });
-            }
+            toast({ title: "Credit Report Analysis Complete", description: "Your AI-powered summary is ready." });
         } else {
              throw new Error("AI returned an empty response.");
         }
@@ -390,12 +375,4 @@ function CreditPageContent() {
       <AiAgentChat cibilReportAvailable={!!rawText} />
     </div>
   );
-}
-
-export default function CreditPage() {
-    return (
-        <AuthProvider>
-            <CreditPageContent />
-        </AuthProvider>
-    )
 }

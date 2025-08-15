@@ -10,8 +10,8 @@ export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to the main dashboard page immediately
-    router.replace('/dashboard');
+    // Redirect to the main credit analysis page immediately
+    router.replace('/credit');
   }, [router]);
 
   return (
@@ -22,7 +22,7 @@ export default function HomePage() {
         </div>
         <div className="flex items-center gap-2 text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" />
-          <p>Redirecting to your dashboard...</p>
+          <p>Redirecting to Credit Analysis...</p>
         </div>
       </div>
     </main>
