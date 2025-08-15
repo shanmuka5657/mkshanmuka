@@ -4,13 +4,14 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, Loader2, ShieldAlert, Zap, GitCommit, ShieldCheck, ShieldClose, HelpCircle, TrendingUp, TrendingDown } from "lucide-react";
 import { Button } from "./ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "./ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { getRiskAssessment, RiskAssessmentOutput } from "@/ai/flows/risk-assessment";
 import type { AnalyzeCreditReportOutput } from "@/ai/flows/credit-report-analysis";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
+import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 
 interface RiskAssessmentViewProps {
   analysisResult: AnalyzeCreditReportOutput;
