@@ -22,16 +22,16 @@ const storage = getStorage(app);
 const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 
-// Connect to emulators in development
-// This code will only run in the browser and in development mode
-if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+// Connect to emulators in development.
+// This logic will be tree-shaken in production builds.
+if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
     // Use a flag on the window object to avoid reconnecting on hot reloads
     if (!(window as any).firebaseEmulatorsConnected) {
         connectAuthEmulator(auth, "http://localhost:9099");
         connectFirestoreEmulator(db, "localhost", 9150);
         connectStorageEmulator(storage, "localhost", 9199);
         (window as any).firebaseEmulatorsConnected = true;
-        console.log("Firebase emulators connected.");
+        console.log("Firebase emulators connected for local development.");
     }
 }
 
