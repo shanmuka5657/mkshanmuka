@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   signInWithPopup,
-  GoogleAuthProvider,
   User,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -34,17 +33,18 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const createSession = async (idToken: string, type: 'google' | 'email' = 'email') => {
+  const createSession = async (idToken: string) => {
     const response = await fetch('/api/auth/session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idToken, type }),
+      body: JSON.stringify({ idToken }),
     });
 
     if (!response.ok) {
       const { error } = await response.json();
       throw new Error(error || 'Failed to create session.');
     }
+    return response.json();
   };
 
   const handleAuthSuccess = (user: User) => {
@@ -53,12 +53,14 @@ export default function LoginPage() {
       description: `Welcome, ${user.email}`,
     });
     router.push('/dashboard');
-    router.refresh();
+    router.refresh(); // Important to refresh server-side state
   };
 
   const handleAuthError = (error: any) => {
     console.error("Authentication Error:", error);
-    const errorMessage = error.code ? error.code.replace('auth/', '').replace(/-/g, ' ') : error.message;
+    const errorMessage = error.code
+      ? error.code.replace('auth/', '').replace(/-/g, ' ')
+      : error.message;
     toast({
       variant: 'destructive',
       title: 'Authentication Failed',
@@ -69,12 +71,8 @@ export default function LoginPage() {
   const handleEmailAuth = async (type: 'login' | 'signup') => {
     setIsLoading(true);
     try {
-      let userCredential;
-      if (type === 'login') {
-        userCredential = await signInWithEmailAndPassword(auth, email, password);
-      } else {
-        userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      }
+      const authFn = type === 'login' ? signInWithEmailAndPassword : createUserWithEmailAndPassword;
+      const userCredential = await authFn(auth, email, password);
       
       const idToken = await userCredential.user.getIdToken();
       await createSession(idToken);
@@ -86,16 +84,13 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
-
-  const handleLogin = () => handleEmailAuth('login');
-  const handleSignUp = () => handleEmailAuth('signup');
   
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
         const result = await signInWithPopup(auth, googleProvider);
         const idToken = await result.user.getIdToken();
-        await createSession(idToken, 'google');
+        await createSession(idToken);
         handleAuthSuccess(result.user);
     } catch (error) {
         handleAuthError(error);
@@ -134,7 +129,7 @@ export default function LoginPage() {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button onClick={handleLogin} disabled={isLoading} className="w-full">
+                  <Button onClick={() => handleEmailAuth('login')} disabled={isLoading} className="w-full">
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Login
                   </Button>
@@ -160,7 +155,7 @@ export default function LoginPage() {
                   </div>
                 </CardContent>
                 <CardFooter>
-                   <Button onClick={handleSignUp} disabled={isLoading} className="w-full">
+                   <Button onClick={() => handleEmailAuth('signup')} disabled={isLoading} className="w-full">
                      {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Sign Up
                   </Button>

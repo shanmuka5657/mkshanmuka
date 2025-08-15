@@ -37,15 +37,16 @@ function getFirebaseServices(): FirebaseServices {
   const storage = getStorage(app);
 
   // Connect to emulators in development.
+  // This check is crucial to ensure emulators are only used locally.
   if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
     // Use a flag on the window object to avoid reconnecting on hot reloads
     if (!(window as any).firebaseEmulatorsConnected) {
       try {
         console.log("Connecting to Firebase emulators...");
-        // THIS IS THE CRUCIAL FIX: Connect the client-side auth to the emulator
-        connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
-        connectFirestoreEmulator(db, "127.0.0.1", 9150);
-        connectStorageEmulator(storage, "127.0.0.1", 9199);
+        // Use 'localhost' instead of '127.0.0.1' for better compatibility in some dev environments
+        connectAuthEmulator(auth, "http://localhost:9099", { disableWarnings: true });
+        connectFirestoreEmulator(db, "localhost", 9150);
+        connectStorageEmulator(storage, "localhost", 9199);
         (window as any).firebaseEmulatorsConnected = true;
         console.log("Firebase emulators connected for local development.");
       } catch (error) {
