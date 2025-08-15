@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -40,7 +39,7 @@ const mapFirebaseError = (errorCode: string): string => {
         case 'auth/invalid-credential':
              return 'Invalid email or password. Please try again.';
         case 'auth/invalid-id-token':
-            return 'The user\\'s credential is no longer valid. The user must sign in again.';
+            return "The user's credential is no longer valid. The user must sign in again.";
         case 'auth/user-disabled':
             return 'This account has been disabled by an administrator.';
         case 'auth/network-request-failed':
