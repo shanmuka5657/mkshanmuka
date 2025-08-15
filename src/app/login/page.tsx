@@ -4,8 +4,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
   onAuthStateChanged,
   signInWithPopup,
   GoogleAuthProvider,
@@ -14,14 +12,12 @@ import {
 import { auth, googleProvider } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, LogIn, UserPlus } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Logo } from '@/components/ui/logo';
 
 const GoogleIcon = () => (
-    <svg className="h-5 w-5" viewBox="0 0 24 24">
+    <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
         <path
             d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
             fill="#4285F4"
@@ -42,9 +38,6 @@ const GoogleIcon = () => (
 );
 
 export default function LoginPage() {
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const router = useRouter();
@@ -60,40 +53,6 @@ export default function LoginPage() {
     });
     return () => unsubscribe();
   }, [router]);
-
-  const handleAuthAction = async () => {
-    if (!email || !password) {
-      toast({
-        variant: 'destructive',
-        title: 'Missing Fields',
-        description: 'Please enter both email and password.',
-      });
-      return;
-    }
-    setIsLoading(true);
-    try {
-      if (mode === 'signup') {
-        await createUserWithEmailAndPassword(auth, email, password);
-        toast({
-          title: 'Signup Successful',
-          description: 'Welcome! You are now logged in.',
-          variant: 'default',
-          className: 'bg-green-100 text-green-800'
-        });
-      } else {
-        await signInWithEmailAndPassword(auth, email, password);
-         toast({
-          title: 'Login Successful',
-          description: 'Welcome back! You are now being redirected.',
-        });
-      }
-      // The onAuthStateChanged listener will handle the redirect.
-    } catch (error: any) {
-      handleAuthError(error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
   
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -116,33 +75,6 @@ export default function LoginPage() {
       
       let friendlyMessage = 'An unexpected error occurred. Please try again.';
       switch (error.code) {
-        case 'auth/wrong-password':
-          friendlyMessage = 'Incorrect password. Please try again.';
-          break;
-        case 'auth/user-not-found':
-          friendlyMessage = 'No account found with this email. Please sign up or check for typos.';
-          break;
-        case 'auth/email-already-in-use':
-          friendlyMessage = 'This email is already registered. Please log in instead.';
-          break;
-        case 'auth/weak-password':
-          friendlyMessage = 'Password is too weak. It should be at least 6 characters long.';
-          break;
-        case 'auth/invalid-email':
-          friendlyMessage = 'The email address is not valid.';
-          break;
-        case 'auth/invalid-credential':
-             friendlyMessage = 'The email or password you entered is incorrect.';
-             break;
-        case 'auth/network-request-failed':
-            friendlyMessage = 'Network Error: Could not connect to Firebase services. Please check your internet connection and ensure the Firebase emulators are running.';
-            break;
-        case 'auth/invalid-api-key':
-             friendlyMessage = 'The provided Firebase API key is not valid. Please check your configuration.';
-             break;
-        case 'auth/operation-not-allowed':
-             friendlyMessage = 'Email/Password sign-in is not enabled in your Firebase project.';
-             break;
         case 'auth/popup-closed-by-user':
             friendlyMessage = 'The sign-in popup was closed. Please try again.';
             return; // Don't show a toast for this, it's not a real error.
@@ -158,10 +90,6 @@ export default function LoginPage() {
       });
   }
   
-  const toggleMode = () => {
-    setMode(prevMode => (prevMode === 'login' ? 'signup' : 'login'));
-  };
-
   if (isCheckingAuth) {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-background">
@@ -178,64 +106,17 @@ export default function LoginPage() {
           <div className="mx-auto mb-4">
             <Logo />
           </div>
-          <CardTitle>{mode === 'login' ? 'Welcome Back' : 'Create an Account'}</CardTitle>
+          <CardTitle>Welcome to CreditWise AI</CardTitle>
           <CardDescription>
-            {mode === 'login' ? 'Enter your credentials to access your account. (Hint: use admin@mkcreditwise.com for admin access)' : 'Enter your details to get started'}
+            Sign in with your Google account to continue.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="user@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoading}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={isLoading}
-            />
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-4">
-          <Button onClick={handleAuthAction} className="w-full" disabled={isLoading}>
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (mode === 'login' ? <LogIn className="mr-2 h-4 w-4" /> : <UserPlus className="mr-2 h-4 w-4" />)}
-            {mode === 'login' ? 'Login' : 'Sign Up'}
-          </Button>
-
-            <div className="relative w-full">
-                <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">
-                    Or continue with
-                    </span>
-                </div>
-            </div>
-
-            <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
+        <CardContent>
+           <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon />}
                 Sign in with Google
             </Button>
-
-           <p className="text-center text-sm text-muted-foreground">
-            {mode === 'login' ? "Don't have an account?" : "Already have an account?"}{' '}
-            <button onClick={toggleMode} className="underline underline-offset-4 hover:text-primary font-semibold" disabled={isLoading}>
-              {mode === 'login' ? 'Sign Up' : 'Login'}
-            </button>
-          </p>
-        </CardFooter>
+        </CardContent>
       </Card>
     </div>
   );
