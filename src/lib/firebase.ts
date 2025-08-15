@@ -28,11 +28,20 @@ const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
 
 // Connect to emulators in development
-if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined' && !(auth as any)._isEmulated) {
-    // Point to the emulators running on localhost.
-    // connectAuthEmulator(auth, 'http://localhost:9099');
-    // connectFirestoreEmulator(db, 'localhost', 9150);
-    // connectStorageEmulator(storage, 'localhost', 9199);
+if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
+    // Check if emulators are already connected to prevent re-initialization
+    if (!(auth as any)._isEmulated) {
+        connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
+    }
+    // Firestore emulator connection check is handled internally by the SDK after first connect
+    try {
+        connectFirestoreEmulator(db, 'localhost', 9150);
+    } catch (e) {
+        // Ignore errors if already connected
+    }
+    if (!(storage as any)._isEmulated) {
+        connectStorageEmulator(storage, 'localhost', 9199);
+    }
 }
 
 
