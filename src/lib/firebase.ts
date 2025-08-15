@@ -4,8 +4,7 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
-// Your web app's Firebase configuration is read from environment variables
-// This is more secure and flexible than hardcoding values.
+// Your web app's Firebase configuration
 const firebaseConfig: FirebaseOptions = {
   apiKey: "AIzaSyAeIyY3IH-zAkV8FSmmKyR1b32pCa46fQg",
   authDomain: "creditwise-ai-nd7s0.firebaseapp.com",
