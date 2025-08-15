@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import {
   signInWithPopup,
   User,
-  signInWithCustomToken
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
 } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
@@ -71,19 +72,16 @@ export default function LoginPage() {
   const handleEmailAuth = async (type: 'login' | 'signup') => {
     setIsLoading(true);
     try {
-      // This is a placeholder for a full server-side email/pass auth.
-      // In a real app, you would have a server action that validates the password
-      // and returns the UID, or creates a user.
-      // For this environment, we'll simulate getting a UID to create a custom token.
+      let userCredential;
+      if (type === 'login') {
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
+      } else {
+        userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      }
       
-      // A more robust solution would be a server action like `signInWithEmailAction`
-      // For now, we are demonstrating the custom token flow which is more reliable in this env.
-      // This part is simplified for demonstration.
-      toast({
-        variant: 'destructive',
-        title: 'Feature Not Fully Implemented',
-        description: 'Email/Password sign-in is disabled in this demo. Please use Google Sign-In.',
-      });
+      const idToken = await userCredential.user.getIdToken();
+      await createSession(idToken);
+      handleAuthSuccess(userCredential.user);
 
     } catch (error: any) {
       handleAuthError(error);
