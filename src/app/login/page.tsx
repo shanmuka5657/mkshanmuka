@@ -17,61 +17,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Logo } from '@/components/ui/logo';
-import { auth } from '@/lib/firebase';
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-} from 'firebase/auth';
+import { emailLoginAction, emailSignupAction } from '@/app/actions';
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleAuthSuccess = (type: 'login' | 'signup') => {
-    toast({
-      title: 'Success!',
-      description: type === 'login' ? 'Welcome back!' : 'Your account has been created.',
-    });
+  const handleAuthSuccess = () => {
     router.push('/dashboard');
-    router.refresh(); // Ensures the server-side state is updated
-  };
-
-  const handleAuthError = (error: any) => {
-    let description = 'An unexpected error occurred. Please try again.';
-    // Firebase errors have a `code` property
-    if (error && typeof error.code === 'string') {
-      const errorCode = error.code;
-      switch (errorCode) {
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-        case 'auth/invalid-credential':
-          description = 'Invalid email or password. Please try again.';
-          break;
-        case 'auth/email-already-in-use':
-        case 'auth/email-already-exists':
-          description = 'This email address is already in use by another account.';
-          break;
-        case 'auth/weak-password':
-          description = 'The password is too weak. Please choose a stronger password (at least 6 characters).';
-          break;
-        case 'auth/invalid-email':
-          description = 'Please enter a valid email address.';
-          break;
-        case 'auth/network-request-failed':
-          description = 'Network error. Please check your internet connection and try again.';
-          break;
-        default:
-          description = `An unexpected error occurred. Please try again. Code: ${errorCode}`;
-          break;
-      }
-    }
-
-    toast({
-      variant: 'destructive',
-      title: 'Authentication Failed',
-      description: description,
-    });
+    router.refresh();
   };
 
   const handleAuth = async (type: 'login' | 'signup', event: React.FormEvent<HTMLFormElement>) => {
@@ -83,15 +38,22 @@ export default function LoginPage() {
     const password = formData.get('password') as string;
 
     try {
-      const authFn = type === 'login' ? signInWithEmailAndPassword : createUserWithEmailAndPassword;
-      const userCredential = await authFn(auth, email, password);
-      const idToken = await userCredential.user.getIdToken();
+      const action = type === 'login' ? emailLoginAction : emailSignupAction;
+      const result = await action({ email, password });
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      if (!result.idToken) {
+        throw new Error('Failed to get ID token from server.');
+      }
 
       // Send the ID token to the server to create a session cookie
       const response = await fetch('/api/auth/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken }),
+        body: JSON.stringify({ idToken: result.idToken }),
       });
 
       if (!response.ok) {
@@ -99,9 +61,18 @@ export default function LoginPage() {
         throw new Error(error || 'Failed to create session.');
       }
 
-      handleAuthSuccess(type);
+      toast({
+        title: 'Success!',
+        description: type === 'login' ? 'Welcome back!' : 'Your account has been created.',
+      });
+      handleAuthSuccess();
+
     } catch (error: any) {
-      handleAuthError(error);
+      toast({
+        variant: 'destructive',
+        title: 'Authentication Failed',
+        description: error.message || 'An unexpected error occurred.',
+      });
     } finally {
       setIsLoading(false);
     }
