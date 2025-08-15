@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   onAuthStateChanged,
-  signInWithPopup,
+  signInWithRedirect,
   GoogleAuthProvider,
   User
 } from 'firebase/auth';
@@ -57,15 +57,11 @@ export default function LoginPage() {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      await signInWithPopup(auth, googleProvider);
-      toast({
-        title: 'Login Successful',
-        description: 'Welcome! You have signed in with Google.',
-      });
-      // The onAuthStateChanged listener will handle the redirect.
+      await signInWithRedirect(auth, googleProvider);
+      // The user will be redirected to Google's sign-in page.
+      // The onAuthStateChanged listener will handle the redirect back.
     } catch (error: any) {
       handleAuthError(error);
-    } finally {
       setIsLoading(false);
     }
   };
