@@ -3,8 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
   User,
@@ -39,6 +37,8 @@ export default function LoginPage() {
       description: `Welcome, ${user.email}`,
     });
     router.push('/dashboard');
+    // We also need to trigger a router refresh to ensure the new auth state is picked up by server components/layouts
+    router.refresh();
   };
 
   const handleAuthError = (error: any) => {
@@ -50,35 +50,57 @@ export default function LoginPage() {
     });
   };
 
-  const handleLogin = async () => {
-    setIsLoading(true);
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      handleAuthSuccess(userCredential.user);
-    } catch (error) {
-      handleAuthError(error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const handleApiAuth = async (endpoint: 'login' | 'signup') => {
+      setIsLoading(true);
+      try {
+          const response = await fetch(`/api/auth/session`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email, password, type: endpoint }),
+          });
 
-  const handleSignUp = async () => {
-    setIsLoading(true);
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      handleAuthSuccess(userCredential.user);
-    } catch (error) {
-      handleAuthError(error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+          const { user, error } = await response.json();
+
+          if (!response.ok || error) {
+              throw new Error(error || 'An unknown error occurred.');
+          }
+          
+          if (user) {
+              handleAuthSuccess(user);
+          } else {
+              throw new Error('Authentication failed, please try again.');
+          }
+
+      } catch (error: any) {
+          handleAuthError(error);
+      } finally {
+          setIsLoading(false);
+      }
+  }
+
+  const handleLogin = () => handleApiAuth('login');
+  const handleSignUp = () => handleApiAuth('signup');
   
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
         const result = await signInWithPopup(auth, googleProvider);
+        const idToken = await result.user.getIdToken();
+        
+        // Use the session API for Google sign-in as well to get the cookie
+        const response = await fetch('/api/auth/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken, type: 'google' }),
+        });
+
+        if (!response.ok) {
+            const { error } = await response.json();
+            throw new Error(error || "Google sign-in failed.");
+        }
+
         handleAuthSuccess(result.user);
+
     } catch (error) {
         handleAuthError(error);
     } finally {

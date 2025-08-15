@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useContext, createContext, ReactNode } from 'react';
-import { onAuthStateChanged, User, signOut as firebaseSignOut } from 'firebase/auth';
+import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 
@@ -32,8 +32,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signOut = async () => {
-    await firebaseSignOut(auth);
+    // Instead of just signing out on the client, we call our API route
+    // to clear the server-side session cookie.
+    await fetch('/api/auth/session', { method: 'DELETE' });
+    setUser(null); // Clear the user state immediately
     router.push('/login');
+    router.refresh(); // Ensure layout reflects signed-out state
   };
 
   return (

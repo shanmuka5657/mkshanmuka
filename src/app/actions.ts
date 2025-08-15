@@ -29,15 +29,20 @@ export async function saveReportSummaryAction(
   analysisResult: AnalyzeCreditReportOutput,
   cibilScore: number | null
 ): Promise<void> {
-  // 1. Verify user authentication
+  // 1. Verify user authentication using the session cookie
   const sessionCookie = cookies().get('__session')?.value || '';
   
+  if (!sessionCookie) {
+      throw new Error('User is not authenticated.');
+  }
+
   let decodedIdToken;
   try {
+    // Verify the session cookie. This will also verify if it's expired.
     decodedIdToken = await adminAuth.verifySessionCookie(sessionCookie, true);
   } catch (error) {
     console.error('Failed to verify session cookie:', error);
-    throw new Error('User is not authenticated.');
+    throw new Error('User is not authenticated or session has expired.');
   }
 
   const userId = decodedIdToken.uid;
