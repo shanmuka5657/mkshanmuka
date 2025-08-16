@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
-  { href: '/', label: 'Credit', icon: FileText },
+  { href: '/credit', label: 'Credit', icon: FileText },
   { href: '/verify', label: 'Verify', icon: Fingerprint },
   { href: '/cross-verify', label: 'Cross-Verify', icon: FileCheck2 },
   { href: '/trainer', label: 'Trainer', icon: BrainCircuit },
@@ -18,11 +18,14 @@ const navItems = [
 export function BottomNavbar() {
   const pathname = usePathname();
 
+  // A simple way to handle the root path redirect for active state visual
+  const creditIsActive = pathname === '/credit' || pathname === '/';
+
   return (
     <div className="fixed bottom-0 left-0 z-50 w-full h-20 bg-background border-t border-border no-print">
       <div className={`grid h-full max-w-lg grid-cols-5 mx-auto font-medium`}>
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = item.href === '/credit' ? creditIsActive : pathname === item.href;
           return (
             <Link
               key={item.href}

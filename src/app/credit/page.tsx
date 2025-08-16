@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { getDocument, GlobalWorkerOptions, version } from 'pdfjs-dist';
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import {
   UploadCloud,
   FileText,
@@ -28,7 +28,6 @@ import { CreditSummaryView } from '@/components/CreditSummaryView';
 import { RiskAssessmentView } from '@/components/RiskAssessmentView';
 import { AiRatingView } from '@/components/AiRatingView';
 import { FinancialsView } from '@/components/FinancialsView';
-import { saveReportSummaryAction } from '@/app/actions';
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -92,7 +91,9 @@ export default function CreditPage() {
   const creditFileInputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
-    GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.mjs`;
+    if (typeof window !== 'undefined') {
+      GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${"4.4.168"}/legacy/build/pdf.worker.min.mjs`;
+    }
   }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,7 +164,27 @@ export default function CreditPage() {
         const output = await analyzeCreditReport({ creditReportText: rawText });
         if (output) {
             setAnalysisResult(output);
-            toast({ title: "Credit Report Analysis Complete", description: "Your AI-powered summary is ready." });
+            
+            // Automatically save extracted details to local storage for the dashboard
+            try {
+                const userDetails = {
+                    name: output.customerDetails.name,
+                    mobile: output.customerDetails.mobileNumber,
+                    pan: output.customerDetails.pan,
+                    cibilScore: output.cibilScore || '',
+                    totalEmi: output.emiDetails.totalEmi,
+                    address: output.customerDetails.address,
+                };
+                localStorage.setItem('userDetails', JSON.stringify(userDetails));
+                
+                // Dispatch a storage event to notify other tabs (like the dashboard)
+                window.dispatchEvent(new Event('storage'));
+
+                toast({ title: "Details Updated!", description: "Your information has been automatically updated on the dashboard." });
+            } catch (e) {
+                console.error("Failed to save to local storage", e);
+                toast({ variant: 'destructive', title: 'Could not save to dashboard', description: 'There was an issue saving the extracted details.' });
+            }
 
         } else {
              throw new Error("AI returned an empty response.");

@@ -15,7 +15,7 @@ const features = [
   {
     title: 'Credit Analysis',
     description: 'Upload a CIBIL report for an in-depth, AI-powered analysis of credit health.',
-    href: '/',
+    href: '/credit',
     icon: <FileText className="h-8 w-8 text-primary" />,
   },
   {
