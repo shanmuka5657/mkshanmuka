@@ -67,17 +67,17 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
     setUnderwriting(null);
     
     try {
-        const { output: riskAssessmentOutput } = await getFinancialRiskAssessment({ analysisResult, estimatedIncome: income });
+        const riskAssessmentOutput = await getFinancialRiskAssessment({ analysisResult, estimatedIncome: income });
         setLoading(prev => ({ ...prev, risk: false }));
         
         // Use the risk assessment without guarantor loans for the primary rating/eligibility flow.
-        const { output: riskAssessmentForRating } = await getRiskAssessment({ analysisResult });
+        const riskAssessmentForRating = await getRiskAssessment({ analysisResult });
         
-        const { output: aiRatingOutput } = await getAiRating({ analysisResult, riskAssessment: riskAssessmentForRating.assessmentWithoutGuarantor });
+        const aiRatingOutput = await getAiRating({ analysisResult, riskAssessment: riskAssessmentForRating.assessmentWithoutGuarantor });
         setAiRating(aiRatingOutput);
         setLoading(prev => ({ ...prev, rating: false }));
 
-        const { output: loanEligibilityOutput } = await getLoanEligibility({
+        const loanEligibilityOutput = await getLoanEligibility({
             aiScore: aiRatingOutput.riskScore,
             rating: aiRatingOutput.rating,
             monthlyIncome: income,
@@ -115,7 +115,7 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
     setUnderwriting(null);
 
     try {
-        const { output: riskAssessmentForRating } = await getRiskAssessment({ analysisResult });
+        const riskAssessmentForRating = await getRiskAssessment({ analysisResult });
 
         const underwritingInput: CreditUnderwritingInput = {
             analysisResult,
@@ -130,7 +130,7 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
             userComments,
         };
         
-        const { output: underwritingOutput } = await getCreditUnderwriting(underwritingInput);
+        const underwritingOutput = await getCreditUnderwriting(underwritingInput);
         setUnderwriting(underwritingOutput);
         toast({ title: 'Underwriting Complete', description: 'AI has made a decision.' });
 
@@ -358,5 +358,3 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
     </div>
   );
 }
-
-    

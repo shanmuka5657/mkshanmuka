@@ -11,7 +11,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import type { FlowUsage } from 'genkit';
 import { textToSpeech } from './text-to-speech';
 
 // Define the structure for a single message in the history
@@ -46,7 +45,7 @@ export type AiAgentChatOutput = z.infer<typeof AiAgentChatOutputSchema>;
 
 export async function aiAgentChat(
   input: AiAgentChatInput
-): Promise<{ output: AiAgentChatOutput, usage: FlowUsage }> {
+): Promise<AiAgentChatOutput> {
   return aiAgentChatFlow(input);
 }
 
@@ -54,10 +53,7 @@ const aiAgentChatFlow = ai.defineFlow(
   {
     name: 'aiAgentChatFlow',
     inputSchema: AiAgentChatInputSchema,
-    outputSchema: z.object({
-        output: AiAgentChatOutputSchema,
-        usage: z.any(),
-    }),
+    outputSchema: AiAgentChatOutputSchema,
   },
   async ({ history, cibilReportAvailable, bankStatementAvailable }) => {
     
@@ -101,12 +97,9 @@ The user has uploaded their bank statement. You have access to this document. Us
     // Generate audio from the response text
     const { audioDataUri } = await textToSpeech(responseText);
 
-    return {
-      output: { 
-          answer: responseText,
-          audioDataUri,
-      },
-      usage: llmResponse.usage,
+    return { 
+        answer: responseText,
+        audioDataUri,
     };
   }
 );

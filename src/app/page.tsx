@@ -161,7 +161,7 @@ export default function CreditPage() {
     }
     setIsAnalyzing(true);
     try {
-        const { output, usage } = await analyzeCreditReport({ creditReportText: rawText });
+        const output = await analyzeCreditReport({ creditReportText: rawText });
         if (output) {
             setAnalysisResult(output);
             

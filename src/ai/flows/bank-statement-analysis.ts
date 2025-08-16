@@ -11,7 +11,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type { FlowUsage } from 'genkit';
 
 const BankStatementAnalysisInputSchema = z.object({
   statementText: z.string().describe('The full text extracted from the bank statement PDF.'),
@@ -70,7 +69,7 @@ export type BankStatementAnalysisOutput = z.infer<typeof BankStatementAnalysisOu
 
 export async function analyzeBankStatement(
   input: BankStatementAnalysisInput
-): Promise<{ output: BankStatementAnalysisOutput, usage: FlowUsage }> {
+): Promise<BankStatementAnalysisOutput> {
   return analyzeBankStatementFlow(input);
 }
 
@@ -126,10 +125,7 @@ const analyzeBankStatementFlow = ai.defineFlow(
   {
     name: 'analyzeBankStatementFlow',
     inputSchema: BankStatementAnalysisInputSchema,
-    outputSchema: z.object({
-      output: BankStatementAnalysisOutputSchema,
-      usage: z.any(),
-    }),
+    outputSchema: BankStatementAnalysisOutputSchema,
   },
   async input => {
     const result = await prompt(input);
@@ -137,6 +133,6 @@ const analyzeBankStatementFlow = ai.defineFlow(
     if (!output) {
       throw new Error("AI failed to analyze the bank statement.");
     }
-    return { output, usage: result.usage };
+    return output;
   }
 );

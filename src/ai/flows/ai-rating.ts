@@ -12,7 +12,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { FlowUsage } from 'genkit';
 import type { RiskAssessmentOutput } from './risk-assessment';
 import type { AnalyzeCreditReportOutput } from './credit-report-analysis';
 
@@ -60,7 +59,7 @@ export type AiRatingOutput = z.infer<typeof AiRatingOutputSchema>;
 
 export async function getAiRating(
   input: AiRatingInput
-): Promise<{ output: AiRatingOutput, usage: FlowUsage }> {
+): Promise<AiRatingOutput> {
   const result = await aiRatingFlow(input);
   return result;
 }
@@ -98,10 +97,7 @@ const aiRatingFlow = ai.defineFlow(
   {
     name: 'aiRatingFlow',
     inputSchema: AiRatingInputSchema,
-    outputSchema: z.object({
-        output: AiRatingOutputSchema,
-        usage: z.any(),
-    }),
+    outputSchema: AiRatingOutputSchema,
   },
   async (input) => {
     const result = await prompt(input);
@@ -109,6 +105,6 @@ const aiRatingFlow = ai.defineFlow(
     if (!output) {
       throw new Error("AI failed to provide a rating.");
     }
-    return { output, usage: result.usage };
+    return output;
   }
 );

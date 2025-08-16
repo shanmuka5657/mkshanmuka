@@ -81,7 +81,7 @@ export function AiRatingView({ analysisResult, onBack }: AiRatingViewProps) {
     const runAnalysis = async () => {
       setIsLoading(true);
       try {
-        const { output: riskAssessment } = await getRiskAssessment({ analysisResult });
+        const riskAssessment = await getRiskAssessment({ analysisResult });
         if (!riskAssessment) throw new Error("Could not get risk assessment for rating.");
         
         const [ratingWith, ratingWithout] = await Promise.all([
@@ -89,8 +89,8 @@ export function AiRatingView({ analysisResult, onBack }: AiRatingViewProps) {
             getAiRating({ analysisResult, riskAssessment: riskAssessment.assessmentWithoutGuarantor })
         ]);
 
-        setRatingWithGuarantor(ratingWith.output);
-        setRatingWithoutGuarantor(ratingWithout.output);
+        setRatingWithGuarantor(ratingWith);
+        setRatingWithoutGuarantor(ratingWithout);
 
       } catch (error: any) {
         console.error("Error getting AI rating:", error);

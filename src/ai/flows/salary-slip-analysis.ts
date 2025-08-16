@@ -11,7 +11,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type { FlowUsage } from 'genkit';
 
 const SalarySlipAnalysisInputSchema = z.object({
   salarySlips: z.array(z.object({
@@ -50,7 +49,7 @@ export type SalarySlipAnalysisOutput = z.infer<typeof SalarySlipAnalysisOutputSc
 
 export async function analyzeSalarySlips(
   input: SalarySlipAnalysisInput
-): Promise<{ output: SalarySlipAnalysisOutput, usage: FlowUsage }> {
+): Promise<SalarySlipAnalysisOutput> {
   return analyzeSalarySlipsFlow(input);
 }
 
@@ -98,10 +97,7 @@ const analyzeSalarySlipsFlow = ai.defineFlow(
   {
     name: 'analyzeSalarySlipsFlow',
     inputSchema: SalarySlipAnalysisInputSchema,
-    outputSchema: z.object({
-      output: SalarySlipAnalysisOutputSchema,
-      usage: z.any(),
-    }),
+    outputSchema: SalarySlipAnalysisOutputSchema,
   },
   async input => {
     const result = await prompt(input);
@@ -109,6 +105,6 @@ const analyzeSalarySlipsFlow = ai.defineFlow(
     if (!output) {
       throw new Error("AI failed to analyze the salary slips.");
     }
-    return { output, usage: result.usage };
+    return output;
   }
 );

@@ -12,7 +12,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type { FlowUsage } from 'genkit';
 import type { AnalyzeCreditReportOutput } from './credit-report-analysis';
 
 
@@ -65,7 +64,7 @@ export type RiskAssessmentOutput = z.infer<typeof RiskAssessmentOutputSchema>;
 
 export async function getRiskAssessment(
   input: RiskAssessmentInput
-): Promise<{ output: RiskAssessmentOutput, usage: FlowUsage }> {
+): Promise<RiskAssessmentOutput> {
   return riskAssessmentFlow(input);
 }
 
@@ -114,10 +113,7 @@ const riskAssessmentFlow = ai.defineFlow(
   {
     name: 'riskAssessmentFlow',
     inputSchema: RiskAssessmentInputSchema,
-    outputSchema: z.object({
-        output: RiskAssessmentOutputSchema,
-        usage: z.any(),
-    }),
+    outputSchema: RiskAssessmentOutputSchema,
   },
   async (input) => {
     const {output, usage} = await prompt(input);
@@ -137,6 +133,6 @@ const riskAssessmentFlow = ai.defineFlow(
     let ead2 = output.assessmentWithoutGuarantor.exposureAtDefault;
     output.assessmentWithoutGuarantor.expectedLoss = Math.round(pd2 * lgd2 * ead2);
 
-    return { output, usage };
+    return output;
   }
 );

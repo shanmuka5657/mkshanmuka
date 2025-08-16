@@ -11,7 +11,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type { FlowUsage } from 'genkit';
 import type { SalarySlipAnalysisOutput } from './salary-slip-analysis';
 import type { BankStatementAnalysisOutput } from './bank-statement-analysis';
 import type { AnalyzeCreditReportOutput } from './credit-report-analysis';
@@ -56,7 +55,7 @@ export type CrossVerificationOutput = z.infer<typeof CrossVerificationOutputSche
 
 export async function crossVerifyDocuments(
   input: CrossVerificationInput
-): Promise<{ output: CrossVerificationOutput, usage: FlowUsage }> {
+): Promise<CrossVerificationOutput> {
   return crossVerifyDocumentsFlow(input);
 }
 
@@ -111,10 +110,7 @@ const crossVerifyDocumentsFlow = ai.defineFlow(
   {
     name: 'crossVerifyDocumentsFlow',
     inputSchema: CrossVerificationInputSchema,
-    outputSchema: z.object({
-      output: CrossVerificationOutputSchema,
-      usage: z.any(),
-    }),
+    outputSchema: CrossVerificationOutputSchema,
   },
   async input => {
     const result = await prompt(input);
@@ -122,6 +118,6 @@ const crossVerifyDocumentsFlow = ai.defineFlow(
     if (!output) {
       throw new Error("AI failed to cross-verify documents.");
     }
-    return { output, usage: result.usage };
+    return output;
   }
 );

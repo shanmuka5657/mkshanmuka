@@ -11,7 +11,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type { FlowUsage } from 'genkit';
 
 const VerifyPdfInputSchema = z.object({
   pdfDataUri: z
@@ -58,12 +57,12 @@ const VerifyPdfOutputSchema = z.object({
 export type VerifyPdfOutput = z.infer<typeof VerifyPdfOutputSchema>;
 
 
-export async function verifyPdf(input: VerifyPdfInput): Promise<{ output: VerifyPdfOutput, usage: FlowUsage }> {
-  const {output, usage} = await verifyPdfFlow(input);
-  if (!output) {
+export async function verifyPdf(input: VerifyPdfInput): Promise<VerifyPdfOutput> {
+  const result = await verifyPdfFlow(input);
+  if (!result) {
       throw new Error("AI failed to provide a forensic analysis.");
   }
-  return { output, usage };
+  return result;
 }
 
 
@@ -118,17 +117,13 @@ const verifyPdfFlow = ai.defineFlow(
   {
     name: 'verifyPdfFlow',
     inputSchema: VerifyPdfInputSchema,
-    outputSchema: z.object({
-      output: VerifyPdfOutputSchema,
-      usage: z.any(),
-    }),
+    outputSchema: VerifyPdfOutputSchema,
   },
   async (input) => {
-    const result = await prompt(input);
-    const output = result.output;
+    const {output} = await prompt(input);
     if (!output) {
       throw new Error("AI failed to provide a forensic analysis.");
     }
-    return { output, usage: result.usage };
+    return output;
   }
 );

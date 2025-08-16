@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -105,7 +106,7 @@ export default function VerifyPdfPage() {
           const metadata = (await pdf.getMetadata()).info as any;
           setProgress(50);
           
-          const { output } = await verifyPdf({
+          const output = await verifyPdf({
               pdfDataUri: dataUri,
               metadata: {
                   CreationDate: metadata.CreationDate,

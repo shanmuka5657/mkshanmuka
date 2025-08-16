@@ -12,7 +12,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { FlowUsage } from 'genkit';
 
 const AnalyzeCreditReportInputSchema = z.object({
   creditReportText: z.string().describe('The text extracted from the credit report.'),
@@ -99,12 +98,12 @@ const AnalyzeCreditReportOutputSchema = z.object({
 });
 export type AnalyzeCreditReportOutput = z.infer<typeof AnalyzeCreditReportOutputSchema>;
 
-export async function analyzeCreditReport(input: AnalyzeCreditReportInput): Promise<{ output: AnalyzeCreditReportOutput, usage: FlowUsage }> {
+export async function analyzeCreditReport(input: AnalyzeCreditReportInput): Promise<AnalyzeCreditReportOutput> {
   const result = await analyzeCreditReportFlow(input);
-  if (!result.output) {
+  if (!result) {
       throw new Error("AI failed to analyze the report.");
   }
-  return { output: result.output, usage: result.usage };
+  return result;
 }
 
 const prompt = ai.definePrompt({
@@ -157,16 +156,13 @@ const analyzeCreditReportFlow = ai.defineFlow(
   {
     name: 'analyzeCreditReportFlow',
     inputSchema: AnalyzeCreditReportInputSchema,
-    outputSchema: z.object({
-      output: AnalyzeCreditReportOutputSchema,
-      usage: z.any(),
-    }),
+    outputSchema: AnalyzeCreditReportOutputSchema,
   },
   async input => {
-    const {output, usage} = await prompt(input);
+    const {output} = await prompt(input);
     if (!output) {
       throw new Error("AI failed to analyze the report.");
     }
-    return { output, usage };
+    return output;
   }
 );

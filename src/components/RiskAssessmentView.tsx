@@ -101,7 +101,7 @@ export function RiskAssessmentView({ analysisResult, onBack }: RiskAssessmentVie
     const runAnalysis = async () => {
       setIsLoading(true);
       try {
-        const { output } = await getRiskAssessment({ analysisResult });
+        const output = await getRiskAssessment({ analysisResult });
         setAssessment(output);
       } catch (error: any) {
         console.error("Error getting risk assessment:", error);

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
@@ -178,7 +179,7 @@ export default function CrossVerifyPage() {
       // CIBIL Analysis
       if (cibilFile.file) {
         setCibilFile(prev => ({ ...prev, status: 'processing' }));
-        const { output } = await analyzeCreditReport({ creditReportText: cibilFile.text });
+        const output = await analyzeCreditReport({ creditReportText: cibilFile.text });
         finalCibilAnalysis = output;
         setCibilFile(prev => ({ ...prev, analysis: output, status: 'done' }));
       }
@@ -186,7 +187,7 @@ export default function CrossVerifyPage() {
       // Bank Statement Analysis
       if (bankStatementFile.file) {
         setBankStatementFile(prev => ({ ...prev, status: 'processing' }));
-        const { output } = await analyzeBankStatement({ statementText: bankStatementFile.text });
+        const output = await analyzeBankStatement({ statementText: bankStatementFile.text });
         finalBankAnalysis = output;
         setBankStatementFile(prev => ({ ...prev, analysis: output, status: 'done' }));
       }
@@ -201,7 +202,7 @@ export default function CrossVerifyPage() {
                   reader.readAsDataURL(file);
               });
           }));
-          const { output } = await analyzeSalarySlips({ salarySlips: slipInputs });
+          const output = await analyzeSalarySlips({ salarySlips: slipInputs });
           finalSalaryAnalysis = output;
           setSalarySlipAnalysis(output);
       }
@@ -215,7 +216,7 @@ export default function CrossVerifyPage() {
         salarySlipAnalysis: finalSalaryAnalysis,
       };
 
-      const { output: verificationOutput } = await crossVerifyDocuments(verificationInput);
+      const verificationOutput = await crossVerifyDocuments(verificationInput);
       setVerificationResult(verificationOutput);
       
       toast({ title: "Cross-Verification Complete!", description: "The verification report is ready below." });
