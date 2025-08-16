@@ -6,17 +6,5 @@ steps:
 # Build the Next.js application
 - name: 'gcr.io/cloud-builders/npm'
   args: ['run', 'build']
-# Deploy to Firebase App Hosting
-- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  entrypoint: 'gcloud'
-  args:
-    - 'apphosting'
-    - 'backends'
-    - 'update'
-    - 'pwa'
-    - '--region=us-central1'
-    - '--project=creditwise-ai-nd7s0'
-# This service account is crucial for granting the build process permissions to deploy.
-serviceAccount: 'projects/creditwise-ai-nd7s0/serviceAccounts/firebase-app-hosting-build@creditwise-ai-nd7s0.iam.gserviceaccount.com'
 options:
   logging: CLOUD_LOGGING_ONLY
