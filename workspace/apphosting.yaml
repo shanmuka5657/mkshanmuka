@@ -8,6 +8,11 @@ scaling:
   minInstances: 0
   maxInstances: 2
   concurrency: 80
-# env:
-#   - variable: GEMINI_API_KEY
-#     secret: GEMINI_API_KEY
+env:
+  - variable: GEMINI_API_KEY
+    secret: GEMINI_API_KEY
+headers:
+  - source: /
+    headers:
+      - key: Cache-Control
+        value: 'private, max-age=0, no-store, must-revalidate'
