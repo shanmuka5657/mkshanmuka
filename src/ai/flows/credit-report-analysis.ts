@@ -99,11 +99,7 @@ const AnalyzeCreditReportOutputSchema = z.object({
 export type AnalyzeCreditReportOutput = z.infer<typeof AnalyzeCreditReportOutputSchema>;
 
 export async function analyzeCreditReport(input: AnalyzeCreditReportInput): Promise<AnalyzeCreditReportOutput> {
-  const result = await analyzeCreditReportFlow(input);
-  if (!result) {
-      throw new Error("AI failed to analyze the report.");
-  }
-  return result;
+  return analyzeCreditReportFlow(input);
 }
 
 const prompt = ai.definePrompt({

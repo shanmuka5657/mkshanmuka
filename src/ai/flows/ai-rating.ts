@@ -60,8 +60,7 @@ export type AiRatingOutput = z.infer<typeof AiRatingOutputSchema>;
 export async function getAiRating(
   input: AiRatingInput
 ): Promise<AiRatingOutput> {
-  const result = await aiRatingFlow(input);
-  return result;
+  return aiRatingFlow(input);
 }
 
 const prompt = ai.definePrompt({

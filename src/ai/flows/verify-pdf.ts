@@ -58,11 +58,7 @@ export type VerifyPdfOutput = z.infer<typeof VerifyPdfOutputSchema>;
 
 
 export async function verifyPdf(input: VerifyPdfInput): Promise<VerifyPdfOutput> {
-  const result = await verifyPdfFlow(input);
-  if (!result) {
-      throw new Error("AI failed to provide a forensic analysis.");
-  }
-  return result;
+  return verifyPdfFlow(input);
 }
 
 

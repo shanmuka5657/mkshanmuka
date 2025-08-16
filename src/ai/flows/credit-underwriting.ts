@@ -113,8 +113,7 @@ export type CreditUnderwritingOutput = z.infer<
 export async function getCreditUnderwriting(
   input: CreditUnderwritingInput
 ): Promise<CreditUnderwritingOutput> {
-  const result = await creditUnderwritingFlow(input);
-  return result;
+  return creditUnderwritingFlow(input);
 }
 
 const prompt = ai.definePrompt({
