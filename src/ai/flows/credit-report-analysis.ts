@@ -109,6 +109,8 @@ const prompt = ai.definePrompt({
   output: {schema: AnalyzeCreditReportOutputSchema},
   prompt: `You are an expert CIBIL report data extractor. Your ONLY job is to read the provided credit report text and extract all specified information in a single, comprehensive pass. Do NOT perform any summarizations or calculations beyond what is explicitly asked for.
 
+**CRITICAL RULE:** For every field you are asked to extract, if you cannot find the information in the provided text, you MUST return "N/A" for strings, 0 for numbers, or an empty array for lists. You must not leave any field blank or fail to return a value.
+
 **Extraction Tasks:**
 
 1.  **CIBIL Score (cibilScore):** Find the primary CIBIL score in the report. It's often labeled "CIBIL SCORE" or "CREDITVISION SCORE". Extract the 3-digit number. If not found, you MUST return 0.
