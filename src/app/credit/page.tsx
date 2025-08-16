@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import { getDocument, GlobalWorkerOptions, version } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import {
   UploadCloud,
   FileText,
@@ -92,7 +92,7 @@ export default function CreditPage() {
   
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${"4.4.168"}/legacy/build/pdf.worker.min.mjs`;
+      GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${version}/legacy/build/pdf.worker.min.mjs`;
     }
   }, []);
 
