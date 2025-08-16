@@ -1,32 +1,30 @@
 'use server';
 
 import { adminDb, adminAuth } from '@/lib/firebase-admin';
-import { cookies } from 'next/headers';
 import type { AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
 
 /**
  * Saves a new credit report analysis summary to Firestore using the Admin SDK.
  * This is a Server Action and runs only on the server.
+ * @param idToken The Firebase ID token of the authenticated user.
  * @param analysisResult The full analysis output from the AI.
  * @param cibilScore The CIBIL score extracted from the report.
  */
 export async function saveReportSummaryAction(
+  idToken: string,
   analysisResult: AnalyzeCreditReportOutput,
   cibilScore: number | null
 ): Promise<void> {
-  // 1. Verify user authentication using the session cookie
-  const sessionCookie = cookies().get('session')?.value || '';
-  
-  if (!sessionCookie) {
-      throw new Error('User is not authenticated.');
+  if (!idToken) {
+    throw new Error('User is not authenticated.');
   }
 
   let decodedIdToken;
   try {
-    // Verify the session cookie. This will also verify if it's expired.
-    decodedIdToken = await adminAuth.verifySessionCookie(sessionCookie, true);
+    // Verify the ID token. This is the secure way to authenticate server-side.
+    decodedIdToken = await adminAuth.verifyIdToken(idToken);
   } catch (error) {
-    console.error('Failed to verify session cookie:', error);
+    console.error('Failed to verify ID token:', error);
     throw new Error('User is not authenticated or session has expired.');
   }
 

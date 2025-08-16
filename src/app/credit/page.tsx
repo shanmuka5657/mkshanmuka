@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -174,7 +173,8 @@ function CreditPageContent() {
             // Save the report summary to Firestore if the user is logged in
             if (user) {
                 try {
-                    await saveReportSummaryAction(output, cibilScore);
+                    const idToken = await user.getIdToken();
+                    await saveReportSummaryAction(idToken, output, cibilScore);
                     toast({ title: "Credit Report Analysis Complete & Saved", description: "Your AI-powered summary is ready and saved to your dashboard." });
                 } catch (dbError: any) {
                     console.error("Error saving report:", dbError);

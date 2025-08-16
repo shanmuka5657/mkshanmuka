@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useContext, createContext, ReactNode } from 'react';
@@ -36,9 +35,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       // Sign out from Firebase on the client
       await auth.signOut();
-      
-      // Call our API route to clear the server-side session cookie
-      await fetch('/api/auth/session', { method: 'DELETE' });
       
       // Push to login and refresh the page to reflect the signed-out state
       router.push('/login');

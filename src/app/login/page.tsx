@@ -69,27 +69,10 @@ export default function LoginPage() {
     const password = formData.get('password') as string;
 
     try {
-      const userCredential =
-        type === 'login'
-          ? await signInWithEmailAndPassword(auth, email, password)
-          : await createUserWithEmailAndPassword(auth, email, password);
-
-      const idToken = await userCredential.user.getIdToken();
-
-      if (!idToken) {
-          throw new Error('Failed to retrieve ID token from Firebase.');
-      }
-      
-      // Send the ID token to the server to create a session cookie
-      const response = await fetch('/api/auth/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken }),
-      });
-
-      if (!response.ok) {
-        const { error } = await response.json();
-        throw new Error(error || 'Failed to create session.');
+      if (type === 'login') {
+        await signInWithEmailAndPassword(auth, email, password);
+      } else {
+        await createUserWithEmailAndPassword(auth, email, password);
       }
 
       toast({
