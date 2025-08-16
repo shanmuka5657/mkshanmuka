@@ -11,7 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type { FlowUsage } from 'genkit/flow';
+import type { FlowUsage } from 'genkit';
 
 const BankStatementAnalysisInputSchema = z.object({
   statementText: z.string().describe('The full text extracted from the bank statement PDF.'),

@@ -11,7 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type { FlowUsage } from 'genkit/flow';
+import type { FlowUsage } from 'genkit';
 
 const CalculateTotalEmiInputSchema = z.object({
   creditReportText: z.string().describe('The full text extracted from the credit report.'),

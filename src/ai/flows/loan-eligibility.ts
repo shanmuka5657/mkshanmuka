@@ -11,7 +11,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import type { FlowUsage } from 'genkit/flow';
+import type { FlowUsage } from 'genkit';
 import type { AnalyzeCreditReportOutput } from './credit-report-analysis';
 
 const LoanEligibilityInputSchema = z.object({

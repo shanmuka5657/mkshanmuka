@@ -12,7 +12,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { FlowUsage } from 'genkit/flow';
+import { FlowUsage } from 'genkit';
 import type { RiskAssessmentOutput } from './risk-assessment';
 import type { AnalyzeCreditReportOutput } from './credit-report-analysis';
 
