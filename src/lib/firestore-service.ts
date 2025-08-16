@@ -1,4 +1,5 @@
-import { db } from '@/lib/firebase';
+
+import { db } from '@/lib/firebase-client';
 import {
   collection,
   query,
@@ -6,12 +7,11 @@ import {
   getDocs,
   Timestamp,
 } from 'firebase/firestore';
-import type { AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
 
 // This is the shape of the summary data we store in Firestore.
 export interface CreditReportSummary {
   id: string;
-  userId: string;
+  userId?: string; // userId is now optional
   name: string;
   pan: string;
   mobileNumber: string;
@@ -22,14 +22,14 @@ export interface CreditReportSummary {
 }
 
 /**
- * Fetches all credit report summaries for a given user.
+ * Fetches all credit report summaries.
  * This function is intended for CLIENT-SIDE use.
- * @param userId The ID of the user whose reports to fetch.
+ * Since auth is removed, it fetches all reports.
  * @returns A promise that resolves to an array of credit report summaries.
  */
-export async function getReportsForUser(userId: string): Promise<CreditReportSummary[]> {
+export async function getAllReports(): Promise<CreditReportSummary[]> {
   const reportsCollection = collection(db, 'creditReports');
-  const q = query(reportsCollection, where('userId', '==', userId));
+  const q = query(reportsCollection);
   const querySnapshot = await getDocs(q);
 
   const reports: CreditReportSummary[] = [];
