@@ -60,22 +60,16 @@ export function AiAgentChat({ cibilReportAvailable, bankStatementAvailable = fal
 
     setIsLoading(true);
     
-    const userContent: AiAgentChatHistory['content'] = [];
-    if (userMessage) {
-      userContent.push({ text: userMessage });
-    }
-    if (fileDataUri) {
-        const mimeType = fileDataUri.substring(fileDataUri.indexOf(':') + 1, fileDataUri.indexOf(';'));
-        userContent.push({ media: { url: fileDataUri, contentType: mimeType } });
-    }
-
-    const newUserMessage: AiAgentChatHistory = { role: 'user', content: userContent };
+    // Note: The AI flow currently only supports text history. 
+    // Multi-modal input is not fully wired up in the v1 flow yet.
+    // We'll send the text part for now.
+    const newUserMessage: AiAgentChatHistory = { role: 'user', content: userMessage };
     const newHistory = [...history, newUserMessage];
     setHistory(newHistory);
     setMessage('');
     
     try {
-      const { output } = await aiAgentChat({
+      const output = await aiAgentChat({
         history: newHistory,
         cibilReportAvailable,
         bankStatementAvailable,
@@ -83,7 +77,7 @@ export function AiAgentChat({ cibilReportAvailable, bankStatementAvailable = fal
 
       const modelResponse: AiAgentChatHistory = {
         role: 'model',
-        content: [{ text: output.answer }],
+        content: output.answer,
       };
       setHistory(prev => [...prev, modelResponse]);
 
@@ -107,11 +101,16 @@ export function AiAgentChat({ cibilReportAvailable, bankStatementAvailable = fal
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        handleSendMessage(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+      toast({
+          title: "File Upload (Not Implemented)",
+          description: "Multi-modal chat is not fully supported in this version. Your message will be sent without the file.",
+      });
+      // The logic to handle fileDataUri is commented out until the AI flow supports it.
+      // const reader = new FileReader();
+      // reader.onload = (e) => {
+      //   handleSendMessage(e.target?.result as string);
+      // };
+      // reader.readAsDataURL(file);
     }
   };
 
@@ -155,13 +154,7 @@ export function AiAgentChat({ cibilReportAvailable, bankStatementAvailable = fal
                   <div key={index} className={cn('flex items-start gap-3', entry.role === 'user' ? 'justify-end' : 'justify-start')}>
                     {entry.role === 'model' && <Bot className="h-6 w-6 text-primary flex-shrink-0" />}
                     <div className={cn('max-w-xs rounded-lg p-3 text-sm', entry.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted')}>
-                      {entry.content.map((c, i) => {
-                          if (c.text) return <p key={i} className="whitespace-pre-wrap">{c.text}</p>
-                          if (c.media?.url.startsWith('data:image')) {
-                              return <img key={i} src={c.media.url} alt="user upload" className="max-w-full h-auto rounded-md my-2" />
-                          }
-                          return null;
-                      })}
+                       <p className="whitespace-pre-wrap">{entry.content}</p>
                     </div>
                     {entry.role === 'user' && <User className="h-6 w-6 text-muted-foreground flex-shrink-0" />}
                   </div>

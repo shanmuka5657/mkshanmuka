@@ -13,16 +13,10 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { textToSpeech } from './text-to-speech';
 
-// Define the structure for a single message in the history
+// Define the structure for a single message in the history, aligning with Genkit's MessageData type
 const AiAgentChatMessageSchema = z.object({
   role: z.enum(['user', 'model']),
-  content: z.array(z.object({
-    text: z.string().optional(),
-    media: z.object({
-      url: z.string(),
-      contentType: z.string().optional(),
-    }).optional(),
-  }))
+  content: z.string(), // Corrected: Genkit's basic history content is a string
 });
 
 // The input now includes the history of the conversation and the CIBIL report
@@ -71,13 +65,15 @@ The user has uploaded their bank statement. You have access to this document. Us
         contextPrompt = `The user has not uploaded any document. If they ask questions that would require a CIBIL report or bank statement, you MUST inform them that you need them to upload a document first.`
     }
 
+    // The system prompt is now passed as the main 'prompt' parameter
     const systemPrompt = `You are a helpful AI Agent for the CreditWise AI application. Your goal is to be helpful and answer the user's questions accurately and concisely based on the documents they have provided. Maintain a friendly and conversational tone.
     
     **CONTEXT:**
     ${contextPrompt}
     
-    If the user provides an image or document in their message, use it as additional context for your answer.`
+    If the user provides an image or document in their message, use it as additional context for your answer.`;
     
+    // Corrected: Use 'prompt' and 'history' parameters as per Genkit v1.x
     const llmResponse = await ai.generate({
       model: 'googleai/gemini-1.5-flash',
       prompt: systemPrompt,
