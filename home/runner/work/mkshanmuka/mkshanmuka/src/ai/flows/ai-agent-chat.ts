@@ -65,7 +65,6 @@ The user has uploaded their bank statement. You have access to this document. Us
         contextPrompt = `The user has not uploaded any document. If they ask questions that would require a CIBIL report or bank statement, you MUST inform them that you need them to upload a document first.`
     }
 
-    // The system prompt is now passed as the main 'prompt' parameter
     const systemPrompt = `You are a helpful AI Agent for the CreditWise AI application. Your goal is to be helpful and answer the user's questions accurately and concisely based on the documents they have provided. Maintain a friendly and conversational tone.
     
     **CONTEXT:**
@@ -75,8 +74,10 @@ The user has uploaded their bank statement. You have access to this document. Us
 
     const llmResponse = await ai.generate({
       model: 'googleai/gemini-1.5-flash',
-      prompt: systemPrompt,
-      history: history,
+      prompt: {
+        system: systemPrompt,
+        history: history,
+      },
     });
 
     const responseText = llmResponse.text;
