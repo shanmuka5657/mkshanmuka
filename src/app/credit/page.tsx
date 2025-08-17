@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, 'useState', useEffect, useRef } from 'react';
 import { getDocument, GlobalWorkerOptions, version } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import {
   UploadCloud,
