@@ -42,23 +42,24 @@
     {
       "name": "Analyze Credit Report",
       "short_name": "Analyze",
-      "description": "Upload a CIBIL report for AI analysis",
+      "description": "Go to the credit analysis page",
       "url": "/credit",
       "icons": [{ "src": "https://placehold.co/96x96.png", "sizes": "96x96" }]
     },
     {
-      "name": "Verify PDF Document",
+      "name": "Verify a PDF",
       "short_name": "Verify",
-      "description": "Run a forensic check on a PDF document",
+      "description": "Go to the PDF verification page",
       "url": "/verify",
       "icons": [{ "src": "https://placehold.co/96x96.png", "sizes": "96x96" }]
-    },
+    }
+  ],
+  "file_handlers": [
     {
-      "name": "Cross-Verify Documents",
-      "short_name": "Cross-Verify",
-      "description": "Compare details across multiple documents",
-      "url": "/cross-verify",
-      "icons": [{ "src": "https://placehold.co/96x96.png", "sizes": "96x96" }]
+      "action": "/credit",
+      "accept": {
+        "application/pdf": [".pdf"]
+      }
     }
   ],
   "share_target": {
@@ -71,26 +72,34 @@
       "url": "url",
       "files": [
         {
-          "name": "pdf",
-          "accept": ["application/pdf", ".pdf"]
+          "name": "pdfFile",
+          "accept": ["application/pdf"]
         }
       ]
     }
   },
-  "file_handlers": [
-    {
-      "action": "/credit",
-      "accept": {
-        "application/pdf": [".pdf"]
-      },
-      "launch_type": "single-client"
-    }
-  ],
+  "handle_links": "auto",
   "protocol_handlers": [
     {
       "protocol": "web+creditwise",
-      "url": "/?protocol=%s"
+      "url": "/?url=%s"
     }
   ],
-  "handle_links": "auto"
+  "display_override": [
+    "window-controls-overlay",
+    "standalone"
+  ],
+  "edge_side_panel": {
+    "preferred_width": 480
+  },
+  "widgets": [
+    {
+      "name": "CreditWise Quick Actions",
+      "description": "Quickly access CreditWise AI features.",
+      "tag": "creditwise-widget",
+      "template": "creditwise-widget-template",
+      "ms_ac_template": "creditwise-widget-template",
+      "data": "{}"
+    }
+  ]
 }
