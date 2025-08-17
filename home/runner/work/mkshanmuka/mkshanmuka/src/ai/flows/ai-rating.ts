@@ -15,18 +15,18 @@ import {z} from 'genkit';
 import type { RiskAssessmentOutput } from './risk-assessment';
 import type { AnalyzeCreditReportOutput } from './credit-report-analysis';
 
+// Corrected the type for riskAssessment to expect a single assessment object, not the dual-assessment wrapper.
 const AiRatingInputSchema = z.object({
   analysisResult: z
     .any()
     .describe('The full, structured analysis from the initial credit report parsing flow.'),
   riskAssessment: z
     .any()
-
     .describe('A detailed, pre-calculated risk assessment including PD, LGD, etc.'),
 });
 export type AiRatingInput = {
   analysisResult: AnalyzeCreditReportOutput;
-  riskAssessment: RiskAssessmentOutput;
+  riskAssessment: RiskAssessmentOutput['assessmentWithGuarantor']; // Use the more specific inner type
 };
 
 const AiRatingOutputSchema = z.object({
