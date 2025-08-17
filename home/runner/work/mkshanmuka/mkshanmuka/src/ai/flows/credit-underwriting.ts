@@ -188,10 +188,10 @@ const creditUnderwritingFlow = ai.defineFlow(
     const riskAssessment = input.riskAssessment as RiskAssessmentOutput;
 
     // Ensure the final output uses the exact pre-calculated values for consistency.
-    output.probabilityOfDefault = riskAssessment.probabilityOfDefault;
-    output.lossGivenDefault = riskAssessment.lossGivenDefault;
-    output.exposureAtDefault = riskAssessment.exposureAtDefault;
-    output.expectedLoss = riskAssessment.expectedLoss;
+    output.probabilityOfDefault = riskAssessment.assessmentWithoutGuarantor.probabilityOfDefault;
+    output.lossGivenDefault = riskAssessment.assessmentWithoutGuarantor.lossGivenDefault;
+    output.exposureAtDefault = riskAssessment.assessmentWithoutGuarantor.exposureAtDefault;
+    output.expectedLoss = riskAssessment.assessmentWithoutGuarantor.expectedLoss;
 
     return output;
   }
