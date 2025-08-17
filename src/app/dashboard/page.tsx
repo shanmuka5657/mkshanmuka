@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -8,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, FileText } from 'lucide-react';
 import { getAllReports, CreditReportSummary } from '@/lib/firestore-service';
 import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 export default function DashboardPage() {
     const [reports, setReports] = useState<CreditReportSummary[]>([]);
@@ -62,8 +63,11 @@ export default function DashboardPage() {
           ) : reports.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
                 <FileText className="mx-auto h-12 w-12 mb-4"/>
-                <h3 className="text-lg font-semibold">No Reports Found</h3>
-                <p>Go to the "Credit" page to analyze your first CIBIL report. It will appear here once saved.</p>
+                <h3 className="text-lg font-semibold">Analyze Your First Report</h3>
+                <p className="mb-4 mt-2 max-w-md mx-auto">Get started by uploading and analyzing your first customer CIBIL report to see the AI in action.</p>
+                <Button asChild>
+                    <Link href="/credit">Analyze Report</Link>
+                </Button>
             </div>
           ) : (
             <div className="overflow-x-auto">
