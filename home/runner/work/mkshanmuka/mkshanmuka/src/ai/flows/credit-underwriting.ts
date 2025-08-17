@@ -54,7 +54,7 @@ export type CreditUnderwritingInput = {
     analysisResult: AnalyzeCreditReportOutput;
     aiRating: AiRatingOutput;
     loanEligibility: LoanEligibilityOutput;
-    riskAssessment: RiskAssessmentOutput['assessmentWithoutGuarantor']; // Corrected to single assessment
+    riskAssessment: RiskAssessmentOutput;
     estimatedIncome: number;
     employmentType: "Salaried" | "Self-employed" | "Daily Wage Earner";
     loanType: "Personal Loan" | "Home Loan" | "Auto Loan" | "Loan Against Property";
@@ -155,9 +155,9 @@ The user has provided the following notes about their loans. You MUST consider t
 {{{json aiRating}}}
 \`\`\`
 
-**Financial Risk Assessment Data:**
+**Financial Risk Assessment Data (Use the 'Without Guarantor' version for decisioning):**
 \`\`\`json
-{{{json riskAssessment}}}
+{{{json riskAssessment.assessmentWithoutGuarantor}}}
 \`\`\`
 
 **Your Underwriting Task:**
@@ -179,7 +179,11 @@ const creditUnderwritingFlow = ai.defineFlow(
     outputSchema: CreditUnderwritingOutputSchema,
   },
   async (input) => {
-    const {output} = await prompt(input);
+    const {output} = await prompt({
+        ...input,
+        // Pass only the relevant part of the assessment to the prompt context
+        riskAssessment: input.riskAssessment.assessmentWithoutGuarantor as any,
+    });
 
     if (!output) {
       throw new Error("AI failed to provide an underwriting analysis.");
@@ -188,10 +192,10 @@ const creditUnderwritingFlow = ai.defineFlow(
     const riskAssessment = input.riskAssessment;
 
     // Ensure the final output uses the exact pre-calculated values for consistency.
-    output.probabilityOfDefault = riskAssessment.probabilityOfDefault;
-    output.lossGivenDefault = riskAssessment.lossGivenDefault;
-    output.exposureAtDefault = riskAssessment.exposureAtDefault;
-    output.expectedLoss = riskAssessment.expectedLoss;
+    output.probabilityOfDefault = riskAssessment.assessmentWithoutGuarantor.probabilityOfDefault;
+    output.lossGivenDefault = riskAssessment.assessmentWithoutGuarantor.lossGivenDefault;
+    output.exposureAtDefault = riskAssessment.assessmentWithoutGuarantor.exposureAtDefault;
+    output.expectedLoss = riskAssessment.assessmentWithoutGuarantor.expectedLoss;
 
     return output;
   }
