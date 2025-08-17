@@ -80,8 +80,8 @@ The user has uploaded their bank statement. You have access to this document. Us
     
     const llmResponse = await ai.generate({
       model: 'googleai/gemini-1.5-flash',
-      messages: history,
-      system: systemPrompt,
+      prompt: systemPrompt,
+      history: history,
     });
 
     const responseText = llmResponse.text;
