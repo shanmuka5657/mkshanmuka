@@ -65,6 +65,7 @@ export async function getAiRating(
 
 const prompt = ai.definePrompt({
   name: 'aiRatingPrompt',
+  model: 'googleai/gemini-1.5-flash',
   input: {schema: AiRatingInputSchema},
   output: {schema: AiRatingOutputSchema},
   prompt: `You are an expert credit analyst. Your task is to provide a holistic AI-powered credit rating based on the provided structured credit report data and a pre-calculated risk assessment. Do NOT simply repeat the risk assessment. Your output should be a high-level, user-friendly summary.
@@ -98,14 +99,7 @@ const aiRatingFlow = ai.defineFlow(
     outputSchema: AiRatingOutputSchema,
   },
   async (input) => {
-    const result = await ai.generate({
-        prompt: {
-            name: 'aiRatingPrompt',
-            input: input,
-        }
-    });
-
-    const output = result.output();
+    const {output} = await prompt(input);
 
     if (!output) {
       throw new Error("AI failed to provide a rating.");
