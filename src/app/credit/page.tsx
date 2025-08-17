@@ -137,7 +137,12 @@ export default function CreditPage() {
             const text = await page.getTextContent();
             textContent += text.items.map(item => 'str' in item ? item.str : '').join(' ');
           }
-          setRawText(textContent);
+          // Clean up the text before setting it
+          const cleanedText = textContent
+            .replace(/\s+/g, ' ') // Replace multiple whitespace characters with a single space
+            .replace(/(\r\n|\n|\r)/gm, " ") // Replace newlines with spaces
+            .trim();
+          setRawText(cleanedText);
           setIsTextExtracted(true);
         }
       };
