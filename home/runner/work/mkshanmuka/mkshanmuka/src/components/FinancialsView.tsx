@@ -361,3 +361,5 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
 }
 
     
+
+    
