@@ -16,7 +16,7 @@ import { textToSpeech } from './text-to-speech';
 // Define the structure for a single message in the history, aligning with Genkit's MessageData type
 const AiAgentChatMessageSchema = z.object({
   role: z.enum(['user', 'model']),
-  content: z.string(), // Corrected: Genkit's basic history content is a string
+  content: z.string(),
 });
 
 // The input now includes the history of the conversation and the CIBIL report
@@ -73,21 +73,11 @@ The user has uploaded their bank statement. You have access to this document. Us
     
     If the user provides an image or document in their message, use it as additional context for your answer.`;
 
-    // Build conversation context from history
-    const conversation = history
-      .map(h => `${h.role === "user" ? "User" : "AI"}: ${h.content}`)
-      .join("\n");
-
-    // Add the latest system prompt at the end
-    const fullPrompt = `${conversation}\nSystem: ${systemPrompt}`;
-
+    // Corrected: Use 'prompt' and 'history' parameters as per Genkit v1.x
     const llmResponse = await ai.generate({
-      model: "googleai/gemini-1.5-flash",
-      prompt: fullPrompt,
-      config: {
-        temperature: 0.7,       // tweak if needed
-        maxOutputTokens: 512    // adjust as per requirement
-      }
+      model: 'googleai/gemini-1.5-flash',
+      prompt: systemPrompt,
+      history: history,
     });
 
     const responseText = llmResponse.text;
