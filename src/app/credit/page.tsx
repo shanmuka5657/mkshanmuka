@@ -91,9 +91,8 @@ export default function CreditPage() {
   const creditFileInputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${version}/legacy/build/pdf.worker.min.mjs`;
-    }
+    // Correctly set the workerSrc for pdfjs-dist
+    GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${version}/legacy/build/pdf.worker.min.mjs`;
   }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -196,9 +195,9 @@ export default function CreditPage() {
         } else if (errorMessage.includes('503') || errorMessage.includes('overloaded')) {
             errorTitle = "AI Service Busy";
             userFriendlyMessage = "The AI service is currently experiencing high traffic. Please try again in a moment.";
-        } else if (errorMessage.includes('API key not valid')) {
-            errorTitle = "Invalid API Key";
-            userFriendlyMessage = "The AI service API key is not configured correctly. Please contact support.";
+        } else if (errorMessage.includes('API key not valid') || errorMessage.includes('GEMINI_API_KEY')) {
+            errorTitle = "Invalid or Missing API Key";
+            userFriendlyMessage = "The AI service API key is not configured correctly. Please add it to your .env file.";
         }
 
          toast({
