@@ -3,14 +3,14 @@
 
 import { useState, useEffect } from "react";
 import { ArrowLeft, Loader2, Award, ThumbsUp, ThumbsDown, Sparkles } from "lucide-react";
-import { Button } from "./ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { getAiRating, AiRatingOutput } from "@/ai/flows/ai-rating";
 import { getRiskAssessment, RiskAssessmentOutput } from "@/ai/flows/risk-assessment";
 import type { AnalyzeCreditReportOutput } from "@/ai/flows/credit-report-analysis";
 import { cn } from "@/lib/utils";
-import { Progress } from "./ui/progress";
+import { Progress } from "@/components/ui/progress";
 
 interface AiRatingViewProps {
   analysisResult: AnalyzeCreditReportOutput;
