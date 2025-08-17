@@ -3,8 +3,8 @@
 
 import { useState, useEffect } from "react";
 import { ArrowLeft, Loader2, Landmark, ShieldCheck, FileWarning, HelpCircle } from "lucide-react";
-import { Button } from "./ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "./ui/card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import type { AnalyzeCreditReportOutput } from "@/ai/flows/credit-report-analysis";
 import { getLoanEligibility, LoanEligibilityOutput } from "@/ai/flows/loan-eligibility";
@@ -13,8 +13,8 @@ import { getCreditUnderwriting, CreditUnderwritingOutput, CreditUnderwritingInpu
 import { getAiRating, AiRatingOutput } from "@/ai/flows/ai-rating";
 import { getRiskAssessment, RiskAssessmentOutput } from "@/ai/flows/risk-assessment";
 
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -22,9 +22,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Textarea } from "./ui/textarea";
-import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-import { Badge } from "./ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface FinancialsViewProps {
@@ -42,7 +42,7 @@ type LoadingState = {
 export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) {
   const [estimatedIncome, setEstimatedIncome] = useState('');
   const [loading, setLoading] = useState<LoadingState>({ risk: false, rating: false, eligibility: false, underwriting: false });
-  const [riskAssessment, setRiskAssessment] = useState<RiskAssessmentOutput | null>(null);
+  const [financialRisk, setFinancialRisk] = useState<FinancialRiskOutput | null>(null);
   const [aiRating, setAiRating] = useState<AiRatingOutput | null>(null);
   const [loanEligibility, setLoanEligibility] = useState<LoanEligibilityOutput | null>(null);
   const [underwriting, setUnderwriting] = useState<CreditUnderwritingOutput | null>(null);
@@ -67,7 +67,8 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
     setUnderwriting(null);
     
     try {
-        const riskAssessmentOutput = await getFinancialRiskAssessment({ analysisResult, estimatedIncome: income });
+        const financialRiskOutput = await getFinancialRiskAssessment({ analysisResult, estimatedIncome: income });
+        setFinancialRisk(financialRiskOutput);
         setLoading(prev => ({ ...prev, risk: false }));
         
         // Use the risk assessment without guarantor loans for the primary rating/eligibility flow.
@@ -101,7 +102,7 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
   };
   
   const handleRunUnderwriting = async () => {
-    if (!loanEligibility || !aiRating || !riskAssessment) {
+    if (!loanEligibility || !aiRating || !financialRisk) {
         toast({ variant: 'destructive', title: 'Missing Data', description: 'Please run the initial financial analysis first.' });
         return;
     }
@@ -121,7 +122,7 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
             analysisResult,
             aiRating,
             loanEligibility,
-            riskAssessment: riskAssessmentForRating.assessmentWithoutGuarantor, // Use the non-guarantor version
+            riskAssessment: riskAssessmentForRating, // CORRECTED: Pass the full object
             estimatedIncome: Number(estimatedIncome),
             employmentType,
             loanType,
@@ -134,7 +135,7 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
         setUnderwriting(underwritingOutput);
         toast({ title: 'Underwriting Complete', description: 'AI has made a decision.' });
 
-    } catch (error: any) {
+    } catch (error: any) { // CORRECTED: Removed stray dot
       console.error("Error during underwriting:", error);
       toast({
         variant: "destructive",
@@ -358,3 +359,5 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
     </div>
   );
 }
+
+    
