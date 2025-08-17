@@ -59,5 +59,8 @@
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "overrides": {
+    "@opentelemetry/winston-transport": "0.37.0"
   }
 }
