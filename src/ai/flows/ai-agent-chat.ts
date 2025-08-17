@@ -12,7 +12,6 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { textToSpeech } from './text-to-speech';
-import { Message } from 'genkit';
 
 // Define the structure for a single message in the history, aligning with Genkit's MessageData type
 const AiAgentChatMessageSchema = z.object({
@@ -74,11 +73,14 @@ The user has uploaded their bank statement. You have access to this document. Us
     If the user provides an image or document in their message, use it as additional context for your answer.`;
 
     const llmResponse = await ai.generate({
-      model: 'googleai/gemini-1.5-flash',
-      history: [
-        new Message('system', systemPrompt),
-        ...history.map(msg => new Message(msg.role, msg.content))
-      ]
+        model: 'googleai/gemini-1.5-flash',
+        messages: [
+            { role: 'system', content: systemPrompt },
+            ...history.map(item => ({
+                role: item.role,
+                content: item.content,
+            }))
+        ]
     });
 
     const responseText = llmResponse.text;
