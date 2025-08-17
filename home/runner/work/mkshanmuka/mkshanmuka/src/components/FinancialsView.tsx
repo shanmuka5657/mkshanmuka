@@ -3,8 +3,8 @@
 
 import { useState, useEffect } from "react";
 import { ArrowLeft, Loader2, Landmark, ShieldCheck, FileWarning, HelpCircle } from "lucide-react";
-import { Button } from "./ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "./ui/card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import type { AnalyzeCreditReportOutput } from "@/ai/flows/credit-report-analysis";
 import { getLoanEligibility, LoanEligibilityOutput } from "@/ai/flows/loan-eligibility";
@@ -13,8 +13,8 @@ import { getCreditUnderwriting, CreditUnderwritingOutput, CreditUnderwritingInpu
 import { getAiRating, AiRatingOutput } from "@/ai/flows/ai-rating";
 import { getRiskAssessment, RiskAssessmentOutput } from "@/ai/flows/risk-assessment";
 
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -22,9 +22,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Textarea } from "./ui/textarea";
-import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-import { Badge } from "./ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface FinancialsViewProps {
