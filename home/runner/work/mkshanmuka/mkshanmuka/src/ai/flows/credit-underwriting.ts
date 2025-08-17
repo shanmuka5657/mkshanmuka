@@ -28,7 +28,7 @@ const CreditUnderwritingInputSchema = z.object({
     .describe('The previously calculated loan eligibility.'),
   riskAssessment: z
     .any()
-    .describe('The previously calculated financial risk assessment.'),
+    .describe('The previously calculated financial risk assessment for the user, excluding guarantor loans.'),
   estimatedIncome: z
     .number()
     .describe("The user's estimated monthly income in INR."),
@@ -54,7 +54,7 @@ export type CreditUnderwritingInput = {
     analysisResult: AnalyzeCreditReportOutput;
     aiRating: AiRatingOutput;
     loanEligibility: LoanEligibilityOutput;
-    riskAssessment: RiskAssessmentOutput;
+    riskAssessment: RiskAssessmentOutput['assessmentWithoutGuarantor']; // Corrected to single assessment
     estimatedIncome: number;
     employmentType: "Salaried" | "Self-employed" | "Daily Wage Earner";
     loanType: "Personal Loan" | "Home Loan" | "Auto Loan" | "Loan Against Property";
@@ -185,13 +185,13 @@ const creditUnderwritingFlow = ai.defineFlow(
       throw new Error("AI failed to provide an underwriting analysis.");
     }
     
-    const riskAssessment = input.riskAssessment as RiskAssessmentOutput;
+    const riskAssessment = input.riskAssessment;
 
     // Ensure the final output uses the exact pre-calculated values for consistency.
-    output.probabilityOfDefault = riskAssessment.assessmentWithoutGuarantor.probabilityOfDefault;
-    output.lossGivenDefault = riskAssessment.assessmentWithoutGuarantor.lossGivenDefault;
-    output.exposureAtDefault = riskAssessment.assessmentWithoutGuarantor.exposureAtDefault;
-    output.expectedLoss = riskAssessment.assessmentWithoutGuarantor.expectedLoss;
+    output.probabilityOfDefault = riskAssessment.probabilityOfDefault;
+    output.lossGivenDefault = riskAssessment.lossGivenDefault;
+    output.exposureAtDefault = riskAssessment.exposureAtDefault;
+    output.expectedLoss = riskAssessment.expectedLoss;
 
     return output;
   }
