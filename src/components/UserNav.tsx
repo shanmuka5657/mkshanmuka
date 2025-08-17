@@ -18,12 +18,18 @@ import { LogOut, User } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useAuthState } from 'react-firebase-hooks/auth';
+import { useEffect, useState } from "react";
 
 
 export function UserNav() {
   const [user, loading, error] = useAuthState(auth);
   const router = useRouter();
   const { toast } = useToast();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -42,8 +48,8 @@ export function UserNav() {
     }
   };
 
-  if (loading) {
-    return null; // Or a loading spinner
+  if (!isClient || loading) {
+    return null; // Don't render anything on the server or while loading
   }
 
   if (!user) {
