@@ -8,6 +8,7 @@ import { Logo } from '@/components/ui/logo';
 export const metadata: Metadata = {
   title: 'CreditWise AI - AI Credit Analysis',
   description: 'Advanced AI Credit Score Analyzer & ML Model Trainer by CreditWise AI',
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
