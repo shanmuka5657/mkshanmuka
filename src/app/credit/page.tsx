@@ -27,6 +27,7 @@ import { CreditSummaryView } from '@/components/CreditSummaryView';
 import { RiskAssessmentView } from '@/components/RiskAssessmentView';
 import { AiRatingView } from '@/components/AiRatingView';
 import { FinancialsView } from '@/components/FinancialsView';
+import { saveReportSummaryAction } from '@/app/actions';
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -142,7 +143,7 @@ export default function CreditPage() {
       };
       reader.readAsArrayBuffer(selectedFile);
     } catch (error) {
-      
+      console.error("PDF Processing Error: ", error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -164,25 +165,13 @@ export default function CreditPage() {
         if (output) {
             setAnalysisResult(output);
             
-            // Automatically save extracted details to local storage for the dashboard
+            // Automatically save extracted details to the database
             try {
-                const userDetails = {
-                    name: output.customerDetails.name,
-                    mobile: output.customerDetails.mobileNumber,
-                    pan: output.customerDetails.pan,
-                    cibilScore: output.cibilScore || '',
-                    totalEmi: output.emiDetails.totalEmi,
-                    address: output.customerDetails.address,
-                };
-                localStorage.setItem('userDetails', JSON.stringify(userDetails));
-                
-                // Dispatch a storage event to notify other tabs (like the dashboard)
-                window.dispatchEvent(new Event('storage'));
-
-                toast({ title: "Details Updated!", description: "Your information has been automatically updated on the dashboard." });
+                await saveReportSummaryAction(output, output.cibilScore);
+                toast({ title: "Report Saved!", description: "The customer's report summary has been saved to the dashboard." });
             } catch (e) {
-                
-                toast({ variant: 'destructive', title: 'Could not save to dashboard', description: 'There was an issue saving the extracted details.' });
+                console.error('Save to DB error:', e);
+                toast({ variant: 'destructive', title: 'Could not save report', description: 'There was an issue saving the extracted details to the database.' });
             }
 
         } else {
@@ -191,7 +180,7 @@ export default function CreditPage() {
 
 
     } catch (error: any) {
-        
+        console.error("Analysis Error: ", error);
         const errorMessage = error.message || "An unknown error occurred.";
         let errorTitle = "An Error Occurred";
         let userFriendlyMessage = "Something went wrong. Please try again.";
@@ -288,7 +277,7 @@ export default function CreditPage() {
                     <div className="mt-4">
                         <Button onClick={handleAnalyzeCreditReport} size="lg">
                             <Sparkles className="mr-2 h-5 w-5"/>
-                            Analyze Report
+                            Analyze & Save Report
                         </Button>
                     </div>
                 )}
@@ -305,7 +294,7 @@ export default function CreditPage() {
                         <ClipboardCheck className="h-5 w-5"/>
                         <div>
                             <h4 className="font-semibold">Analysis Complete!</h4>
-                            <p className="text-xs">Your AI-powered insights are ready. Use the dashboard below to explore.</p>
+                            <p className="text-xs">Your AI-powered insights are ready. The report summary has been saved to the dashboard.</p>
                         </div>
                     </div>
                 )}
@@ -376,7 +365,7 @@ export default function CreditPage() {
               <AccordionItem value="item-1">
                 <AccordionTrigger>
                     <div className="flex items-center gap-2 font-semibold">
-                        <BarChart className="text-primary"/>Raw Report Text & Cost
+                        <BarChart className="text-primary"/>Raw Report Text
                     </div>
                 </AccordionTrigger>
                 <AccordionContent>

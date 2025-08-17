@@ -32,7 +32,7 @@ export async function saveReportSummaryAction(
     const reportsCollection = adminDb.collection('creditReports');
     await reportsCollection.add(reportSummary);
   } catch (error) {
-    
+    console.error('Error saving report to Firestore:', error);
     throw new Error('Failed to save report to the database.');
   }
 }
