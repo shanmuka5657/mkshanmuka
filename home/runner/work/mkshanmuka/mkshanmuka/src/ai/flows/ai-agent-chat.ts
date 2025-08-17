@@ -74,16 +74,19 @@ The user has uploaded their bank statement. You have access to this document. Us
 
     const llmResponse = await ai.generate({
       model: 'googleai/gemini-1.5-flash',
-      prompt: {
-        system: systemPrompt,
-        history: history,
-      },
+      messages: [
+          { role: 'system', content: [{ text: systemPrompt }] },
+          ...history.map(item => ({
+              role: item.role as 'user' | 'model',
+              content: [{ text: item.content }],
+          }))
+      ]
     });
 
-    const responseText = llmResponse.text;
+    const responseText = llmResponse.text();
     if (!responseText) {
       // In case the model returns a non-text response or an error.
-      const toolResponse = llmResponse.output?.content[0]?.toolRequest;
+      const toolResponse = llmResponse.output()?.content[0]?.toolRequest;
       if(toolResponse) {
           throw new Error("The AI tried to use a tool, but none were provided.");
       }

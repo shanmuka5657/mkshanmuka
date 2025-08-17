@@ -98,7 +98,14 @@ const aiRatingFlow = ai.defineFlow(
     outputSchema: AiRatingOutputSchema,
   },
   async (input) => {
-    const {output} = await prompt(input);
+    const result = await ai.generate({
+        prompt: {
+            name: 'aiRatingPrompt',
+            input: input,
+        }
+    });
+
+    const output = result.output();
 
     if (!output) {
       throw new Error("AI failed to provide a rating.");
