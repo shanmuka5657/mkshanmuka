@@ -28,7 +28,7 @@ const CreditUnderwritingInputSchema = z.object({
     .describe('The previously calculated loan eligibility.'),
   riskAssessment: z
     .any()
-    .describe('The previously calculated financial risk assessment for the user, excluding guarantor loans.'),
+    .describe('The previously calculated financial risk assessment for the user, including both guarantor and non-guarantor loans.'),
   estimatedIncome: z
     .number()
     .describe("The user's estimated monthly income in INR."),
@@ -54,7 +54,7 @@ export type CreditUnderwritingInput = {
     analysisResult: AnalyzeCreditReportOutput;
     aiRating: AiRatingOutput;
     loanEligibility: LoanEligibilityOutput;
-    riskAssessment: RiskAssessmentOutput;
+    riskAssessment: RiskAssessmentOutput; // This now expects the full dual-assessment object
     estimatedIncome: number;
     employmentType: "Salaried" | "Self-employed" | "Daily Wage Earner";
     loanType: "Personal Loan" | "Home Loan" | "Auto Loan" | "Loan Against Property";
@@ -126,7 +126,7 @@ const prompt = ai.definePrompt({
 **CRITICAL RULES:**
 1.  **NEVER APPROVE MORE THAN REQUESTED:** The 'approvedLoanAmount' CANNOT be higher than the 'desiredLoanAmount'.
 2.  **RESPECT ELIGIBILITY LIMITS:** The 'approvedLoanAmount' must ALSO NOT exceed the 'Pre-Calculated Max Eligible Loan Amount'. If the 'repaymentCapacity' is 0, you MUST decline the loan. Your final approved amount must be the lower of the desired amount and the eligible amount.
-3.  **USE PRE-CALCULATED RISK METRICS**: You have been provided with pre-calculated risk metrics (PD, LGD, EAD, EL). You MUST use these exact values in your output. Do NOT recalculate them.
+3.  **USE PRE-CALCULATED RISK METRICS**: You have been provided with pre-calculated risk metrics (PD, LGD, EAD, EL). You MUST use the values from the 'assessmentWithoutGuarantor' section of the risk assessment for your decisioning. Do NOT recalculate them.
 
 **Applicant's Profile & Pre-Calculated Data:**
 - **Loan Type Requested:** {{{loanType}}}
@@ -166,7 +166,7 @@ The user has provided the following notes about their loans. You MUST consider t
 2.  **Determine and Justify Loan Terms:** If approved, determine the final loan terms, adhering strictly to the critical rules.
 3.  **Write a Comprehensive Summary:** Explain *exactly* how you reached your decision. Reference specific positive and negative factors from the structured data. If the user provided comments, you MUST address them. If you reduce the loan amount, explain *why*, linking it to specific risks (e.g., "While the applicant requested ₹6,00,000, the approved amount was reduced to ₹4,50,000 due to a high DTI ratio and a recent 30-day delinquency...").
 4.  **List Documents and Conditions:** Provide a standard list of 'requiredDocuments'. Add risk-based 'conditions' if you see inconsistencies (e.g., a 'Daily Wage Earner' with an unusually high income).
-5.  **Use Pre-Calculated Risk Metrics:** Populate the risk fields with the exact values from the input. Write detailed explanations for each metric in 'riskMetricsExplanation'.
+5.  **Use Pre-Calculated Risk Metrics:** Populate the risk fields with the exact values from the input's 'assessmentWithoutGuarantor' section. Write detailed explanations for each metric in 'riskMetricsExplanation'.
 6.  **Assign a Final, Overall Profile Rating:** Synthesize everything into a single, definitive 'finalProfileRating'.
 
 Generate the final, structured output.`,
@@ -179,11 +179,9 @@ const creditUnderwritingFlow = ai.defineFlow(
     outputSchema: CreditUnderwritingOutputSchema,
   },
   async (input) => {
-    const {output} = await prompt({
-        ...input,
-        // Pass only the relevant part of the assessment to the prompt context
-        riskAssessment: input.riskAssessment.assessmentWithoutGuarantor as any,
-    });
+    // The prompt is now intelligent enough to use the assessmentWithoutGuarantor part
+    // of the riskAssessment object passed in. We pass the whole object.
+    const {output} = await prompt(input);
 
     if (!output) {
       throw new Error("AI failed to provide an underwriting analysis.");
@@ -200,3 +198,5 @@ const creditUnderwritingFlow = ai.defineFlow(
     return output;
   }
 );
+
+    
