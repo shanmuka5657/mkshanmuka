@@ -16,37 +16,52 @@ import { Label } from '@/components/ui/label';
 import { Loader2, KeyRound } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase-client';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    // In a real app, you would handle Firebase authentication here.
-    // For this prototype, we'll just show a success or error message.
-    if (email === 'test@example.com' && password === 'password') {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
       toast({
         title: 'Login Successful',
         description: "Welcome back!",
       });
-      // Redirect to dashboard, e.g., router.push('/dashboard');
-    } else {
+      router.push('/dashboard');
+    } catch (error: any) {
+      let errorMessage = 'An unknown error occurred.';
+      switch (error.code) {
+        case 'auth/user-not-found':
+          errorMessage = 'No account found with this email.';
+          break;
+        case 'auth/wrong-password':
+          errorMessage = 'Incorrect password. Please try again.';
+          break;
+        case 'auth/invalid-credential':
+            errorMessage = 'Invalid credentials. Please check your email and password.';
+            break;
+        default:
+          errorMessage = 'Please check your email and password.';
+          break;
+      }
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: 'Please check your email and password.',
+        description: errorMessage,
       });
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   return (

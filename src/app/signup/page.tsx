@@ -16,6 +16,9 @@ import { Label } from '@/components/ui/label';
 import { Loader2, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase-client';
 
 export default function SignupPage() {
   const [name, setName] = useState('');
@@ -23,25 +26,53 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call for signup
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    if (password.length < 6) {
+        toast({
+            variant: 'destructive',
+            title: 'Signup Failed',
+            description: 'Password must be at least 6 characters long.',
+        });
+        setIsLoading(false);
+        return;
+    }
 
-    // In a real app, you would handle Firebase authentication for creating a new user.
-    // For this prototype, we'll just show a success message.
-    toast({
-      title: 'Signup Successful',
-      description: 'You can now sign in with your new account.',
-    });
-    
-    // Ideally, you would redirect the user to the login page or dashboard
-    // e.g., router.push('/login');
-
-    setIsLoading(false);
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      toast({
+        title: 'Signup Successful',
+        description: 'Welcome! You are now being redirected.',
+      });
+      router.push('/dashboard');
+    } catch (error: any) {
+      let errorMessage = 'An unknown error occurred.';
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          errorMessage = 'This email address is already in use.';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Please enter a valid email address.';
+          break;
+        case 'auth/weak-password':
+          errorMessage = 'The password is too weak.';
+          break;
+        default:
+          errorMessage = 'An error occurred during signup. Please try again.';
+          break;
+      }
+      toast({
+        variant: 'destructive',
+        title: 'Signup Failed',
+        description: errorMessage,
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -91,6 +122,7 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
+                placeholder="Must be at least 6 characters"
               />
             </div>
           </CardContent>
