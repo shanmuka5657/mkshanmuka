@@ -61,6 +61,6 @@
     "node": ">=18.0.0"
   },
   "overrides": {
-    "@opentelemetry/winston-transport": "0.37.0"
+    "@opentelemetry/winston-transport": "npm:@opentelemetry/instrumentation@^0.38.0"
   }
 }

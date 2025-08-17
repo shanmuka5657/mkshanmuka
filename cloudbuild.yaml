@@ -2,7 +2,7 @@
 steps:
 # Install dependencies
 - name: 'gcr.io/cloud-builders/npm'
-  args: ['install']
+  args: ['install', '--legacy-peer-deps']
 # Build the Next.js application
 - name: 'gcr.io/cloud-builders/npm'
   args: ['run', 'build']
