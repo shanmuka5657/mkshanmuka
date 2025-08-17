@@ -98,15 +98,7 @@ const aiRatingFlow = ai.defineFlow(
     outputSchema: AiRatingOutputSchema,
   },
   async (input) => {
-    const {output} = await ai.generate({
-      model: "googleai/gemini-1.5-flash",
-      prompt: (await prompt.render(input)).prompt,
-      output: { schema: AiRatingOutputSchema },
-      config: {
-        temperature: 0.3,
-        maxOutputTokens: 1024
-      }
-    });
+    const {output} = await prompt(input);
 
     if (!output) {
       throw new Error("AI failed to provide a rating.");

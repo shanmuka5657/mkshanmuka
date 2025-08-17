@@ -120,15 +120,7 @@ const loanEligibilityFlow = ai.defineFlow(
     outputSchema: LoanEligibilityOutputSchema,
   },
   async (input) => {
-    const {output} = await ai.generate({
-      model: "googleai/gemini-1.5-flash",
-      prompt: (await prompt.render(input)).prompt,
-      output: { schema: LoanEligibilityOutputSchema },
-      config: {
-        temperature: 0.5,
-        maxOutputTokens: 1024
-      }
-    });
+    const {output} = await prompt(input);
 
     if (!output) {
       throw new Error("AI failed to calculate loan eligibility.");
