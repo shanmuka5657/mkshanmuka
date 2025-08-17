@@ -121,10 +121,10 @@ const loanEligibilityFlow = ai.defineFlow(
     outputSchema: LoanEligibilityOutputSchema,
   },
   async (input) => {
-    const result = await prompt(input);
-    if (!result.output) {
+    const {output} = await prompt(input);
+    if (!output) {
       throw new Error("AI failed to calculate loan eligibility.");
     }
-    return result.output;
+    return output;
   }
 );

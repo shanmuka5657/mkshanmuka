@@ -74,10 +74,10 @@ const calculateTotalEmiFlow = ai.defineFlow(
     outputSchema: CalculateTotalEmiOutputSchema,
   },
   async (input) => {
-    const result = await prompt(input);
-    if (!result.output) {
+    const {output} = await prompt(input);
+    if (!output) {
       throw new Error("AI failed to calculate the total EMI.");
     }
-    return result.output;
+    return output;
   }
 );

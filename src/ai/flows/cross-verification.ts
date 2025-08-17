@@ -113,8 +113,7 @@ const crossVerifyDocumentsFlow = ai.defineFlow(
     outputSchema: CrossVerificationOutputSchema,
   },
   async input => {
-    const result = await prompt(input);
-    const output = result.output;
+    const {output} = await prompt(input);
     if (!output) {
       throw new Error("AI failed to cross-verify documents.");
     }
