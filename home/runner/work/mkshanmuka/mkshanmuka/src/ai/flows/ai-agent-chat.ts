@@ -1,0 +1,111 @@
+
+'use server';
+
+/**
+ * @fileOverview A general-purpose, multi-modal AI assistant that supports conversation history and can access CIBIL report context.
+ *
+ * - aiAgentChat - A function that handles the chat interaction.
+ * - AiAgentChatHistory - the history type for the chat function.
+ * - AiAgentChatOutput - The return type for the chat function.
+ */
+
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
+import { textToSpeech } from './text-to-speech';
+
+// Define the structure for a single message in the history, aligning with Genkit's MessageData type
+const AiAgentChatMessageSchema = z.object({
+  role: z.enum(['user', 'model']),
+  content: z.string(), // Corrected: Genkit's basic history content is a string
+});
+
+// The input now includes the history of the conversation and the CIBIL report
+const AiAgentChatInputSchema = z.object({
+  history: z.array(AiAgentChatMessageSchema).describe('The conversation history.'),
+  cibilReportAvailable: z.boolean().describe('Whether a CIBIL report has been uploaded.'),
+  bankStatementAvailable: z.boolean().describe('Whether a bank statement has been uploaded.'),
+});
+export type AiAgentChatHistory = z.infer<typeof AiAgentChatMessageSchema>;
+export type AiAgentChatInput = z.infer<typeof AiAgentChatInputSchema>;
+
+
+const AiAgentChatOutputSchema = z.object({
+  answer: z
+    .string()
+    .describe('The AI-generated answer to the user message.'),
+  audioDataUri: z.string().optional().describe("A data URI of the AI's spoken response in WAV format."),
+});
+export type AiAgentChatOutput = z.infer<typeof AiAgentChatOutputSchema>;
+
+export async function aiAgentChat(
+  input: AiAgentChatInput
+): Promise<AiAgentChatOutput> {
+  return aiAgentChatFlow(input);
+}
+
+const aiAgentChatFlow = ai.defineFlow(
+  {
+    name: 'aiAgentChatFlow',
+    inputSchema: AiAgentChatInputSchema,
+    outputSchema: AiAgentChatOutputSchema,
+  },
+  async ({ history, cibilReportAvailable, bankStatementAvailable }) => {
+    
+    let contextPrompt = '';
+    if (cibilReportAvailable) {
+      contextPrompt += `
+The user has uploaded their CIBIL credit report. You have access to this document. Use this as a source of truth to answer questions. Do NOT ask them to upload it again.`;
+    }
+    if (bankStatementAvailable) {
+        contextPrompt += `
+The user has uploaded their bank statement. You have access to this document. Use this as a source of truth to answer questions. Do NOT ask them to upload it again.`;
+    }
+
+    if (!contextPrompt) {
+        contextPrompt = `The user has not uploaded any document. If they ask questions that would require a CIBIL report or bank statement, you MUST inform them that you need them to upload a document first.`
+    }
+
+    // The system prompt is now passed as the main 'prompt' parameter
+    const systemPrompt = `You are a helpful AI Agent for the CreditWise AI application. Your goal is to be helpful and answer the user's questions accurately and concisely based on the documents they have provided. Maintain a friendly and conversational tone.
+    
+    **CONTEXT:**
+    ${contextPrompt}
+    
+    If the user provides an image or document in their message, use it as additional context for your answer.`;
+
+    // Build conversation context from history
+    const conversation = history
+      .map(h => `${h.role === "user" ? "User" : "AI"}: ${h.content}`)
+      .join("\n");
+
+    // Add the latest system prompt at the end
+    const fullPrompt = `${conversation}\nSystem: ${systemPrompt}`;
+
+    const llmResponse = await ai.generate({
+      model: "googleai/gemini-1.5-flash",
+      prompt: fullPrompt,
+      config: {
+        temperature: 0.7,       // tweak if needed
+        maxOutputTokens: 512    // adjust as per requirement
+      }
+    });
+
+    const responseText = llmResponse.text;
+    if (!responseText) {
+      // In case the model returns a non-text response or an error.
+      const toolResponse = llmResponse.output?.content[0]?.toolRequest;
+      if(toolResponse) {
+          throw new Error("The AI tried to use a tool, but none were provided.");
+      }
+      throw new Error("The AI returned an empty or invalid response.");
+    }
+    
+    // Generate audio from the response text
+    const { audioDataUri } = await textToSpeech(responseText);
+
+    return { 
+        answer: responseText,
+        audioDataUri,
+    };
+  }
+);
