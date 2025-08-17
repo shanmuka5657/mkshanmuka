@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "preinstall": "npm config set legacy-peer-deps true",
-    "dev": "next dev --port 9002 --hostname 0.0.0.0",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start -p $PORT",
     "lint": "next lint",
