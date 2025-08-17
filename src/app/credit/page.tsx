@@ -142,7 +142,7 @@ export default function CreditPage() {
       };
       reader.readAsArrayBuffer(selectedFile);
     } catch (error) {
-      console.error('Error processing PDF:', error);
+      
       toast({
         variant: "destructive",
         title: "Error",
@@ -181,7 +181,7 @@ export default function CreditPage() {
 
                 toast({ title: "Details Updated!", description: "Your information has been automatically updated on the dashboard." });
             } catch (e) {
-                console.error("Failed to save to local storage", e);
+                
                 toast({ variant: 'destructive', title: 'Could not save to dashboard', description: 'There was an issue saving the extracted details.' });
             }
 
@@ -191,7 +191,7 @@ export default function CreditPage() {
 
 
     } catch (error: any) {
-        console.error('Error analyzing report:', error);
+        
         const errorMessage = error.message || "An unknown error occurred.";
         let errorTitle = "An Error Occurred";
         let userFriendlyMessage = "Something went wrong. Please try again.";

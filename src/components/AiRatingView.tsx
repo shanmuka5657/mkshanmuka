@@ -93,7 +93,7 @@ export function AiRatingView({ analysisResult, onBack }: AiRatingViewProps) {
         setRatingWithoutGuarantor(ratingWithout);
 
       } catch (error: any) {
-        console.error("Error getting AI rating:", error);
+        
         toast({
           variant: "destructive",
           title: "Failed to get AI Credit Meter",

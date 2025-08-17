@@ -8,7 +8,7 @@ if (process.env.GEMINI_API_KEY) {
     plugins.push(googleAI());
 } else {
     // This warning will appear in your server logs.
-    console.warn("GEMINI_API_KEY is not set. AI features will be disabled.");
+    
 }
 
 export const ai = genkit({

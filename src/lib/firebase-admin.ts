@@ -12,11 +12,11 @@ if (process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT) {
     try {
         serviceAccount = JSON.parse(process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT);
     } catch (e) {
-        console.error('Error parsing FIREBASE_ADMIN_SERVICE_ACCOUNT JSON:', e);
+        
         serviceAccount = undefined;
     }
 } else {
-    console.warn('FIREBASE_ADMIN_SERVICE_ACCOUNT environment variable is not set.');
+    
 }
 
 if (!getApps().length) {

@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "preinstall": "npm config set legacy-peer-deps true",
     "dev": "next dev",
     "build": "next build",
     "start": "next start -p $PORT",
@@ -11,7 +10,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@genkit-ai/googleai": "0.6.2",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.1",
     "@radix-ui/react-avatar": "^1.1.0",
@@ -31,8 +29,6 @@
     "clsx": "^2.1.1",
     "dotenv": "^16.4.5",
     "firebase": "10.12.3",
-    "firebase-admin": "^12.2.0",
-    "genkit": "0.6.2",
     "lucide-react": "^0.408.0",
     "next": "14.2.5",
     "pdfjs-dist": "4.4.168",
@@ -52,11 +48,13 @@
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@types/recharts": "^1.8.29",
-    "genkit-cli": "0.6.2",
     "typescript": "^5.5.3"
   },
   "engines": {
     "node": ">=20.0.0"
   },
-  "overrides": {}
+  "overrides": {
+    "@radix-ui/primitive": "1.1.2",
+    "@radix-ui/react-dismissable-layer": "1.0.11"
+  }
 }

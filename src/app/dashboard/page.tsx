@@ -66,7 +66,7 @@ export default function DashboardPage() {
                 setIsEditing(true); // If no details, start in editing mode
             }
         } catch (error) {
-            console.error("Failed to load user details from local storage", error);
+            
             setIsEditing(true);
         }
     }, []);
@@ -80,7 +80,7 @@ export default function DashboardPage() {
                     setDetails(JSON.parse(savedDetails));
                 }
             } catch (error) {
-                console.error("Failed to update details from storage change", error);
+                
             }
         };
 
@@ -101,7 +101,7 @@ export default function DashboardPage() {
             toast({ title: "Details Saved!", description: "Your information has been saved locally on this device." });
             setIsEditing(false);
         } catch (error) {
-            console.error("Failed to save user details to local storage", error);
+            
             toast({ variant: 'destructive', title: "Save Failed", description: "Could not save details to local storage." });
         }
     };

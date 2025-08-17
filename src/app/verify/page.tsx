@@ -128,7 +128,7 @@ export default function VerifyPdfPage() {
       reader.readAsDataURL(pdfFile);
 
     } catch (error: any) {
-      console.error('Error analyzing PDF:', error);
+      
       toast({
         variant: 'destructive',
         title: 'Analysis Failed',

@@ -91,7 +91,7 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
         toast({ title: 'Financial Analysis Complete', description: 'Loan eligibility and financial risk have been calculated.' });
 
     } catch (error: any) {
-      console.error("Error during financial analysis:", error);
+      
       toast({
         variant: "destructive",
         title: "Financial Analysis Failed",
@@ -136,7 +136,7 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
         toast({ title: 'Underwriting Complete', description: 'AI has made a decision.' });
 
     } catch (error: any) {
-      console.error("Error during underwriting:", error);
+      
       toast({
         variant: "destructive",
         title: "Underwriting Failed",

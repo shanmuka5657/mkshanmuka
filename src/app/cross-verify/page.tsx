@@ -222,7 +222,7 @@ export default function CrossVerifyPage() {
       toast({ title: "Cross-Verification Complete!", description: "The verification report is ready below." });
 
     } catch (error: any) {
-      console.error('Error during analysis:', error);
+      
       toast({ variant: 'destructive', title: 'Analysis Failed', description: error.message || 'An unknown error occurred.' });
       if (cibilFile.status === 'processing') setCibilFile(p => ({ ...p, status: 'error' }));
       if (bankStatementFile.status === 'processing') setBankStatementFile(p => ({ ...p, status: 'error' }));

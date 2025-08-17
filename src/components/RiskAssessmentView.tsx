@@ -104,7 +104,7 @@ export function RiskAssessmentView({ analysisResult, onBack }: RiskAssessmentVie
         const output = await getRiskAssessment({ analysisResult });
         setAssessment(output);
       } catch (error: any) {
-        console.error("Error getting risk assessment:", error);
+        
         toast({
           variant: "destructive",
           title: "Failed to get AI Risk Assessment",
