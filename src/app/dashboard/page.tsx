@@ -3,13 +3,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { ArrowRight, FileCheck2, FileText, Fingerprint, Save, User, Edit } from 'lucide-react';
+import { ArrowRight, FileCheck2, FileText, Fingerprint } from 'lucide-react';
 import Link from 'next/link';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 
 const features = [
   {
@@ -32,79 +27,12 @@ const features = [
   },
 ];
 
-interface UserDetails {
-    name: string;
-    mobile: string;
-    pan: string;
-    cibilScore: string;
-    totalEmi: string;
-    address: string;
-}
-
-const initialDetails: UserDetails = {
-    name: '',
-    mobile: '',
-    pan: '',
-    cibilScore: '',
-    totalEmi: '',
-    address: '',
-};
-
 export default function DashboardPage() {
     const [isMounted, setIsMounted] = useState(false);
-    const [details, setDetails] = useState<UserDetails>(initialDetails);
-    const [isEditing, setIsEditing] = useState(false);
-    const { toast } = useToast();
 
     useEffect(() => {
         setIsMounted(true);
-        try {
-            const savedDetails = localStorage.getItem('userDetails');
-            if (savedDetails) {
-                setDetails(JSON.parse(savedDetails));
-            } else {
-                setIsEditing(true); // If no details, start in editing mode
-            }
-        } catch (error) {
-            
-            setIsEditing(true);
-        }
     }, []);
-
-    // Effect to listen for changes in local storage from other tabs/pages
-    useEffect(() => {
-        const handleStorageChange = () => {
-            try {
-                const savedDetails = localStorage.getItem('userDetails');
-                if (savedDetails) {
-                    setDetails(JSON.parse(savedDetails));
-                }
-            } catch (error) {
-                
-            }
-        };
-
-        window.addEventListener('storage', handleStorageChange);
-        return () => {
-            window.removeEventListener('storage', handleStorageChange);
-        };
-    }, []);
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { id, value } = e.target;
-        setDetails(prev => ({ ...prev, [id]: value }));
-    };
-
-    const handleSave = () => {
-        try {
-            localStorage.setItem('userDetails', JSON.stringify(details));
-            toast({ title: "Details Saved!", description: "Your information has been saved locally on this device." });
-            setIsEditing(false);
-        } catch (error) {
-            
-            toast({ variant: 'destructive', title: "Save Failed", description: "Could not save details to local storage." });
-        }
-    };
     
     if (!isMounted) {
         return null; // or a loading spinner
@@ -121,55 +49,6 @@ export default function DashboardPage() {
         </p>
       </div>
       
-      <Card>
-        <CardHeader>
-            <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                    <User className="h-6 w-6 text-primary" />
-                    <CardTitle>My Details</CardTitle>
-                </div>
-                {!isEditing && (
-                     <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-                        <Edit className="mr-2 h-4 w-4" /> Edit
-                    </Button>
-                )}
-            </div>
-            <CardDescription>This information is automatically populated from your last analysis and saved on your device.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-             <div>
-                <Label htmlFor="name">Name</Label>
-                <Input id="name" value={details.name} onChange={handleInputChange} disabled={!isEditing} placeholder="Populated from report" />
-            </div>
-             <div>
-                <Label htmlFor="mobile">Mobile Number</Label>
-                <Input id="mobile" value={details.mobile} onChange={handleInputChange} disabled={!isEditing} placeholder="Populated from report" />
-            </div>
-            <div>
-                <Label htmlFor="pan">PAN Card Number</Label>
-                <Input id="pan" value={details.pan} onChange={handleInputChange} disabled={!isEditing} placeholder="Populated from report" />
-            </div>
-            <div>
-                <Label htmlFor="cibilScore">CIBIL Score</Label>
-                <Input id="cibilScore" type="number" value={details.cibilScore} onChange={handleInputChange} disabled={!isEditing} placeholder="Populated from report" />
-            </div>
-             <div>
-                <Label htmlFor="totalEmi">Total Monthly EMI (₹)</Label>
-                <Input id="totalEmi" type="number" value={details.totalEmi} onChange={handleInputChange} disabled={!isEditing} placeholder="Populated from report" />
-            </div>
-            <div>
-                <Label htmlFor="address">Address</Label>
-                <Input id="address" value={details.address} onChange={handleInputChange} disabled={!isEditing} placeholder="Populated from report" />
-            </div>
-        </CardContent>
-        {isEditing && (
-            <CardFooter className="flex justify-end gap-2">
-                <Button variant="ghost" onClick={() => setIsEditing(false)}>Cancel</Button>
-                <Button onClick={handleSave}><Save className="mr-2 h-4 w-4"/>Save Details</Button>
-            </CardFooter>
-        )}
-      </Card>
-
       <div className="text-center mt-12">
         <h2 className="text-2xl font-bold tracking-tight">Analysis Tools</h2>
         <p className="mt-2 text-md text-muted-foreground">Use our AI-powered tools for deeper insights.</p>
