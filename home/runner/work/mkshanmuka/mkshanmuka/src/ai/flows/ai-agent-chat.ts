@@ -73,7 +73,6 @@ The user has uploaded their bank statement. You have access to this document. Us
     
     If the user provides an image or document in their message, use it as additional context for your answer.`;
 
-    // Corrected: Use 'prompt' and 'history' parameters as per Genkit v1.x
     const llmResponse = await ai.generate({
       model: 'googleai/gemini-1.5-flash',
       prompt: systemPrompt,
