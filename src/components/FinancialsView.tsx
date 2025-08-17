@@ -122,7 +122,7 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
             analysisResult,
             aiRating,
             loanEligibility,
-            riskAssessment: riskAssessmentForRating, // CORRECTED: Pass the full object
+            riskAssessment: riskAssessmentForRating,
             estimatedIncome: Number(estimatedIncome),
             employmentType,
             loanType,
@@ -135,7 +135,7 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
         setUnderwriting(underwritingOutput);
         toast({ title: 'Underwriting Complete', description: 'AI has made a decision.' });
 
-    } catch (error: any) { // CORRECTED: Removed stray dot
+    } catch (error: any) {
       console.error("Error during underwriting:", error);
       toast({
         variant: "destructive",
@@ -359,5 +359,3 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
     </div>
   );
 }
-
-    
