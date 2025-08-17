@@ -11,7 +11,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { textToSpeech } from './text-to-speech';
+import { textToSpeech } from '@/ai/flows/text-to-speech';
 
 // Define the structure for a single message in the history, aligning with Genkit's MessageData type
 const AiAgentChatMessageSchema = z.object({
