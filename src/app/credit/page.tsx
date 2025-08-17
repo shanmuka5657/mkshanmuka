@@ -20,7 +20,6 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from "@/hooks/use-toast"
 import { analyzeCreditReport, AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
-import { AiAgentChat } from '@/components/CreditChat';
 import { cn } from '@/lib/utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { AnalysisDashboard } from '@/components/AnalysisDashboard';
@@ -390,7 +389,6 @@ export default function CreditPage() {
               </AccordionItem>
             </Accordion>
       </main>
-      <AiAgentChat cibilReportAvailable={!!rawText} />
     </div>
   );
 }
