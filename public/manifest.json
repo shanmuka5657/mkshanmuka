@@ -9,7 +9,8 @@
   "scope": "/",
   "lang": "en-US",
   "categories": [
-    "education"
+    "finance",
+    "utilities"
   ],
   "icons": [
     {
@@ -37,16 +38,59 @@
       "purpose": "maskable"
     }
   ],
-  "orientation": "natural",
-  "display_override": [
-    "browser",
-    "minimal-ui",
-    "standalone",
-    "fullscreen",
-    "window-controls-overlay"
+  "shortcuts": [
+    {
+      "name": "Analyze Credit Report",
+      "short_name": "Analyze",
+      "description": "Upload a CIBIL report for AI analysis",
+      "url": "/credit",
+      "icons": [{ "src": "https://placehold.co/96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Verify PDF Document",
+      "short_name": "Verify",
+      "description": "Run a forensic check on a PDF document",
+      "url": "/verify",
+      "icons": [{ "src": "https://placehold.co/96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Cross-Verify Documents",
+      "short_name": "Cross-Verify",
+      "description": "Compare details across multiple documents",
+      "url": "/cross-verify",
+      "icons": [{ "src": "https://placehold.co/96x96.png", "sizes": "96x96" }]
+    }
   ],
-  "prefer_related_applications": true,
-  "edge_side_panel": {
-    "preferred_width": 60
-  }
+  "share_target": {
+    "action": "/credit",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "pdf",
+          "accept": ["application/pdf", ".pdf"]
+        }
+      ]
+    }
+  },
+  "file_handlers": [
+    {
+      "action": "/credit",
+      "accept": {
+        "application/pdf": [".pdf"]
+      },
+      "launch_type": "single-client"
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+creditwise",
+      "url": "/?protocol=%s"
+    }
+  ],
+  "handle_links": "auto"
 }
