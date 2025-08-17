@@ -19,7 +19,7 @@ const nextConfig = {
   },
   experimental: {
     instrumentationHook: false,
-    turbo: true
+    turbo: {}
   }
 };
 
