@@ -9,7 +9,7 @@
  * - CalculateTotalEmiOutput - The return type for the calculateTotalEmi function.
  */
 
-import {ai, dotprompt} from '@/ai/genkit';
+import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const CalculateTotalEmiInputSchema = z.object({
