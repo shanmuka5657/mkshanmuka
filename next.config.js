@@ -4,12 +4,23 @@ const nextConfig = {
     // This is a workaround for a bug in Next.js where it doesn't correctly
     // bundle Genkit dependencies.
     config.optimization.concatenateModules = false;
+ config.optimization = {
+      ...config.optimization,
+ concatenateModules: false,
+ minimize: false
+    };
 
     // Mark Genkit packages as external for server bundles
     if (isServer) {
       config.externals = config.externals || [];
       config.externals.push(
-        /@genkit-ai\/(.*)/,
+        /@genkit-ai\/.*/,
+ function ({ context, request }, callback) {
+ if (request?.startsWith('@genkit-ai')) {
+ return callback(null, `commonjs ${request}`);
+          }
+ callback();
+        }
       );
     }
     return config;
@@ -18,10 +29,11 @@ const nextConfig = {
     '@genkit-ai',
   ],
   experimental: {
-    serverActions: true,
+    serverActions: {
+      allowedOrigins: ['localhost:3000', 'your-production-domain.com']
+    },
     serverComponentsExternalPackages: [
       '@genkit-ai/firebase',
-      '@genkit-ai/googleai',
       '@genkit-ai/dotprompt',
       'genkit',
     ],
@@ -29,3 +41,4 @@ const nextConfig = {
 };
 
 module.exports = nextConfig;
+

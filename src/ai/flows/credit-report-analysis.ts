@@ -10,7 +10,7 @@
  * - AnalyzeCreditReportOutput - The return type for the analyzeCreditReport function.
  */
 
-import {z} from 'genkit';
+import {z, GenkitClient} from 'genkit';
 import {getGenkit} from '@/lib/genkit-server'; // Assuming this path is correct
 
 const AnalyzeCreditReportInputSchema = z.object({
@@ -98,17 +98,18 @@ const AnalyzeCreditReportOutputSchema = z.object({
 });
 export type AnalyzeCreditReportOutput = z.infer<typeof AnalyzeCreditReportOutputSchema>;
 
-// Function to analyze the credit report using the Genkit flow
-export async function analyzeCreditReport(input: AnalyzeCreditReportInput): Promise<AnalyzeCreditReportOutput> {
-  const genkit = await getGenkit(); // Get the initialized Genkit instance
+import { withGenkitRetry } from '@/lib/genkit-recovery'; // Assuming this path is correct
 
-  // Define the prompt within the function using the obtained genkit instance
-  const prompt = genkit.definePrompt({
-    name: 'analyzeCreditReportPrompt',
-    model: genkit.ai.model('googleai/gemini-1.5-flash'),
-    input: {schema: AnalyzeCreditReportInputSchema},
-    output: {schema: AnalyzeCreditReportOutputSchema},
-    prompt: `You are an expert CIBIL report data extractor. Your ONLY job is to read the provided credit report text and extract all specified information in a single, comprehensive pass. Do NOT perform any summarizations or calculations beyond what is explicitly asked for.
+// Function to analyze the credit report using the Genkit flow with retry
+export async function analyzeCreditReport(input: AnalyzeCreditReportInput): Promise<AnalyzeCreditReportOutput> {
+  return withGenkitRetry(async (genkit: GenkitClient) => {
+    // Define the prompt within the retry function using the obtained genkit instance
+    const prompt = genkit.definePrompt({
+      name: 'analyzeCreditReportPrompt',
+      model: genkit.ai.model('googleai/gemini-1.5-flash'),
+      input: { schema: AnalyzeCreditReportInputSchema },
+      output: { schema: AnalyzeCreditReportOutputSchema },
+      prompt: `You are an expert CIBIL report data extractor. Your ONLY job is to read the provided credit report text and extract all specified information in a single, comprehensive pass. Do NOT perform any summarizations or calculations beyond what is explicitly asked for.
 
 **CRITICAL RULE:** For every field you are asked to extract, if you cannot find the information in the provided text, you MUST return "N/A" for strings, 0 for numbers, or an empty array for lists. You must not leave any field blank or fail to return a value.
 
@@ -149,24 +150,25 @@ export async function analyzeCreditReport(input: AnalyzeCreditReportInput): Prom
 
 Provide the final, consolidated output in the required structured format.
 `,
-});
+    });
 
-  // Define the flow within the function using the obtained genkit instance
-  const analyzeCreditReportFlow = genkit.defineFlow(
-    {
-    name: 'analyzeCreditReportFlow',
-    inputSchema: AnalyzeCreditReportInputSchema,
-    outputSchema: AnalyzeCreditReportOutputSchema,
-    },
-    async (input: AnalyzeCreditReportInput) => {
-    const {output} = await prompt(input);
-    if (!output) {
-      throw new Error("AI failed to analyze the report.");
-    }
-    return output;
-    }
-  );
+    // Define the flow within the retry function using the obtained genkit instance
+    const analyzeCreditReportFlow = genkit.defineFlow(
+      {
+        name: 'analyzeCreditReportFlow',
+        inputSchema: AnalyzeCreditReportInputSchema,
+        outputSchema: AnalyzeCreditReportOutputSchema,
+      },
+      async (input: AnalyzeCreditReportInput) => {
+        const { output } = await prompt(input);
+        if (!output) {
+          throw new Error("AI failed to analyze the report.");
+        }
+        return output;
+      }
+    );
 
-  // Execute the flow and return the result
-  return analyzeCreditReportFlow(input);
+    // Execute the flow within the retry function
+    return analyzeCreditReportFlow(input);
+  });
 }
