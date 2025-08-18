@@ -42,7 +42,8 @@ export async function aiAgentChat(
 ): Promise<AiAgentChatOutput> {
   const genkit = await getGenkit();
   // Pass the genkit instance to the flow if needed, or define flows globally if they don't need instance access
-  return aiAgentChatFlow.run(input); // Assuming flow is defined globally now
+  const resolvedFlow = await aiAgentChatFlow;
+ return resolvedFlow.run(input); // Assuming flow is defined globally now
 }
 
 // Define the flow using the genkit instance asynchronously
