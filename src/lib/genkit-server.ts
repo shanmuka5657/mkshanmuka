@@ -1,6 +1,6 @@
 // src/lib/genkit-server.ts
 import 'server-only';
-import initializeGenkit from '../ai/genkit';
+import { initializeGenkit } from '../ai/genkit';
 let genkitInstance;
 
 let initializationPromise: Promise<any> | null = null;
