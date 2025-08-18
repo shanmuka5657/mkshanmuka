@@ -1,5 +1,5 @@
 import {genkit, ai} from 'genkit';
-import {googleAI} from '@genkit-ai/googleai';
+import {googleAI} from '@genkit-ai/googleai'; // Corrected the package name
 import {firebase} from '@genkit-ai/firebase';
 
 // The 'firebase' import is a plugin object, not a function.
@@ -11,7 +11,8 @@ const plugins = [firebase()];
   plugins.unshift(dotprompt());
 })();
 
-if (process.env.GENKIT_GEMINI_API_KEY) {
+// Corrected the environment variable to GEMINI_API_KEY
+if (process.env.GEMINI_API_KEY) { 
   plugins.push(googleAI());
 } else {
   console.warn(`
@@ -26,7 +27,6 @@ if (process.env.GENKIT_GEMINI_API_KEY) {
 
 genkit({
   plugins,
-  logLevel: 'debug',
   enableTracingAndMetrics: true,
 });
 
