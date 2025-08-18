@@ -42,19 +42,6 @@ export default function RootLayout({
           <BottomNavbar />
         </div>
         <Toaster />
-         <Script id="service-worker-installer" strategy="lazyOnload">
-          {`
-            if ('serviceWorker' in navigator) {
-              window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js').then(registration => {
-                  
-                }).catch(registrationError => {
-                  
-                });
-              });
-            }
-          `}
-        </Script>
       </body>
     </html>
   );
