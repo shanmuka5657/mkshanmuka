@@ -36,11 +36,9 @@ if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'YOUR_API_KEY')
   `);
 }
 
-// Configure Genkit with all the necessary plugins.
-genkit({
+// Apply configuration to the imported Genkit object.
+genkit.configure({
   plugins,
   enableTracingAndMetrics: true, // Recommended for monitoring in Firebase console
 });
 
-// Export the 'ai' object for use in flows and other parts of the application.
-export { ai };

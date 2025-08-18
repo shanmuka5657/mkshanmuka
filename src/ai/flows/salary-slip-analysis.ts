@@ -99,7 +99,7 @@ const analyzeSalarySlipsFlow = ai.defineFlow(
     inputSchema: SalarySlipAnalysisInputSchema,
     outputSchema: SalarySlipAnalysisOutputSchema,
   },
-  async input => {
+  async (input: SalarySlipAnalysisInput) => {
     const {output} = await prompt(input);
     if (!output) {
       throw new Error("AI failed to analyze the salary slips.");
