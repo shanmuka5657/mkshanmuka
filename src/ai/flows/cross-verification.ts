@@ -61,7 +61,7 @@ export async function crossVerifyDocuments(
 
 const prompt = ai.definePrompt({
   name: 'crossVerifyDocumentsPrompt',
-  model: 'gemini-1.5-flash',
+  model: ai.model('googleai/gemini-1.5-flash'),
   input: {schema: CrossVerificationInputSchema},
   output: {schema: CrossVerificationOutputSchema},
   prompt: `You are an expert underwriter specializing in document verification. Your task is to meticulously compare the details from up to three sources: a CIBIL credit report, a bank statement analysis, and a salary slip analysis. Provide a definitive cross-verification report.

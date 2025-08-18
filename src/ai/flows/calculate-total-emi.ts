@@ -43,7 +43,7 @@ export async function calculateTotalEmi(
 
 const prompt = ai.definePrompt({
   name: 'calculateTotalEmiPrompt',
-  model: 'gemini-1.5-flash',
+  model: ai.model('googleai/gemini-1.5-flash'),
   input: {schema: CalculateTotalEmiInputSchema},
   output: {schema: CalculateTotalEmiOutputSchema},
   prompt: `You are a financial data extraction expert. Your task is to meticulously scan the provided credit report text and extract details for all active loans and calculate the total monthly EMI (Equated Monthly Installment).

@@ -118,7 +118,7 @@ export async function getCreditUnderwriting(
 
 const prompt = ai.definePrompt({
   name: 'creditUnderwritingPrompt',
-  model: 'gemini-1.5-flash',
+  model: ai.model('googleai/gemini-1.5-flash'),
   input: {schema: CreditUnderwritingInputSchema},
   output: {schema: CreditUnderwritingOutputSchema},
   prompt: `You are a senior credit underwriter for a major bank in India. Your task is to perform a final, comprehensive underwriting analysis based on a collection of pre-analyzed, structured data. Do NOT use raw text.

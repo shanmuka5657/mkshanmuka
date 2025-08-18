@@ -1,23 +1,33 @@
-import {genkit} from 'genkit';
+import {genkit, ai} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
+import {vertexAI} from '@genkit-ai/vertexai';
+import {firebase} from '@genkit-ai/firebase';
+import {dotprompt} from 'genkit/plugins/dotprompt';
 
-const plugins = [];
+const plugins = [
+  dotprompt(),
+  firebase(),
+];
 
-// This check ensures the app doesn't crash if the API key is missing during deployment.
 if (process.env.GEMINI_API_KEY) {
-    plugins.push(googleAI());
+  plugins.push(googleAI());
+} else if (process.env.GCLOUD_PROJECT) {
+  plugins.push(vertexAI());
 } else {
-    // This warning will appear in your server logs.
-    console.warn(`
+  console.warn(`
 --------------------------------------------------
-- WARNING: GEMINI_API_KEY is not set.
+- WARNING: GEMINI_API_KEY or GCLOUD_PROJECT is not set.
 - The AI features of this app will not work.
-- Get a key from Google AI Studio and add it
-- to the .env file in the root of your project.
+- For local development, get a key from Google AI Studio
+- and add it to the .env file in the root of your project.
 --------------------------------------------------
-    `);
+  `);
 }
 
-export const ai = genkit({
+genkit({
   plugins,
+  logLevel: 'debug',
+  enableTracingAndMetrics: true,
 });
+
+export {ai};

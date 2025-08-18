@@ -55,7 +55,7 @@ export async function getFinancialRiskAssessment(
 
 const prompt = ai.definePrompt({
   name: 'financialRiskPrompt',
-  model: 'gemini-1.5-flash',
+  model: ai.model('googleai/gemini-1.5-flash'),
   input: {schema: FinancialRiskInputSchema},
   output: {schema: FinancialRiskOutputSchema},
   prompt: `You are a financial risk analyst. Your task is to assess the user's overall financial risk based on their structured credit data and estimated income. This is about their broader financial stability. Your analysis must be detailed, non-generic, and provide real-world context in a point-wise format. Do NOT use raw text.
