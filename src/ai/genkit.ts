@@ -1,11 +1,8 @@
 // src/ai/genkit.ts
 
-import * as core from "@genkit-ai/core";
+import { genkit } from 'genkit';
 import { googleAI } from "@genkit-ai/googleai";
-// Import everything from firebase to check what's available
 import * as firebaseProvider from "@genkit-ai/firebase";
-import { z } from "zod";
-
 // Pick correct core initializer
 const genkitInit = (core as any).genkit || (core as any).initGenkit;
 if (!genkitInit) {
@@ -18,6 +15,7 @@ if (!genkitInit) {
 const firebasePlugin =
   (firebaseProvider as any).firebaseAi ||
   (firebaseProvider as any).firebase ||
+import { z } from "zod";
   undefined;
 
 if (!firebasePlugin) {
@@ -26,14 +24,14 @@ if (!firebasePlugin) {
   );
 }
 
-export const ai = genkitInit({
-  logLevel: "debug",
+export const ai = genkit({
   plugins: [
     googleAI({
       apiKey: process.env.GEMINI_API_KEY,
     }),
-    ...(firebasePlugin ? [firebasePlugin()] : []), // only add if exists
+    ...(firebasePlugin ? [firebasePlugin()] : []),
   ],
+  model: googleAI.model('gemini-2.5-flash'),
 });
 
 // Example schema
@@ -44,9 +42,9 @@ export const ExampleSchema = z.object({
 // Test function
 export async function testAI(prompt: string) {
   const response = await ai.generate({
-    model: "googleai/gemini-1.5-flash",
     prompt,
+    output: { schema: ExampleSchema },
   });
 
-  return response.outputText();
+  return response.output;
 }
