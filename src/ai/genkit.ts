@@ -1,21 +1,20 @@
 
-import {genkit, ai} from 'genkit';
-import {googleAI} from '@genkit-ai/googleai'; // Corrected the package name
-import {firebase} from '@genkit-ai/firebase';
+import { genkit, ai } from 'genkit';
+import { googleAI } from '@genkit-ai/googleai';
+import { firebase } from '@genkit-ai/firebase';
+import { dotprompt } from '@genkit-ai/dotprompt';
 
-// The 'firebase' import is a plugin object, not a function.
-// It should be passed directly into the plugins array.
-const plugins = [firebase()];
+// Base plugins that are always included.
+const plugins = [
+  dotprompt(),
+  firebase(),
+];
 
-(async () => {
-  const { dotprompt } = await import('@genkit-ai/dotprompt');
-  plugins.unshift(dotprompt());
-})();
-
-// Corrected the environment variable to GEMINI_API_KEY
-if (process.env.GEMINI_API_KEY) { 
+// Conditionally add the Google AI plugin only if the API key is available.
+if (process.env.GEMINI_API_KEY) {
   plugins.push(googleAI());
 } else {
+  // Log a clear warning if the key is missing, as AI features will not work.
   console.warn(`
 --------------------------------------------------
 - WARNING: GEMINI_API_KEY is not set.
@@ -26,9 +25,11 @@ if (process.env.GEMINI_API_KEY) {
   `);
 }
 
+// Configure Genkit with all the necessary plugins.
 genkit({
   plugins,
-  enableTracingAndMetrics: true,
+  enableTracingAndMetrics: true, // Recommended for monitoring in Firebase console
 });
 
-export {ai};
+// Export the 'ai' object for use in flows and other parts of the application.
+export { ai };
