@@ -1,6 +1,3 @@
----
-// src/ai/genkit.ts
-
 import { genkit } from "@genkit-ai/core";
 import { googleAI } from "@genkit-ai/googleai";
 import { firebaseAi } from "@genkit-ai/firebase";
