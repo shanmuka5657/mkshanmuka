@@ -127,7 +127,7 @@ const analyzeBankStatementFlow = ai.defineFlow(
     inputSchema: BankStatementAnalysisInputSchema,
     outputSchema: BankStatementAnalysisOutputSchema,
   },
-  async input => {
+  async (input: BankStatementAnalysisInput) => {
     const {output} = await prompt(input);
     if (!output) {
       throw new Error("AI failed to analyze the bank statement.");

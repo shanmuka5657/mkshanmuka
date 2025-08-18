@@ -11,7 +11,7 @@ const plugins = [firebase()];
   plugins.unshift(dotprompt());
 })();
 
-if (process.env.GEMINI_API_KEY) {
+if (process.env.GENKIT_GEMINI_API_KEY) {
   plugins.push(googleAI());
 } else {
   console.warn(`
