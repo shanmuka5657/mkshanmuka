@@ -45,8 +45,9 @@ export async function aiAgentChat(
   return aiAgentChatFlow.run(input); // Assuming flow is defined globally now
 }
 
-const aiAgentChatFlow = ai.defineFlow(
-  const genkit = await getGenkit();
+const genkit = await getGenkit();
+
+const aiAgentChatFlow = genkit.defineFlow(
  {
     name: 'aiAgentChatFlow', // Make sure flow name is unique if defining multiple flows
     inputSchema: AiAgentChatInputSchema,
