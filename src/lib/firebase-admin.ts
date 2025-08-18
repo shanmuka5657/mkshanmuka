@@ -11,6 +11,10 @@ let serviceAccount;
 if (process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT) {
     try {
         serviceAccount = JSON.parse(process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT);
+        // This is the crucial fix: replace escaped newlines in the private key.
+        if (serviceAccount.private_key) {
+            serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+        }
     } catch (e) {
         console.warn('Could not parse FIREBASE_ADMIN_SERVICE_ACCOUNT, falling back to default init.');
         serviceAccount = undefined;
