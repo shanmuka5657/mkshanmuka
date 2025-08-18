@@ -1,6 +1,7 @@
 import {genkit, ai} from 'genkit';
-import {googleAI, dotprompt} from '@genkit-ai/googleai';
+import {googleAI} from '@genkit-ai/googleai';
 import {firebase} from '@genkit-ai/firebase';
+import { dotprompt } from '@genkit-ai/dotprompt';
 
 const plugins = [
   dotprompt(),
