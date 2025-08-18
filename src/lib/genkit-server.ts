@@ -14,7 +14,8 @@ export async function getGenkit() {
       isInitialized = true;
     } catch (error) {
       console.error('Genkit initialization failed:', error);
-      throw new Error('AI services unavailable');
+      console.error('Error stack:', error instanceof Error ? error.stack : 'N/A');
+      throw new Error(`AI services unavailable: ${(error as Error).message}`);
     }
   }
   return genkit;
