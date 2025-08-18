@@ -13,6 +13,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
+import {AnalyzeCreditReportInputSchema} from './credit-report-analysis';
 const AnalyzeCreditReportInputSchema = z.object({
   creditReportText: z.string().describe('The text extracted from the credit report.'),
 });
@@ -156,7 +157,7 @@ const analyzeCreditReportFlow = ai.defineFlow(
     inputSchema: AnalyzeCreditReportInputSchema,
     outputSchema: AnalyzeCreditReportOutputSchema,
   },
-  async input => {
+  async (input: AnalyzeCreditReportInput) => {
     const {output} = await prompt(input);
     if (!output) {
       throw new Error("AI failed to analyze the report.");
