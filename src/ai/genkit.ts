@@ -17,16 +17,16 @@ if (!firebasePlugin) {
   );
 }
 
-export const ai, googleAI = genkit({
+export const ai = genkit({
   plugins: [
     googleAI({
       apiKey: process.env.GEMINI_API_KEY,
     }),
     ...(firebasePlugin ? [firebasePlugin()] : []),
   ],
-  model: googleAI.model('gemini-2.5-flash'),
+  // model: googleAI.model("gemini-2.5-flash"), // Moved model configuration here
 });
-
+export { googleAI }; // Export the imported googleAI
 // Example schema: Define the output schema for the AI response using Zod.
 export const ExampleSchema = z.object({
   message: z.string(),

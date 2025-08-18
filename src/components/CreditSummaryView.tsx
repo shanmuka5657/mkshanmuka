@@ -122,7 +122,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
         const totalOutstandingNum = consideredAccounts.reduce((sum, acc) => sum + Number(String(acc.outstanding).replace(/[^0-9.-]+/g,"")), 0);
         const totalEmiNum = consideredAccounts.reduce((sum, acc) => {
             if (acc.status.toLowerCase() !== 'active' && acc.status.toLowerCase() !== 'open') return sum;
-            return sum + (acc.manualEmi ?? Number(String(acc.emi).replace(/[^0-9.-]+/g,"")) || 0);
+            return sum + ((acc.manualEmi ?? Number(String(acc.emi).replace(/[^0-9.-]+/g,""))) || 0);
         }, 0);
 
         const creditUtilization = totalSanctionedNum > 0 ? (totalOutstandingNum / totalSanctionedNum) * 100 : 0;
@@ -296,7 +296,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
     
     const applyChange = (index: number, updates: Partial<EnhancedAccountDetail>, oldAccount: EnhancedAccountDetail, commentText: string | null) => {
         const newAccounts = [...detailedAccounts];
-        const currentEmi = oldAccount.manualEmi ?? Number(String(oldAccount.emi).replace(/[^0-9.-]+/g,"")) || 0;
+        const currentEmi = (oldAccount.manualEmi ?? Number(String(oldAccount.emi).replace(/[^0-9.-]+/g,""))) || 0;
         newAccounts[index] = { ...oldAccount, ...updates };
         setDetailedAccounts(newAccounts);
     
@@ -596,7 +596,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
                                             defaultValue={acc.manualEmi ?? Number(String(acc.emi).replace(/[^0-9.-]+/g,"")) || ''}
                                             onBlur={(e) => {
                                                 const newEmi = e.target.valueAsNumber;
-                                                const currentEmi = acc.manualEmi ?? Number(String(acc.emi).replace(/[^0--9.]+/g,"")) || 0;
+                                                const currentEmi = acc.manualEmi ?? Number(String(acc.emi).replace(/[^0-9.]+/g,"")) || 0;
                                                 if(newEmi !== currentEmi) {
                                                     initiateChange(index, { manualEmi: newEmi })
                                                 }
