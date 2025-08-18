@@ -5,7 +5,6 @@ config();
 import '@/ai/flows/credit-report-analysis.ts'; // MODIFIED - Now the primary analysis flow
 import '@/ai/flows/ai-rating.ts';
 import '@/ai/flows/loan-eligibility.ts';
-// import '@/ai/flows/credit-underwriting.ts'; // Removed
 import '@/ai/flows/financial-risk-assessment.ts';
 import '@/ai/flows/risk-assessment.ts';
 import '@/ai/flows/bank-statement-analysis.ts';
