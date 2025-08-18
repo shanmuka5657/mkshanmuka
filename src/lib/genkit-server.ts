@@ -1,21 +1,9 @@
 // src/lib/genkit-server.ts
 import 'server-only';
-import { initializeGenkit } from '../ai/genkit';
-let genkitInstance;
+import { ai } from '../ai/genkit';
 
-let initializationPromise: Promise<any> | null = null;
-
+// Since the genkit instance is already initialized on import in ../ai/genkit.ts,
+// we can directly export it here.
 export async function getGenkit(): Promise<any> {
- if (!initializationPromise) {
-    initializationPromise = initializeGenkit()
- .then((instance: any) => {
- return instance;
-      })
- .catch((error: any) => {
- console.error('Genkit initialization failed:', error);
- initializationPromise = null; // Allow retry
- throw error;
-      });
-  }
- return initializationPromise;
+  return ai;
 }

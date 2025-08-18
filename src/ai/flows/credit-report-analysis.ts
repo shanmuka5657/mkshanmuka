@@ -11,7 +11,8 @@
  */
 
 import {z} from 'genkit';
-import {getGenkit} from '@/lib/genkit-server'; // Assuming this path is correct
+import {getGenkit} from '@/lib/genkit-server';
+import { gemini15Flash } from "@genkit-ai/googleai";
 
 const AnalyzeCreditReportInputSchema = z.object({
   creditReportText: z.string().describe('The text extracted from the credit report.'),
@@ -106,7 +107,7 @@ export async function analyzeCreditReport(input: AnalyzeCreditReportInput): Prom
     // Define the prompt within the retry function using the obtained genkit instance
     const prompt = genkit.definePrompt({
       name: 'analyzeCreditReportPrompt',
-      model: genkit.ai.model('googleai/gemini-1.5-flash'),
+      model: gemini15Flash,
       input: { schema: AnalyzeCreditReportInputSchema },
       output: { schema: AnalyzeCreditReportOutputSchema },
       prompt: `You are an expert CIBIL report data extractor. Your ONLY job is to read the provided credit report text and extract all specified information in a single, comprehensive pass. Do NOT perform any summarizations or calculations beyond what is explicitly asked for.
