@@ -20,7 +20,10 @@ const nextConfig = {
   experimental: {
     instrumentationHook: false,
     turbo: {}
-  }
+  },
+  serverActions: {
+    bodySizeLimit: '4mb',
+  },
 };
 
 module.exports = nextConfig;
