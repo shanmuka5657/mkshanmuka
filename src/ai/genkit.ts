@@ -8,6 +8,7 @@ export async function initializeGenkit() {
   if (_genkitInstance) return _genkitInstance;
 
   try {
+    console.log('Initializing Genkit: Starting dynamic imports...');
     // Use dynamic imports to avoid Webpack issues
     const [firebasePlugin, dotpromptPlugin] = await Promise.all([
       import('@genkit-ai/firebase').then(m => m.firebase).catch(() => null),
@@ -15,9 +16,11 @@ export async function initializeGenkit() {
     ]);
 
     const plugins = [];
+    console.log('Initializing Genkit: Dynamic imports complete, configuring plugins...');
     if (firebasePlugin) plugins.push(firebasePlugin());
     if (dotpromptPlugin) plugins.push(dotpromptPlugin());
 
+    console.log('Initializing Genkit: Checking for Google AI plugin...');
     // Conditionally add the Google AI plugin only if the API key is available.
     if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'YOUR_API_KEY') {
       plugins.push(googleAI());
@@ -33,11 +36,13 @@ export async function initializeGenkit() {
       `);
     }
 
+    console.log('Initializing Genkit: Configuring Genkit...');
     console.log("GENKIT_API_KEY:", process.env.GEMINI_API_KEY);
     _genkitInstance = genkit.configure({
       plugins,
       enableTracingAndMetrics: true, // Recommended for monitoring in Firebase console
     });
+    console.log('Initializing Genkit: Genkit configured.');
 
     // Initialize if the method exists
     if (typeof _genkitInstance.init === 'function') {
@@ -45,6 +50,7 @@ export async function initializeGenkit() {
     }
 
     return _genkitInstance;
+    console.log('Initializing Genkit: Initialization complete.');
   } catch (error) {
     console.error('Genkit initialization failed:', error);
     throw new Error('Failed to initialize AI services');
