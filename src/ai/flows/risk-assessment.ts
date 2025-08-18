@@ -70,7 +70,7 @@ export async function getRiskAssessment(
 
 const prompt = ai.definePrompt({
   name: 'riskAssessmentPrompt',
-  model: 'googleai/gemini-1.5-flash',
+  model: 'gemini-1.5-flash',
   input: {schema: RiskAssessmentInputSchema},
   output: {schema: RiskAssessmentOutputSchema},
   prompt: `You are an expert credit risk analyst. Your task is to conduct a detailed, technical risk assessment based on the provided structured credit data.

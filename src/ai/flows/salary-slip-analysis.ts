@@ -55,7 +55,7 @@ export async function analyzeSalarySlips(
 
 const prompt = ai.definePrompt({
   name: 'analyzeSalarySlipsPrompt',
-  model: 'googleai/gemini-1.5-flash',
+  model: 'gemini-1.5-flash',
   input: {schema: SalarySlipAnalysisInputSchema},
   output: {schema: SalarySlipAnalysisOutputSchema},
   prompt: `You are a forensic document analyst specializing in verifying Indian salary slips for loan applications. Your task is to meticulously analyze a batch of salary slips, extract key information, and perform a comprehensive, multi-layered fraud detection analysis.
