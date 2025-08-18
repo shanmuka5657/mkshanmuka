@@ -13,7 +13,7 @@ const nextConfig = {
         "node_modules/handlebars/dist/cjs/handlebars.runtime.js"
       ),
       // General alias for the handlebars library
-      handlebars: 'handlebars/dist/cjs/handlebars',
+      handlebars: path.resolve(__dirname, 'node_modules/handlebars/dist/cjs/handlebars.js')
     };
     config.module.noParse = /(require-in-the-middle|handlebars)/;
     
