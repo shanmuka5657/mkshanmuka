@@ -9,7 +9,7 @@
  * - CalculateTotalEmiOutput - The return type for the calculateTotalEmi function.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai, googleAI} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const CalculateTotalEmiInputSchema = z.object({
@@ -44,7 +44,7 @@ export async function calculateTotalEmi(
 const prompt = ai.definePrompt({
   name: 'calculateTotalEmiPrompt',
   model: ai.model('googleai/gemini-1.5-flash'),
-  input: {schema: CalculateTotalEmiInputSchema},
+  model: googleAI.vertexAI('gemini-1.5-flash-001'),
   output: {schema: CalculateTotalEmiOutputSchema},
   prompt: `You are a financial data extraction expert. Your task is to meticulously scan the provided credit report text and extract details for all active loans and calculate the total monthly EMI (Equated Monthly Installment).
 
