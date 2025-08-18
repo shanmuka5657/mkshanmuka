@@ -12,6 +12,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+// TODO: This type might need adjustment based on the actual prompt input.
 import type { RiskAssessmentOutput } from './risk-assessment';
 import type { AnalyzeCreditReportOutput } from './credit-report-analysis';
 
@@ -98,7 +99,7 @@ const aiRatingFlow = ai.defineFlow(
     inputSchema: AiRatingInputSchema,
     outputSchema: AiRatingOutputSchema,
   },
-  async (input) => {
+  async (input: string | object) => {
     const {output} = await prompt(input);
 
     if (!output) {

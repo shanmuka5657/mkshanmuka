@@ -2,6 +2,8 @@ import {genkit, ai} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
 import {firebase} from '@genkit-ai/firebase';
 
+// The 'firebase' import is a plugin object, not a function.
+// It should be passed directly into the plugins array.
 const plugins = [firebase()];
 
 (async () => {
