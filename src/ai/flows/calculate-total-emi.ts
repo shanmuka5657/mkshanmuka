@@ -9,7 +9,7 @@
  * - CalculateTotalEmiOutput - The return type for the calculateTotalEmi function.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai, dotprompt} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const CalculateTotalEmiInputSchema = z.object({
@@ -73,7 +73,7 @@ const calculateTotalEmiFlow = ai.defineFlow(
     inputSchema: CalculateTotalEmiInputSchema,
     outputSchema: CalculateTotalEmiOutputSchema,
   },
-  async (input) => {
+  async (input: CalculateTotalEmiInput) => {
     const {output} = await prompt(input);
     if (!output) {
       throw new Error("AI failed to calculate the total EMI.");
