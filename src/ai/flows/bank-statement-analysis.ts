@@ -9,7 +9,7 @@
  * - BankStatementAnalysisOutput - The return type for the analyzeBankStatement function.
  */
 
-import {ai} from '@/ai/genkit';
+import {getGenkit} from '@/lib/genkit-server';
 import {z} from 'genkit';
 
 const BankStatementAnalysisInputSchema = z.object({
@@ -70,15 +70,20 @@ export type BankStatementAnalysisOutput = z.infer<typeof BankStatementAnalysisOu
 export async function analyzeBankStatement(
   input: BankStatementAnalysisInput
 ): Promise<BankStatementAnalysisOutput> {
-  return analyzeBankStatementFlow(input);
-}
-
-const prompt = ai.definePrompt({
-  name: 'analyzeBankStatementPrompt',
-  model: ai.model('googleai/gemini-1.5-flash'),
-  input: {schema: BankStatementAnalysisInputSchema},
-  output: {schema: BankStatementAnalysisOutputSchema},
-  prompt: `You are an expert financial analyst specializing in Indian bank statements. Your task is to meticulously read the provided bank statement text and extract key financial insights.
+  const genkit = await getGenkit();
+  const flow = genkit.defineFlow(
+    {
+      name: 'analyzeBankStatementFlow',
+      inputSchema: BankStatementAnalysisInputSchema,
+      outputSchema: BankStatementAnalysisOutputSchema,
+    },
+    async (input: BankStatementAnalysisInput) => {
+      const prompt = genkit.ai.definePrompt({
+        name: 'analyzeBankStatementPrompt',
+        model: genkit.ai.model('googleai/gemini-1.5-flash'),
+        input: {schema: BankStatementAnalysisInputSchema},
+        output: {schema: BankStatementAnalysisOutputSchema},
+        prompt: `You are an expert financial analyst specializing in Indian bank statements. Your task is to meticulously read the provided bank statement text and extract key financial insights.
 
 **Extraction & Analysis Tasks:**
 
@@ -103,7 +108,7 @@ const prompt = ai.definePrompt({
     *   You MUST return a formatted currency string (e.g., "₹55,000") for each field. If no such transactions are found for a category, you MUST return "₹0".
 
 4.  **Financial Health (health):**
-    *   Write a concise, one-paragraph 'summary' of the user's financial health based on cash flow, balance trends, and transaction types.
+    *   Write a concise, one-paragraph 'summary' of the overall financial health based on cash flow, balance trends, and transaction types.
     *   List key 'strengths' (e.g., regular savings, consistent income).
     *   List key 'risks' (e.g., high expenditure on non-essentials, check bounces, low average balance).
 
@@ -119,19 +124,15 @@ const prompt = ai.definePrompt({
 
 Provide the final, consolidated output in the required structured format.
 `,
-});
+      });
 
-const analyzeBankStatementFlow = ai.defineFlow(
-  {
-    name: 'analyzeBankStatementFlow',
-    inputSchema: BankStatementAnalysisInputSchema,
-    outputSchema: BankStatementAnalysisOutputSchema,
-  },
-  async (input: BankStatementAnalysisInput) => {
-    const {output} = await prompt(input);
-    if (!output) {
-      throw new Error("AI failed to analyze the bank statement.");
+      const {output} = await prompt(input);
+      if (!output) {
+        throw new Error("AI failed to analyze the bank statement.");
+      }
+      return output;
     }
-    return output;
-  }
-);
+  );
+
+  return flow(input);
+}
