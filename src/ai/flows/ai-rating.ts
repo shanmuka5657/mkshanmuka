@@ -64,7 +64,10 @@ export async function getAiRating(
 ): Promise<AiRatingOutput> {
   return (await aiRatingFlow)(input);
 }
-const prompt = ai.definePrompt({
+
+const aiRatingFlow = (async () => {
+  const genkit = await getGenkit();
+  const prompt = genkit.ai.definePrompt({
   name: 'aiRatingPrompt',
   model: ai.model('googleai/gemini-1.5-flash'),
   input: {schema: AiRatingInputSchema},
@@ -93,8 +96,6 @@ Based on your complete analysis of all the provided structured information, gene
 `,
 });
 
-const aiRatingFlow = (async () => {
-  const genkit = await getGenkit();
   return genkit.defineFlow(
     {
       name: 'aiRatingFlow',
@@ -114,4 +115,5 @@ const aiRatingFlow = (async () => {
       return output;
     }
   );
+
 })();
