@@ -12,11 +12,9 @@ if (process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT) {
     try {
         serviceAccount = JSON.parse(process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT);
     } catch (e) {
-        
+        console.warn('Could not parse FIREBASE_ADMIN_SERVICE_ACCOUNT, falling back to default init.');
         serviceAccount = undefined;
     }
-} else {
-    
 }
 
 if (!getApps().length) {
@@ -27,7 +25,7 @@ if (!getApps().length) {
         });
     } else {
         // Fallback for environments where service account is not set
-        // This may still cause issues if no other auth method is available
+        // This is the default for many cloud environments
         adminApp = initializeApp();
     }
 } else {
