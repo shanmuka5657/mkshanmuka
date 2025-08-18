@@ -10,7 +10,6 @@
  * - AiRatingOutput - The return type for the getAiRating function.
  */
 
-import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 // TODO: This type might need adjustment based on the actual prompt input.
 import type { RiskAssessmentOutput } from './risk-assessment';
@@ -58,12 +57,13 @@ const AiRatingOutputSchema = z.object({
 });
 export type AiRatingOutput = z.infer<typeof AiRatingOutputSchema>;
 
+import { getGenkit } from '@/lib/genkit-server';
+
 export async function getAiRating(
   input: AiRatingInput
 ): Promise<AiRatingOutput> {
-  return aiRatingFlow(input);
+  return (await aiRatingFlow)(input);
 }
-
 const prompt = ai.definePrompt({
   name: 'aiRatingPrompt',
   model: ai.model('googleai/gemini-1.5-flash'),
@@ -93,18 +93,25 @@ Based on your complete analysis of all the provided structured information, gene
 `,
 });
 
-const aiRatingFlow = ai.defineFlow(
-  {
-    name: 'aiRatingFlow',
-    inputSchema: AiRatingInputSchema,
-    outputSchema: AiRatingOutputSchema,
-  },
-  async (input: string | object) => {
-    const {output} = await prompt(input);
+const aiRatingFlow = (async () => {
+  const genkit = await getGenkit();
+  return genkit.defineFlow(
+    {
+      name: 'aiRatingFlow',
+      inputSchema: AiRatingInputSchema,
+      outputSchema: AiRatingOutputSchema,
+    },
+    async (input: string | object) => {
+      // Access the ai model through the genkit instance
+      const { output } = await genkit.ai.generate({
+        model: 'googleai/gemini-1.5-flash',
+        prompt: prompt(input), // Pass the defined prompt
+      });
 
-    if (!output) {
-      throw new Error("AI failed to provide a rating.");
+      if (!output) {
+        throw new Error("AI failed to provide a rating.");
+      }
+      return output;
     }
-    return output;
-  }
-);
+  );
+})();
