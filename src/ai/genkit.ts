@@ -33,6 +33,7 @@ export async function initializeGenkit() {
       `);
     }
 
+    console.log("GENKIT_API_KEY:", process.env.GEMINI_API_KEY);
     _genkitInstance = genkit.configure({
       plugins,
       enableTracingAndMetrics: true, // Recommended for monitoring in Firebase console
