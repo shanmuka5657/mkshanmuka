@@ -1,20 +1,11 @@
-import {genkit, ModelDefinition} from 'genkit';
+import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
 
 const plugins = [];
 
-// Define the models that the app will use
-const gemini15flash: ModelDefinition = {
-    name: 'gemini-1.5-flash',
-    type: 'generative',
-    version: '1.5',
-};
-
 // This check ensures the app doesn't crash if the API key is missing during deployment.
 if (process.env.GEMINI_API_KEY) {
-    plugins.push(googleAI({
-        models: [gemini15flash] // Explicitly define the model
-    }));
+    plugins.push(googleAI());
 } else {
     // This warning will appear in your server logs.
     console.warn(`
