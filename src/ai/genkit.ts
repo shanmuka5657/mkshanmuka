@@ -1,31 +1,42 @@
+// src/ai/genkit.ts
+
 import { genkit } from "@genkit-ai/core";
 import { googleAI } from "@genkit-ai/googleai";
-import { firebaseAi } from "@genkit-ai/firebase";
+// Import everything from firebase to check what's available
+import * as firebaseProvider from "@genkit-ai/firebase";
 import { z } from "zod";
 
-// ✅ Initialize Genkit with proper providers
-export const ai = genkit({
-  // Logging helps during debugging
-  logLevel: "debug",
+// Pick correct function depending on package version
+const firebasePlugin =
+  (firebaseProvider as any).firebaseAi ||
+  (firebaseProvider as any).firebase ||
+  undefined;
 
-  // Providers
+if (!firebasePlugin) {
+  console.warn(
+    "[Genkit] Firebase plugin not found. Check your @genkit-ai/firebase version."
+  );
+}
+
+export const ai = genkit({
+  logLevel: "debug",
   plugins: [
     googleAI({
-      apiKey: process.env.GEMINI_API_KEY, // <-- Make sure this env var is set
+      apiKey: process.env.GEMINI_API_KEY,
     }),
-    firebaseAi(), // <-- Correct import/function (not firebase())
+    ...(firebasePlugin ? [firebasePlugin()] : []), // only add if exists
   ],
 });
 
-// ✅ Example schema (optional, good practice)
+// Example schema
 export const ExampleSchema = z.object({
   message: z.string(),
 });
 
-// ✅ Example model call (you can remove if unused)
+// Test function
 export async function testAI(prompt: string) {
   const response = await ai.generate({
-    model: "googleai/gemini-1.5-flash", // pick your Gemini model here
+    model: "googleai/gemini-1.5-flash",
     prompt,
   });
 

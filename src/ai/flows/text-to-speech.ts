@@ -49,7 +49,7 @@ export const textToSpeech = ai.defineFlow(
     inputSchema: z.string(),
     outputSchema: TextToSpeechOutputSchema,
   },
-  async (text) => {
+ async (text: string) => {
     const { media } = await ai.generate({
       model: googleAI.model('gemini-2.5-flash-preview-tts'),
       config: {
