@@ -1,12 +1,13 @@
 import {genkit, ai} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
 import {firebase} from '@genkit-ai/firebase';
-import { dotprompt } from '@genkit-ai/dotprompt';
 
-const plugins = [
-  dotprompt(),
-  firebase(),
-];
+const plugins = [firebase()];
+
+(async () => {
+  const { dotprompt } = await import('@genkit-ai/dotprompt');
+  plugins.unshift(dotprompt());
+})();
 
 if (process.env.GEMINI_API_KEY) {
   plugins.push(googleAI());
