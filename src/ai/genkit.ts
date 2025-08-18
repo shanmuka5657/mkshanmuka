@@ -1,58 +1,36 @@
+---
+// src/ai/genkit.ts
 
-import { genkit, ai } from 'genkit';
-import { googleAI } from '@genkit-ai/googleai';
+import { genkit } from "@genkit-ai/core";
+import { googleAI } from "@genkit-ai/googleai";
+import { firebaseAi } from "@genkit-ai/firebase";
+import { z } from "zod";
 
-let _genkitInstance;
+// ✅ Initialize Genkit with proper providers
+export const ai = genkit({
+  // Logging helps during debugging
+  logLevel: "debug",
 
-export async function initializeGenkit() {
-  if (_genkitInstance) return _genkitInstance;
+  // Providers
+  plugins: [
+    googleAI({
+      apiKey: process.env.GEMINI_API_KEY, // <-- Make sure this env var is set
+    }),
+    firebaseAi(), // <-- Correct import/function (not firebase())
+  ],
+});
 
-  try {
-    console.log('Initializing Genkit: Starting dynamic imports...');
-    // Use dynamic imports to avoid Webpack issues
-    const [firebasePlugin, dotpromptPlugin] = await Promise.all([
-      import('@genkit-ai/firebase').then(m => m.firebase).catch(() => null),
-      import('@genkit-ai/dotprompt').then(m => m.dotprompt).catch(() => null)
-    ]);
+// ✅ Example schema (optional, good practice)
+export const ExampleSchema = z.object({
+  message: z.string(),
+});
 
-    const plugins = [];
-    console.log('Initializing Genkit: Dynamic imports complete, configuring plugins...');
-    if (firebasePlugin) plugins.push(firebasePlugin());
-    if (dotpromptPlugin) plugins.push(dotpromptPlugin());
+// ✅ Example model call (you can remove if unused)
+export async function testAI(prompt: string) {
+  const response = await ai.generate({
+    model: "googleai/gemini-1.5-flash", // pick your Gemini model here
+    prompt,
+  });
 
-    console.log('Initializing Genkit: Checking for Google AI plugin...');
-    // Conditionally add the Google AI plugin only if the API key is available.
-    if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'YOUR_API_KEY') {
-      plugins.push(googleAI());
-    } else {
-      // Log a clear warning if the key is missing, as AI features will not work.
-      console.warn(`
---------------------------------------------------
-- WARNING: GEMINI_API_KEY is not set.
-- The AI features of this app will not work.
-- For local development, get a key from Google AI Studio
-- and add it to the .env file in the root of your project.
---------------------------------------------------
-      `);
-    }
-
-    console.log('Initializing Genkit: Configuring Genkit...');
-    console.log("GENKIT_API_KEY:", process.env.GEMINI_API_KEY);
-    _genkitInstance = genkit.configure({
-      plugins,
-      enableTracingAndMetrics: true, // Recommended for monitoring in Firebase console
-    });
-    console.log('Initializing Genkit: Genkit configured.');
-
-    // Initialize if the method exists
-    if (typeof _genkitInstance.init === 'function') {
-      await _genkitInstance.init();
-    }
-
-    return _genkitInstance;
-    console.log('Initializing Genkit: Initialization complete.');
-  } catch (error) {
-    console.error('Genkit initialization failed:', error);
-    throw new Error('Failed to initialize AI services');
-  }
+  return response.outputText();
 }
