@@ -45,9 +45,7 @@ export async function aiAgentChat(
   return aiAgentChatFlow.run(input); // Assuming flow is defined globally now
 }
 
-// Define the flow using the genkit instance
-const aiAgentChatFlow = (async () => {
- {
+const aiAgentChatFlow = getGenkit().then(genkit => genkit.defineFlow({
     name: 'aiAgentChatFlow', // Make sure flow name is unique if defining multiple flows
     inputSchema: AiAgentChatInputSchema,
     outputSchema: AiAgentChatOutputSchema,
@@ -104,4 +102,4 @@ The user has uploaded their bank statement. You have access to this document. Us
         audioDataUri,
     };
   }
-})();
+}));
