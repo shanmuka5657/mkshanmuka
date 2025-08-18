@@ -100,7 +100,7 @@ const financialRiskFlow = ai.defineFlow(
     inputSchema: FinancialRiskInputSchema,
     outputSchema: FinancialRiskOutputSchema,
   },
-  async (input) => {
+  async (input: FinancialRiskInput) => {
     const {output} = await prompt(input);
     if (!output) {
       throw new Error("AI failed to assess financial risk.");
