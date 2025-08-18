@@ -30,6 +30,7 @@ export function BottomNavbar() {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
               className={cn(
                 'inline-flex flex-col items-center justify-center px-5 hover:bg-muted group',
                 isActive ? 'text-primary' : 'text-muted-foreground'
