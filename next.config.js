@@ -7,11 +7,13 @@ const nextConfig = {
     // Fix handlebars warnings and resolution issues
     config.resolve.alias = {
       ...config.resolve.alias,
-      handlebars: 'handlebars/dist/cjs/handlebars',
-      'handlebars/runtime': path.resolve(
+      // When handlebars.js tries to require('./handlebars.runtime'), this alias intercepts it.
+      './handlebars.runtime': path.resolve(
         __dirname,
         "node_modules/handlebars/dist/cjs/handlebars.runtime.js"
       ),
+      // General alias for the handlebars library
+      handlebars: 'handlebars/dist/cjs/handlebars',
     };
     config.module.noParse = /(require-in-the-middle|handlebars)/;
     
