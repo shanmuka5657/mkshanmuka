@@ -115,7 +115,7 @@ const riskAssessmentFlow = ai.defineFlow(
     inputSchema: RiskAssessmentInputSchema,
     outputSchema: RiskAssessmentOutputSchema,
   },
-  async (input) => {
+  async (input: RiskAssessmentInput) => {
     const {output} = await prompt(input);
     if (!output) {
       throw new Error("AI failed to provide a risk assessment.");
