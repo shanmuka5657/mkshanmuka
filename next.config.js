@@ -1,4 +1,6 @@
 
+const path = require("path");
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   webpack: (config, { isServer }) => {
@@ -6,6 +8,10 @@ const nextConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       handlebars: 'handlebars/dist/cjs/handlebars',
+      'handlebars/runtime': path.resolve(
+        __dirname,
+        "node_modules/handlebars/dist/cjs/handlebars.runtime.js"
+      ),
     };
     config.module.noParse = /(require-in-the-middle|handlebars)/;
     
