@@ -10,7 +10,7 @@
  * - AnalyzeCreditReportOutput - The return type for the analyzeCreditReport function.
  */
 
-import {z, GenkitClient} from 'genkit';
+import {z} from 'genkit';
 import {getGenkit} from '@/lib/genkit-server'; // Assuming this path is correct
 
 const AnalyzeCreditReportInputSchema = z.object({
@@ -102,7 +102,7 @@ import { withGenkitRetry } from '@/lib/genkit-recovery'; // Assuming this path i
 
 // Function to analyze the credit report using the Genkit flow with retry
 export async function analyzeCreditReport(input: AnalyzeCreditReportInput): Promise<AnalyzeCreditReportOutput> {
-  return withGenkitRetry(async (genkit: GenkitClient) => {
+  return withGenkitRetry(async (genkit) => {
     // Define the prompt within the retry function using the obtained genkit instance
     const prompt = genkit.definePrompt({
       name: 'analyzeCreditReportPrompt',

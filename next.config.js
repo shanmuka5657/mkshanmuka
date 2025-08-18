@@ -25,9 +25,6 @@ const nextConfig = {
     }
     return config;
   },
-  transpilePackages: [
-    '@genkit-ai',
-  ],
   experimental: {
     serverActions: {
       allowedOrigins: ['localhost:3000', 'your-production-domain.com']
@@ -41,4 +38,3 @@ const nextConfig = {
 };
 
 module.exports = nextConfig;
-
