@@ -17,7 +17,7 @@ if (!firebasePlugin) {
   );
 }
 
-export const ai = genkit({
+export const ai, googleAI = genkit({
   plugins: [
     googleAI({
       apiKey: process.env.GEMINI_API_KEY,
