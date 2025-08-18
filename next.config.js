@@ -23,7 +23,7 @@ const nextConfig = {
     turbo: {}
   },
   serverActions: {
-    bodySizeLimit: '4mb',
+    bodySizeLimit: '100mb',
   },
 };
 
