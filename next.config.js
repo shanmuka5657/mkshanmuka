@@ -14,7 +14,11 @@ const nextConfig = {
     }
     return config;
   },
+  transpilePackages: [
+    '@genkit-ai',
+  ],
   experimental: {
+    serverActions: true,
     serverComponentsExternalPackages: [
       '@genkit-ai/firebase',
       '@genkit-ai/googleai',

@@ -10,8 +10,8 @@
  * - AnalyzeCreditReportOutput - The return type for the analyzeCreditReport function.
  */
 
-import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import {getGenkit} from '@/lib/genkit-server'; // Assuming this path is correct
 
 const AnalyzeCreditReportInputSchema = z.object({
   creditReportText: z.string().describe('The text extracted from the credit report.'),
@@ -98,16 +98,17 @@ const AnalyzeCreditReportOutputSchema = z.object({
 });
 export type AnalyzeCreditReportOutput = z.infer<typeof AnalyzeCreditReportOutputSchema>;
 
+// Function to analyze the credit report using the Genkit flow
 export async function analyzeCreditReport(input: AnalyzeCreditReportInput): Promise<AnalyzeCreditReportOutput> {
-  return analyzeCreditReportFlow(input);
-}
+  const genkit = await getGenkit(); // Get the initialized Genkit instance
 
-const prompt = ai.definePrompt({
-  name: 'analyzeCreditReportPrompt',
-  model: ai.model('googleai/gemini-1.5-flash'),
-  input: {schema: AnalyzeCreditReportInputSchema},
-  output: {schema: AnalyzeCreditReportOutputSchema},
-  prompt: `You are an expert CIBIL report data extractor. Your ONLY job is to read the provided credit report text and extract all specified information in a single, comprehensive pass. Do NOT perform any summarizations or calculations beyond what is explicitly asked for.
+  // Define the prompt within the function using the obtained genkit instance
+  const prompt = genkit.definePrompt({
+    name: 'analyzeCreditReportPrompt',
+    model: genkit.ai.model('googleai/gemini-1.5-flash'),
+    input: {schema: AnalyzeCreditReportInputSchema},
+    output: {schema: AnalyzeCreditReportOutputSchema},
+    prompt: `You are an expert CIBIL report data extractor. Your ONLY job is to read the provided credit report text and extract all specified information in a single, comprehensive pass. Do NOT perform any summarizations or calculations beyond what is explicitly asked for.
 
 **CRITICAL RULE:** For every field you are asked to extract, if you cannot find the information in the provided text, you MUST return "N/A" for strings, 0 for numbers, or an empty array for lists. You must not leave any field blank or fail to return a value.
 
@@ -150,17 +151,22 @@ Provide the final, consolidated output in the required structured format.
 `,
 });
 
-const analyzeCreditReportFlow = ai.defineFlow(
-  {
+  // Define the flow within the function using the obtained genkit instance
+  const analyzeCreditReportFlow = genkit.defineFlow(
+    {
     name: 'analyzeCreditReportFlow',
     inputSchema: AnalyzeCreditReportInputSchema,
     outputSchema: AnalyzeCreditReportOutputSchema,
-  },
-  async (input: AnalyzeCreditReportInput) => {
+    },
+    async (input: AnalyzeCreditReportInput) => {
     const {output} = await prompt(input);
     if (!output) {
       throw new Error("AI failed to analyze the report.");
     }
     return output;
-  }
-);
+    }
+  );
+
+  // Execute the flow and return the result
+  return analyzeCreditReportFlow(input);
+}
