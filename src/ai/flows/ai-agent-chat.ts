@@ -9,7 +9,7 @@
  * - AiAgentChatOutput - The return type for the chat function.
  */
 
-import { ai } from '@/ai/genkit';
+import { getGenkit } from '@/lib/genkit-server';
 import { z } from 'genkit';
 import { textToSpeech } from './text-to-speech';
 
@@ -40,10 +40,14 @@ export type AiAgentChatOutput = z.infer<typeof AiAgentChatOutputSchema>;
 export async function aiAgentChat(
   input: AiAgentChatInput
 ): Promise<AiAgentChatOutput> {
-  return aiAgentChatFlow(input);
+  const genkit = await getGenkit();
+  // Pass the genkit instance to the flow if needed, or define flows globally if they don't need instance access
+  return aiAgentChatFlow.run(input); // Assuming flow is defined globally now
 }
 
-const aiAgentChatFlow = ai.defineFlow(
+const aiAgentChatFlow = (async () => {
+  const genkit = await getGenkit();
+  return genkit.defineFlow(
   {
     name: 'aiAgentChatFlow',
     inputSchema: AiAgentChatInputSchema,
@@ -72,7 +76,7 @@ The user has uploaded their bank statement. You have access to this document. Us
     
     If the user provides an image or document in their message, use it as additional context for your answer.`;
 
-    const llmResponse = await ai.generate({
+    const llmResponse = await genkit.ai.generate({
       model: 'gemini-1.5-flash',
       messages: [
           { role: 'system', content: [{ text: systemPrompt }] },
@@ -102,3 +106,4 @@ The user has uploaded their bank statement. You have access to this document. Us
     };
   }
 );
+})();
