@@ -11,6 +11,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import type { AnalyzeCreditReportOutput } from './credit-report-analysis';
+import { googleAI } from 'genkit/plugins';
 
 const FinancialRiskInputSchema = z.object({
   analysisResult: z
