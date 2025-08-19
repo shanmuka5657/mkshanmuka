@@ -76,6 +76,7 @@ export default function DashboardPage() {
                   <TableRow>
                     <TableHead>Customer Name</TableHead>
                     <TableHead>PAN</TableHead>
+                    <TableHead>Mobile Number</TableHead>
                     <TableHead>CIBIL Score</TableHead>
                     <TableHead>Total EMI</TableHead>
                     <TableHead>Active Loans</TableHead>
@@ -87,6 +88,7 @@ export default function DashboardPage() {
                     <TableRow key={report.id}>
                       <TableCell className="font-medium">{report.name}</TableCell>
                       <TableCell>{report.pan}</TableCell>
+                      <TableCell>{report.mobileNumber}</TableCell>
                       <TableCell>
                         <Badge variant={!report.cibilScore || report.cibilScore < 650 ? "destructive" : "success"}>
                           {report.cibilScore || 'N/A'}

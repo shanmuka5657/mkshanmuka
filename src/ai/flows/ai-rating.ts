@@ -65,7 +65,7 @@ export async function getAiRating(
   return (await aiRatingFlow)(input);
 }
 
-const aiRatingFlow = (async () => {
+const aiRatingFlow = async () => {
   const genkit = await getGenkit();
   const prompt = genkit.ai.definePrompt({
   name: 'aiRatingPrompt',
@@ -115,4 +115,4 @@ Based on your complete analysis of all the provided structured information, gene
     }
   );
 
-})();
+};
