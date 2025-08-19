@@ -62,7 +62,8 @@ import { getGenkit } from '@/lib/genkit-server';
 export async function getAiRating(
   input: AiRatingInput
 ): Promise<AiRatingOutput> {
-  return (await aiRatingFlow)(input);
+  const flow = await aiRatingFlow();
+  return flow(input);
 }
 
 const aiRatingFlow = async () => {
