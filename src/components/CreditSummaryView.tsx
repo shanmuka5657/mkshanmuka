@@ -92,6 +92,18 @@ const DpdCircle = ({ value }: { value: string | number }) => {
     )
 }
 
+const getEmiValue = (acc: EnhancedAccountDetail | AccountDetail): number => {
+    // Use nullish coalescing for manualEmi preference
+    if (acc.manualEmi !== undefined && acc.manualEmi !== null) {
+        return acc.manualEmi;
+    }
+    // Safely parse EMI string, default to 0 if parsing fails or string is nullish
+    const emiString = String(acc.emi ?? '');
+    const emiNumber = parseFloat(emiString.replace(/[^0-9.]+/g, ""));
+    return isNaN(emiNumber) ? 0 : emiNumber;
+};
+
+
 type OwnershipType = 'Individual' | 'Guarantor' | 'Joint';
 
 export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewProps) {
@@ -120,9 +132,9 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
         const consideredAccounts = detailedAccounts.filter(acc => acc.isConsidered);
         const totalSanctionedNum = consideredAccounts.reduce((sum, acc) => sum + Number(String(acc.sanctioned).replace(/[^0-9.-]+/g,"")), 0);
         const totalOutstandingNum = consideredAccounts.reduce((sum, acc) => sum + Number(String(acc.outstanding).replace(/[^0-9.-]+/g,"")), 0);
-        const totalEmiNum = detailedAccounts.reduce((sum, acc) => {
+        const totalEmiNum = activeAccounts.reduce((sum, acc) => {
             if (acc.status.toLowerCase() !== 'active' && acc.status.toLowerCase() !== 'open') return sum;
-            return sum + ((acc.manualEmi ?? Number(String(acc.emi).replace(/[^0-9.-]+/g,"")) ) || 0);
+            return sum + getEmiValue(acc);
         }, 0);
 
         const creditUtilization = totalSanctionedNum > 0 ? (totalOutstandingNum / totalSanctionedNum) * 100 : 0;
@@ -296,7 +308,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
     
     const applyChange = (index: number, updates: Partial<EnhancedAccountDetail>, oldAccount: EnhancedAccountDetail, commentText: string | null) => {
         const newAccounts = [...detailedAccounts];
-        const currentEmi = oldAccount.manualEmi ?? (Number(String(oldAccount.emi).replace(/[^0-9.-]+/g,"")) || 0);
+        const currentEmi = getEmiValue(oldAccount);
         newAccounts[index] = { ...oldAccount, ...updates };
         setDetailedAccounts(newAccounts);
     
@@ -593,7 +605,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
                                         <Input
                                             type="number"
                                             className="w-24 h-8 text-right"
-                                            defaultValue={(acc.manualEmi ?? Number(String(acc.emi).replace(/[^0-9.-]+/g,""))) || 0}
+                                            defaultValue={getEmiValue(acc)}
                                             onBlur={(e) => {
                                                 const newEmi = e.target.valueAsNumber;
                                                 const currentEmi = acc.manualEmi ?? Number(String(acc.emi).replace(/[^0-9.]+/g,"")) || 0;
@@ -604,7 +616,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
                                             placeholder="Enter EMI"
                                         />
                                     ) : (
-                                        `₹${(acc.manualEmi ?? Number(String(acc.emi).replace(/[^0-9.-]+/g,"")) || 0).toLocaleString('en-IN')}`
+                                        `₹${getEmiValue(acc).toLocaleString('en-IN')}`
                                     ) }
                                 </TableCell>
                             </TableRow>
