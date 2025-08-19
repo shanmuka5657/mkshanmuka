@@ -295,7 +295,7 @@ export default function CreditPage() {
                 
                 {isReadyForAnalysis && (
                     <div className="mt-4">
-                        <Button onClick={handleAnalyzeCreditReport} size="lg" disabled={loading}>
+                        <Button onClick={handleAnalyzeCreditReport} size="lg" disabled={loading || !user}>
                             <Sparkles className="mr-2 h-5 w-5"/>
                             Analyze & Save Report
                         </Button>

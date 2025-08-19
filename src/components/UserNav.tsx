@@ -14,11 +14,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { auth } from "@/lib/firebase-client";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, User } from "lucide-react";
+import { LogIn, LogOut, User } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 
 export function UserNav() {
@@ -49,11 +50,20 @@ export function UserNav() {
   };
 
   if (!isClient || loading) {
-    return null; // Don't render anything on the server or while loading
+    return (
+      <div className="h-8 w-8 bg-muted rounded-full animate-pulse" />
+    );
   }
 
   if (!user) {
-    return null; // Don't show the nav if not logged in
+    return (
+      <Button asChild>
+        <Link href="/login">
+          <LogIn className="mr-2" />
+          Login
+        </Link>
+      </Button>
+    );
   }
 
   return (
