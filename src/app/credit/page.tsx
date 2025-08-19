@@ -120,7 +120,7 @@ export default function CreditPage() {
     setCreditFileName('');
     setRawText('');
     setIsProcessing(false);
-    setAnalysisResult(null); // This was the missing line
+    setAnalysisResult(null);
     setIsAnalyzing(false);
     setActiveView(null);
     setIsTextExtracted(false);
