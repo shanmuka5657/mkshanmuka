@@ -605,7 +605,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
                                         />
                                     ) : (
                                         `₹${(acc.manualEmi ?? Number(String(acc.emi).replace(/[^0-9.-]+/g,"")) || 0).toLocaleString('en-IN')}`
-                                    )}
+                                    ) }
                                 </TableCell>
                             </TableRow>
                             <TableRow className={!acc.isConsidered ? 'bg-muted/50' : ''}>
