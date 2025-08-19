@@ -24,7 +24,8 @@ export interface CreditReportSummary {
   totalEmi: number;
   activeLoanCount: number;
   createdAt: Timestamp;
-  fullAnalysis?: AnalyzeCreditReportOutput; // The full analysis is now optional here
+  fullAnalysis?: AnalyzeCreditReportOutput;
+  pdfDownloadUrl?: string;
 }
 
 /**
