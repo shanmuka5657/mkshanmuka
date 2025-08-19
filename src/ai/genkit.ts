@@ -25,7 +25,6 @@ export const ai = genkit({
     }),
     ...(firebasePlugin ? [firebasePlugin()] : []),
   ],
-  // model: googleAI.model("gemini-2.5-flash"), // Moved model configuration here
 });
 export { googleAI }; // Export the imported googleAI
 // Example schema: Define the output schema for the AI response using Zod.
@@ -36,6 +35,7 @@ export const ExampleSchema = z.object({
 // Test function: A helper function to demonstrate calling the AI with a prompt and schema.
 export async function testAI(prompt: string) {
   const response = await ai.generate({
+    model: "gemini-1.5-flash",
     prompt, // The input prompt for the AI.
     output: { schema: ExampleSchema },
   });
