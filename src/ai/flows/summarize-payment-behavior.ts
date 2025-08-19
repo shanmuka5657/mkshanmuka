@@ -33,6 +33,7 @@ export async function summarizePaymentBehavior(
 
   const prompt = ai.definePrompt({
     name: 'summarizePaymentBehaviorPrompt',
+    model: 'googleai/gemini-1.5-flash',
     input: { schema: SummarizePaymentBehaviorInputSchema },
     output: { schema: SummarizePaymentBehaviorOutputSchema },
     prompt: `You are a helpful credit analyst. Your task is to write a brief, user-friendly summary of a person's payment behavior based on their payment history data and a pre-calculated rating.
