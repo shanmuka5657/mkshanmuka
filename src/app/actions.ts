@@ -10,13 +10,11 @@ import { FieldValue } from 'firebase-admin/firestore';
  * This now saves the full analysis object and the PDF download URL.
  * This is a Server Action and runs only on the server.
  * @param analysisResult The full analysis output from the AI.
- * @param cibilScore The CIBIL score extracted from the report.
  * @param userId The ID of the user saving the report.
  * @param pdfDownloadUrl Optional URL to the uploaded PDF in Firebase Storage.
  */
 export async function saveReportSummaryAction(
   analysisResult: AnalyzeCreditReportOutput,
-  cibilScore: number | null,
   userId: string,
   pdfDownloadUrl?: string,
 ): Promise<{id: string}> {
@@ -27,7 +25,7 @@ export async function saveReportSummaryAction(
     name: analysisResult.customerDetails.name,
     pan: analysisResult.customerDetails.pan,
     mobileNumber: analysisResult.customerDetails.mobileNumber,
-    cibilScore: cibilScore,
+    cibilScore: analysisResult.cibilScore,
     totalEmi: analysisResult.emiDetails.totalEmi,
     activeLoanCount: analysisResult.emiDetails.activeLoans.length,
     createdAt: FieldValue.serverTimestamp(), // Use server-side timestamp

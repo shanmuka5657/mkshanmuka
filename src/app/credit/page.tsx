@@ -191,7 +191,7 @@ export default function CreditPage() {
         const downloadURL = await getDownloadURL(uploadResult.ref);
         
         // Step 3: Save summary with download URL using Server Action
-        await saveReportSummaryAction(output, output.cibilScore, user.uid, downloadURL);
+        await saveReportSummaryAction(output, user.uid, downloadURL);
         
         // Step 4: Show success toast
         toast({ 
