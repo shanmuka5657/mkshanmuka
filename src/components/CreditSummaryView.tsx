@@ -92,15 +92,28 @@ const DpdCircle = ({ value }: { value: string | number }) => {
     )
 }
 
+function isEnhancedAccountDetail(acc: AccountType | EnhancedAccountDetail): acc is EnhancedAccountDetail {
+    return (acc as EnhancedAccountDetail).isConsidered !== undefined;
+}
+
 const getEmiValue = (acc: EnhancedAccountDetail | AccountDetail): number => {
-    // Use nullish coalescing for manualEmi preference
-    if (acc.manualEmi !== undefined && acc.manualEmi !== null) {
-        return acc.manualEmi;
+    try {
+        let manualEmiValue: number | null | undefined = undefined;
+        if (isEnhancedAccountDetail(acc)) {
+            manualEmiValue = acc.manualEmi;
+        }
+
+        // Safely parse EMI string, defaulting to '0' if acc.emi is null or undefined
+        const emiString = String(acc.emi ?? '0');
+        // Remove non-numeric characters except for the decimal point
+        const parsedEmi = Number(emiString.replace(/[^0-9.]+/g, ""));
+
+        // Use nullish coalescing: prefer manualEmiValue if it's not null or undefined
+        // Then use parsedEmi, and finally fallback to 0 if parsedEmi is NaN or falsy
+        return (isNaN(parsedEmi) ? 0 : (manualEmiValue ?? parsedEmi)) || 0;
+    } catch {
+        return 0; // Return 0 in case of any unexpected errors during parsing
     }
-    // Safely parse EMI string, default to 0 if parsing fails or string is nullish
-    const emiString = String(acc.emi ?? '');
-    const emiNumber = parseFloat(emiString.replace(/[^0-9.]+/g, ""));
-    return isNaN(emiNumber) ? 0 : emiNumber;
 };
 
 
@@ -608,8 +621,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
                                             defaultValue={getEmiValue(acc)}
                                             onBlur={(e) => {
                                                 const newEmi = e.target.valueAsNumber;
-                                                const currentEmi = acc.manualEmi ?? Number(String(acc.emi).replace(/[^0-9.]+/g,"")) || 0;
-                                                if (newEmi !== (acc.manualEmi ?? (Number(String(acc.emi).replace(/[^0-9.]+/g,"")) || 0))) {
+                                                if (newEmi !== getEmiValue(acc)) {
                                                     initiateChange(index, { manualEmi: newEmi });
                                                 }
                                             }}
