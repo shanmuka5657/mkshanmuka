@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, FileText } from 'lucide-react';
+import { Loader2, FileText, Download } from 'lucide-react';
 import { getRecentReports, CreditReportSummary } from '@/lib/firestore-service';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -75,17 +75,20 @@ export default function DashboardPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Customer Name</TableHead>
+                    <TableHead>Mobile</TableHead>
                     <TableHead>PAN</TableHead>
                     <TableHead>CIBIL Score</TableHead>
                     <TableHead>Total EMI</TableHead>
                     <TableHead>Active Loans</TableHead>
                     <TableHead>Date Added</TableHead>
+                    <TableHead className="text-right">Report</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {reports.map((report) => (
                     <TableRow key={report.id}>
                       <TableCell className="font-medium">{report.name}</TableCell>
+                      <TableCell>{report.mobileNumber}</TableCell>
                       <TableCell>{report.pan}</TableCell>
                       <TableCell>
                         <Badge variant={!report.cibilScore || report.cibilScore < 650 ? "destructive" : "success"}>
@@ -95,6 +98,18 @@ export default function DashboardPage() {
                        <TableCell>₹{report.totalEmi.toLocaleString('en-IN')}</TableCell>
                       <TableCell>{report.activeLoanCount}</TableCell>
                       <TableCell>{report.createdAt.toDate().toLocaleDateString()}</TableCell>
+                      <TableCell className="text-right">
+                        {report.pdfDownloadUrl ? (
+                          <Button asChild variant="outline" size="sm">
+                            <a href={report.pdfDownloadUrl} target="_blank" rel="noopener noreferrer">
+                              <Download className="mr-2 h-3 w-3" />
+                              PDF
+                            </a>
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">No PDF</span>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

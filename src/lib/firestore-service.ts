@@ -21,6 +21,7 @@ export interface CreditReportSummary {
   totalEmi: number;
   activeLoanCount: number;
   createdAt: Timestamp;
+  pdfDownloadUrl?: string;
 }
 
 /**

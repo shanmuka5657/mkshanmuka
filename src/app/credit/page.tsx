@@ -14,7 +14,8 @@ import {
   Sparkles
 } from 'lucide-react';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth } from '@/lib/firebase-client';
+import { auth, storage } from '@/lib/firebase-client';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -165,7 +166,7 @@ export default function CreditPage() {
   };
   
   const handleAnalyzeCreditReport = async () => {
-    if (!rawText) {
+    if (!rawText || !creditFile) {
         toast({ variant: 'destructive', title: 'Error', description: 'No report text to analyze.' });
         return;
     }
@@ -186,7 +187,13 @@ export default function CreditPage() {
 
         // Then, attempt to save the report
         try {
-            await saveReportSummaryAction(output, output.cibilScore, user.uid);
+            // 1. Upload PDF to Firebase Storage
+            const storageRef = ref(storage, `credit_reports/${user.uid}/${Date.now()}_${creditFile.name}`);
+            const uploadResult = await uploadBytes(storageRef, creditFile);
+            const downloadURL = await getDownloadURL(uploadResult.ref);
+            
+            // 2. Save summary with download URL
+            await saveReportSummaryAction(output, output.cibilScore, user.uid, downloadURL);
             
             // Only show success toast after saving is successful
             toast({ 
@@ -201,12 +208,12 @@ export default function CreditPage() {
                 .catch(e => console.error("Failed to create training candidate:", e));
 
         } catch (e: any) {
-            console.error('Save to DB error:', e);
+            console.error('Save to DB or Storage error:', e);
             // If saving fails, show specific error
             toast({ 
                 variant: 'destructive', 
                 title: 'Could not save report', 
-                description: e.message || 'There was an issue saving the extracted details to the database.' 
+                description: e.message || 'There was an issue saving the extracted details or uploading the file.' 
             });
         }
 
