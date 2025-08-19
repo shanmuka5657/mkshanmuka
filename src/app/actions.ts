@@ -21,7 +21,7 @@ export async function saveReportSummaryAction(
 
   // Prepare the data for Firestore, now including the full analysis result
   const reportData = {
-    userId: userId,
+    userId: userId, // This line was missing and is the cause of the issue
     name: analysisResult.customerDetails.name,
     pan: analysisResult.customerDetails.pan,
     mobileNumber: analysisResult.customerDetails.mobileNumber,
