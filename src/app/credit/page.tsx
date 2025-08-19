@@ -176,28 +176,39 @@ export default function CreditPage() {
     setIsAnalyzing(true);
     try {
         const output = await analyzeCreditReport({ creditReportText: rawText });
-        if (output) {
-            setAnalysisResult(output);
-            
-            // Automatically save extracted details to the database
-            try {
-                await saveReportSummaryAction(output, output.cibilScore, user.uid);
-                toast({ title: "Report Saved!", description: "The customer's report summary has been saved to the dashboard." });
-
-                // Also create a training candidate from the AI rating
-                const riskAssessmentForRating = await getRiskAssessment({ analysisResult: output });
-                const aiRatingOutput = await getAiRating({ analysisResult: output, riskAssessment: riskAssessmentForRating.assessmentWithoutGuarantor });
-                addTrainingCandidate(aiRatingOutput);
-
-            } catch (e: any) {
-                console.error('Save to DB error:', e);
-                toast({ variant: 'destructive', title: 'Could not save report', description: e.message || 'There was an issue saving the extracted details to the database.' });
-            }
-
-        } else {
-             throw new Error("AI returned an empty response.");
+        
+        if (!output) {
+            throw new Error("AI returned an empty response.");
         }
 
+        // Set result for UI first
+        setAnalysisResult(output);
+
+        // Then, attempt to save the report
+        try {
+            await saveReportSummaryAction(output, output.cibilScore, user.uid);
+            
+            // Only show success toast after saving is successful
+            toast({ 
+                title: "Analysis Complete & Saved!", 
+                description: "Your AI-powered insights are ready and the report summary has been saved to the dashboard." 
+            });
+
+            // Also create a training candidate from the AI rating, can happen in background
+            getRiskAssessment({ analysisResult: output })
+                .then(riskAssessmentForRating => getAiRating({ analysisResult: output, riskAssessment: riskAssessmentForRating.assessmentWithoutGuarantor }))
+                .then(aiRatingOutput => addTrainingCandidate(aiRatingOutput))
+                .catch(e => console.error("Failed to create training candidate:", e));
+
+        } catch (e: any) {
+            console.error('Save to DB error:', e);
+            // If saving fails, show specific error
+            toast({ 
+                variant: 'destructive', 
+                title: 'Could not save report', 
+                description: e.message || 'There was an issue saving the extracted details to the database.' 
+            });
+        }
 
     } catch (error: any) {
         console.error("Analysis Error: ", error);
