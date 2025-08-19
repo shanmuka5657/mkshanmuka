@@ -64,7 +64,7 @@ export async function verifyPdf(input: VerifyPdfInput): Promise<VerifyPdfOutput>
 
 const prompt = ai.definePrompt({
     name: 'verifyPdfPrompt',
-    model: ai.model('googleai/gemini-1.5-flash'),
+    model: 'googleai/gemini-1.5-flash',
     input: {schema: VerifyPdfInputSchema},
     output: {schema: VerifyPdfOutputSchema},
     prompt: `You are a world-class forensic document analyst. Your task is to conduct a thorough forensic analysis of the provided PDF and return your findings in a structured JSON format. The confidence score must be a direct reflection of the detailed forensic report.
