@@ -174,51 +174,42 @@ export default function CreditPage() {
       toast({ variant: 'destructive', title: 'Not Logged In', description: 'You must be logged in to analyze and save a report.' });
       return;
     }
+
     setIsAnalyzing(true);
+    let output: AnalyzeCreditReportOutput | null = null;
+
     try {
-        const output = await analyzeCreditReport({ creditReportText: rawText });
+        // Step 1: Get AI Analysis
+        output = await analyzeCreditReport({ creditReportText: rawText });
         
         if (!output) {
             throw new Error("AI returned an empty response.");
         }
-
-        // Set result for UI first
         setAnalysisResult(output);
 
-        // Then, attempt to save the report
-        try {
-            // 1. Upload PDF to Firebase Storage
-            const storageRef = ref(storage, `credit_reports/${user.uid}/${Date.now()}_${creditFile.name}`);
-            const uploadResult = await uploadBytes(storageRef, creditFile);
-            const downloadURL = await getDownloadURL(uploadResult.ref);
-            
-            // 2. Save summary with download URL
-            await saveReportSummaryAction(output, output.cibilScore, user.uid, downloadURL);
-            
-            // Only show success toast after saving is successful
-            toast({ 
-                title: "Analysis Complete & Saved!", 
-                description: "Your AI-powered insights are ready and the report summary has been saved to the dashboard." 
-            });
+        // Step 2: Upload PDF to Firebase Storage
+        const storageRef = ref(storage, `credit_reports/${user.uid}/${Date.now()}_${creditFile.name}`);
+        const uploadResult = await uploadBytes(storageRef, creditFile);
+        const downloadURL = await getDownloadURL(uploadResult.ref);
+        
+        // Step 3: Save summary with download URL using Server Action
+        await saveReportSummaryAction(output, output.cibilScore, user.uid, downloadURL);
+        
+        // Only show success toast after everything is successful
+        toast({ 
+            title: "Analysis Complete & Saved!", 
+            description: "Your AI-powered insights are ready and the report summary has been saved to the dashboard." 
+        });
 
-            // Also create a training candidate from the AI rating, can happen in background
-            getRiskAssessment({ analysisResult: output })
-                .then(riskAssessmentForRating => getAiRating({ analysisResult: output, riskAssessment: riskAssessmentForRating.assessmentWithoutGuarantor }))
-                .then(aiRatingOutput => addTrainingCandidate(aiRatingOutput))
-                .catch(e => console.error("Failed to create training candidate:", e));
-
-        } catch (e: any) {
-            console.error('Save to DB or Storage error:', e);
-            // If saving fails, show specific error
-            toast({ 
-                variant: 'destructive', 
-                title: 'Could not save report', 
-                description: e.message || 'There was an issue saving the extracted details or uploading the file.' 
-            });
-        }
+        // Step 4 (Optional, Background): Create a training candidate
+        // This can fail without blocking the user flow
+        getRiskAssessment({ analysisResult: output })
+            .then(riskAssessmentForRating => getAiRating({ analysisResult: output, riskAssessment: riskAssessmentForRating.assessmentWithoutGuarantor }))
+            .then(aiRatingOutput => addTrainingCandidate(aiRatingOutput))
+            .catch(e => console.error("Failed to create training candidate:", e));
 
     } catch (error: any) {
-        console.error("Analysis Error: ", error);
+        console.error("Analysis or Save Error: ", error);
         const errorMessage = error.message || "An unknown error occurred.";
         let errorTitle = "An Error Occurred";
         let userFriendlyMessage = "Something went wrong. Please try again.";
@@ -232,6 +223,9 @@ export default function CreditPage() {
         } else if (errorMessage.includes('API key not valid') || errorMessage.includes('GEMINI_API_KEY')) {
             errorTitle = "Invalid or Missing API Key";
             userFriendlyMessage = "The AI service API key is not configured correctly. Please add it to your .env file.";
+        } else if (errorMessage.includes('Failed to save report')) {
+             errorTitle = "Could not save report";
+             userFriendlyMessage = "The analysis was successful, but the report could not be saved to the database. Please check server logs.";
         }
 
          toast({
