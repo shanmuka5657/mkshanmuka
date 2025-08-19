@@ -1,9 +1,8 @@
-
 'use server';
 
 import { adminDb } from '@/lib/firebase-admin';
 import type { AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
-import { firestore } from 'firebase-admin';
+import admin from 'firebase-admin';
 
 /**
  * Saves a new credit report analysis to Firestore using the Admin SDK.
@@ -28,7 +27,7 @@ export async function saveReportSummaryAction(
     cibilScore: analysisResult.cibilScore,
     totalEmi: analysisResult.emiDetails.totalEmi,
     activeLoanCount: analysisResult.emiDetails.activeLoans.length,
-    createdAt: firestore.FieldValue.serverTimestamp(), // Use server-side timestamp
+    createdAt: admin.firestore.FieldValue.serverTimestamp(), // Use server-side timestamp from the Admin SDK
     fullAnalysis: analysisResult, // Store the entire analysis object
     pdfDownloadUrl: pdfDownloadUrl || null,
   };
