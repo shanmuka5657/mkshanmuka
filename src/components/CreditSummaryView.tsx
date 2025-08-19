@@ -593,7 +593,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
                                         <Input
                                             type="number"
                                             className="w-24 h-8 text-right"
-                                            defaultValue={(acc.manualEmi ?? Number(String(acc.emi).replace(/[^0-9.-]+/g,""))) || ''}
+                                            defaultValue={(acc.manualEmi ?? Number(String(acc.emi).replace(/[^0-9.-]+/g,""))) || 0}
                                             onBlur={(e) => {
                                                 const newEmi = e.target.valueAsNumber;
                                                 const currentEmi = acc.manualEmi ?? Number(String(acc.emi).replace(/[^0-9.]+/g,"")) || 0;
@@ -604,7 +604,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
                                             placeholder="Enter EMI"
                                         />
                                     ) : (
-                                        `₹${((acc.manualEmi ?? Number(String(acc.emi).replace(/[^0-9.-]+/g,"")) ) || 0).toLocaleString('en-IN')}`
+                                        `₹${(acc.manualEmi ?? Number(String(acc.emi).replace(/[^0-9.-]+/g,"")) || 0).toLocaleString('en-IN')}`
                                     )}
                                 </TableCell>
                             </TableRow>
