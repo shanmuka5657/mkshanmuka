@@ -16,15 +16,18 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!params.reportId) return;
+    if (!params.reportId) {
+      setIsLoading(false);
+      return;
+    }
 
     const fetchReport = async () => {
-      setIsLoading(true);
       try {
         const fetchedReport = await getReportById(params.reportId);
         if (fetchedReport) {
           setReport(fetchedReport);
         } else {
+          // This will trigger the not-found UI
           notFound();
         }
       } catch (error) {
@@ -34,7 +37,7 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
           title: "Error",
           description: "Could not fetch the report from the database.",
         });
-        // Optionally redirect to dashboard on error
+        // Redirect to dashboard on error
         router.push('/dashboard');
       } finally {
         setIsLoading(false);
@@ -48,14 +51,17 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="ml-4">Loading report...</p>
       </div>
     );
   }
 
   if (!report || !report.fullAnalysis) {
     return (
-        <div className="flex justify-center items-center h-screen">
-            <p>Report data is incomplete or could not be loaded.</p>
+        <div className="flex flex-col justify-center items-center h-screen text-center">
+            <h2 className="text-2xl font-semibold mb-2">Report Not Found</h2>
+            <p className="text-muted-foreground mb-4">The report data is incomplete or could not be loaded.</p>
+            <Button onClick={() => router.push('/dashboard')}>Back to Dashboard</Button>
         </div>
     );
   }
