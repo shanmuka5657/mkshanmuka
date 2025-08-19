@@ -21,7 +21,7 @@ const RiskAssessmentInputSchema = z.object({
     .describe('The full, structured analysis from the initial credit report parsing flow.'),
 });
 export type RiskAssessmentInput = {
-    analysisResult: AnalyzeCreditReportOutput;
+    analysisResult?: AnalyzeCreditReportOutput;
 };
 
 const RiskFactorSchema = z.object({
