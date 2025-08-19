@@ -92,8 +92,8 @@ export function BehaviorAnalysisCard({ analysis, isLoading }: BehaviorAnalysisCa
                                 <ResponsiveContainer>
                                     <BarChart data={analysis.paymentTrend} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                                         <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="month" fontSize={12} tickLine={false} axisLine={false} />
-                                        <YAxis allowDecimals={false} fontSize={12} tickLine={false} axisLine={false} />
+                                        <XAxis dataKey="month" fontSize={12} tickLine={false} axisLine={false} padding={{ left: 0, right: 0 }} />
+                                        <YAxis allowDecimals={false} fontSize={12} tickLine={false} axisLine={false} domain={['dataMin', 'dataMax']} />
                                         <Bar dataKey="onTime" stackId="a" fill="#22c55e" name="On-Time" />
                                         <Bar dataKey="late" stackId="a" fill="#ef4444" name="Late" />
                                     </BarChart>

@@ -122,7 +122,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
         const totalOutstandingNum = consideredAccounts.reduce((sum, acc) => sum + Number(String(acc.outstanding).replace(/[^0-9.-]+/g,"")), 0);
         const totalEmiNum = consideredAccounts.reduce((sum, acc) => {
             if (acc.status.toLowerCase() !== 'active' && acc.status.toLowerCase() !== 'open') return sum;
-            return sum + ((acc.manualEmi ?? Number(String(acc.emi).replace(/[^0-9.-]+/g,""))) || 0);
+            return sum + ((acc.manualEmi ?? Number(String(acc.emi).replace(/[^0-9.-]+/g,"")) ) || 0);
         }, 0);
 
         const creditUtilization = totalSanctionedNum > 0 ? (totalOutstandingNum / totalSanctionedNum) * 100 : 0;
@@ -593,18 +593,18 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
                                         <Input
                                             type="number"
                                             className="w-24 h-8 text-right"
-                                            defaultValue={acc.manualEmi ?? Number(String(acc.emi).replace(/[^0-9.-]+/g,"")) || ''}
+                                            defaultValue={(acc.manualEmi ?? Number(String(acc.emi).replace(/[^0-9.-]+/g,""))) || ''}
                                             onBlur={(e) => {
                                                 const newEmi = e.target.valueAsNumber;
                                                 const currentEmi = acc.manualEmi ?? Number(String(acc.emi).replace(/[^0-9.]+/g,"")) || 0;
                                                 if(newEmi !== currentEmi) {
-                                                    initiateChange(index, { manualEmi: newEmi })
+                                                    initiateChange(index, { manualEmi: newEmi });
                                                 }
                                             }}
                                             placeholder="Enter EMI"
                                         />
                                     ) : (
-                                        `₹${(acc.manualEmi ?? Number(String(acc.emi).replace(/[^0-9.-]+/g,"")) || 0).toLocaleString('en-IN')}`
+                                        `₹${((acc.manualEmi ?? Number(String(acc.emi).replace(/[^0-9.-]+/g,"")) ) || 0).toLocaleString('en-IN')}`
                                     )}
                                 </TableCell>
                             </TableRow>
