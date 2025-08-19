@@ -76,6 +76,7 @@ const AccountDetailSchema = z.object({
     paymentHistory: z.string().describe("The raw payment history string (e.g., '000|000|STD...'). Use 'NA' if not applicable."),
     monthlyPaymentHistory: z.array(MonthlyPaymentDetailSchema).describe("A structured list of monthly payment statuses derived from the payment history string. Each entry should have the month, year, and status. If payment history is 'NA', this should be an empty array.")
 });
+export type AccountDetail = z.infer<typeof AccountDetailSchema>;
 
 const LoanDetailSchema = z.object({
     loanType: z.string().describe("The type of the loan (e.g., 'Personal Loan', 'Credit Card')."),
