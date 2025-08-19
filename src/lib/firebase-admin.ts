@@ -7,29 +7,24 @@ let adminApp: App;
 let adminAuth: Auth;
 let adminDb: Firestore;
 
-let serviceAccount;
-if (process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT) {
-    try {
-        serviceAccount = JSON.parse(process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT);
-        // This is the crucial fix: replace escaped newlines in the private key.
-        if (serviceAccount.private_key) {
-            serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
-        }
-    } catch (e) {
-        console.warn('Could not parse FIREBASE_ADMIN_SERVICE_ACCOUNT, falling back to default init.');
-        serviceAccount = undefined;
-    }
-}
+// Prefer individual env variables for security
+const projectId = process.env.FIREBASE_PROJECT_ID;
+const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
 if (!getApps().length) {
-    if (serviceAccount) {
+    if (projectId && clientEmail && privateKey) {
         adminApp = initializeApp({
-            credential: cert(serviceAccount),
+            credential: cert({
+                projectId,
+                clientEmail,
+                privateKey,
+            }),
             databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
         });
     } else {
-        // Fallback for environments where service account is not set
-        // This is the default for many cloud environments
+        console.warn('Firebase Admin SDK credentials not fully set in environment variables. Falling back to default init.');
+        // Fallback for environments like Google Cloud Run with default credentials
         adminApp = initializeApp();
     }
 } else {
