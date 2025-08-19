@@ -25,7 +25,7 @@ const nextConfig = {
       allowedOrigins: ['localhost:3000', 'your-production-domain.com']
     },
     // This line is crucial for Firebase Admin SDK to work in Server Actions
-    serverComponentsExternalPackages: ['firebase-admin'],
+    serverComponentsExternalPackages: ['firebase-admin', '@genkit-ai/firebase', '@genkit-ai/dotprompt', 'genkit'],
   }
 };
 
