@@ -101,15 +101,17 @@ const AnalyzeCreditReportOutputSchema = z.object({
 });
 export type AnalyzeCreditReportOutput = z.infer<typeof AnalyzeCreditReportOutputSchema>;
 
-// This function now just calls the flow with the retry wrapper.
+// This function now just calls the defined flow with the retry wrapper.
 export async function analyzeCreditReport(input: AnalyzeCreditReportInput): Promise<AnalyzeCreditReportOutput> {
-    const genkit = await getGenkit();
-    // Get the defined flow from genkit, which is initialized once
-    const analyzeCreditReportFlow = genkit.getFlow('analyzeCreditReportFlow');
-    if (!analyzeCreditReportFlow) {
-        throw new Error("analyzeCreditReportFlow is not defined. Check your genkit initialization.");
-    }
-    return withGenkitRetry(() => analyzeCreditReportFlow.run(input));
+    return withGenkitRetry(async () => {
+        const genkit = await getGenkit();
+        const analyzeCreditReportFlow = genkit.getFlow('analyzeCreditReportFlow');
+        if (!analyzeCreditReportFlow) {
+            throw new Error("analyzeCreditReportFlow is not defined. Check your genkit initialization.");
+        }
+        // Use .run() to execute the flow
+        return analyzeCreditReportFlow.run(input);
+    });
 }
 
 // Initialize the flow when this file is loaded by the server.
