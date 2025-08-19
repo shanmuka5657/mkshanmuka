@@ -8,6 +8,7 @@ import { CreditSummaryView } from '@/components/CreditSummaryView';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
+import { Button } from '@/components/ui/button';
 
 export default function ReportDetailPage({ params }: { params: { reportId: string } }) {
   const [report, setReport] = useState<CreditReportSummary | null>(null);
