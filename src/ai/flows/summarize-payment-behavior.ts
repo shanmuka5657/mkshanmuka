@@ -30,6 +30,7 @@ export type SummarizePaymentBehaviorOutput = z.infer<typeof SummarizePaymentBeha
 export async function summarizePaymentBehavior(
   input: SummarizePaymentBehaviorInput
 ): Promise<SummarizePaymentBehaviorOutput> {
+
   const prompt = ai.definePrompt({
     name: 'summarizePaymentBehaviorPrompt',
     input: { schema: SummarizePaymentBehaviorInputSchema },
@@ -55,6 +56,7 @@ export async function summarizePaymentBehavior(
   });
 
   const { output } = await prompt(input);
+
   if (!output) {
     throw new Error("AI failed to generate a payment behavior summary.");
   }
