@@ -27,7 +27,7 @@ export type LoanEligibilityInput = {
     rating: string;
     monthlyIncome: number;
     totalMonthlyEMI: number;
-    analysisResult: AnalyzeCreditReportOutput;
+    analysisResult?: AnalyzeCreditReportOutput;
 };
 
 const LoanEligibilityOutputSchema = z.object({
