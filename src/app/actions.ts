@@ -3,34 +3,38 @@
 
 import { adminDb } from '@/lib/firebase-admin';
 import type { AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
+import { FieldValue } from 'firebase-admin/firestore';
 
 /**
  * Saves a new credit report analysis summary to Firestore using the Admin SDK.
  * This is a Server Action and runs only on the server.
- * This version does not require user authentication.
  * @param analysisResult The full analysis output from the AI.
  * @param cibilScore The CIBIL score extracted from the report.
+ * @param userId The ID of the user saving the report.
  */
 export async function saveReportSummaryAction(
   analysisResult: AnalyzeCreditReportOutput,
-  cibilScore: number | null
-): Promise<void> {
+  cibilScore: number | null,
+  userId: string,
+): Promise<{id: string}> {
 
-  // Prepare the data for Firestore without a userId
+  // Prepare the data for Firestore
   const reportSummary = {
+    userId: userId,
     name: analysisResult.customerDetails.name,
     pan: analysisResult.customerDetails.pan,
     mobileNumber: analysisResult.customerDetails.mobileNumber,
     cibilScore: cibilScore,
     totalEmi: analysisResult.emiDetails.totalEmi,
     activeLoanCount: analysisResult.emiDetails.activeLoans.length,
-    createdAt: new Date(), // Use a server-side timestamp
+    createdAt: FieldValue.serverTimestamp(), // Use server-side timestamp
   };
 
   // Save the document to Firestore
   try {
     const reportsCollection = adminDb.collection('creditReports');
-    await reportsCollection.add(reportSummary);
+    const docRef = await reportsCollection.add(reportSummary);
+    return { id: docRef.id };
   } catch (error) {
     console.error('Error saving report to Firestore:', error);
     throw new Error('Failed to save report to the database.');

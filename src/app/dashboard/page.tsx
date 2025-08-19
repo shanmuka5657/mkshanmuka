@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, FileText } from 'lucide-react';
-import { getAllReports, CreditReportSummary } from '@/lib/firestore-service';
+import { getRecentReports, CreditReportSummary } from '@/lib/firestore-service';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -19,9 +19,8 @@ export default function DashboardPage() {
     useEffect(() => {
         const fetchReports = async () => {
             try {
-                const fetchedReports = await getAllReports();
-                // Sort by creation date, newest first
-                fetchedReports.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+                const fetchedReports = await getRecentReports();
+                // Reports are already sorted by Firestore
                 setReports(fetchedReports);
             } catch (error) {
                 console.error("Failed to fetch reports:", error);

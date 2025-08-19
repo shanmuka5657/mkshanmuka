@@ -13,6 +13,8 @@ import {
   User,
   Sparkles
 } from 'lucide-react';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '@/lib/firebase-client';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -28,6 +30,9 @@ import { RiskAssessmentView } from '@/components/RiskAssessmentView';
 import { AiRatingView } from '@/components/AiRatingView';
 import { FinancialsView } from '@/components/FinancialsView';
 import { saveReportSummaryAction } from '@/app/actions';
+import { addTrainingCandidate } from '@/lib/training-store';
+import { getAiRating } from '@/ai/flows/ai-rating';
+import { getRiskAssessment } from '@/ai/flows/risk-assessment';
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -89,6 +94,7 @@ export default function CreditPage() {
   
   const { toast } = useToast()
   const creditFileInputRef = useRef<HTMLInputElement>(null);
+  const [user, loading] = useAuthState(auth);
   
   useEffect(() => {
     // Correctly set the workerSrc for pdfjs-dist
@@ -163,6 +169,10 @@ export default function CreditPage() {
         toast({ variant: 'destructive', title: 'Error', description: 'No report text to analyze.' });
         return;
     }
+     if (!user) {
+      toast({ variant: 'destructive', title: 'Not Logged In', description: 'You must be logged in to analyze and save a report.' });
+      return;
+    }
     setIsAnalyzing(true);
     try {
         const output = await analyzeCreditReport({ creditReportText: rawText });
@@ -171,11 +181,17 @@ export default function CreditPage() {
             
             // Automatically save extracted details to the database
             try {
-                await saveReportSummaryAction(output, output.cibilScore);
+                await saveReportSummaryAction(output, output.cibilScore, user.uid);
                 toast({ title: "Report Saved!", description: "The customer's report summary has been saved to the dashboard." });
-            } catch (e) {
+
+                // Also create a training candidate from the AI rating
+                const riskAssessmentForRating = await getRiskAssessment({ analysisResult: output });
+                const aiRatingOutput = await getAiRating({ analysisResult: output, riskAssessment: riskAssessmentForRating.assessmentWithoutGuarantor });
+                addTrainingCandidate(aiRatingOutput);
+
+            } catch (e: any) {
                 console.error('Save to DB error:', e);
-                toast({ variant: 'destructive', title: 'Could not save report', description: 'There was an issue saving the extracted details to the database.' });
+                toast({ variant: 'destructive', title: 'Could not save report', description: e.message || 'There was an issue saving the extracted details to the database.' });
             }
 
         } else {
@@ -279,7 +295,7 @@ export default function CreditPage() {
                 
                 {isReadyForAnalysis && (
                     <div className="mt-4">
-                        <Button onClick={handleAnalyzeCreditReport} size="lg">
+                        <Button onClick={handleAnalyzeCreditReport} size="lg" disabled={loading}>
                             <Sparkles className="mr-2 h-5 w-5"/>
                             Analyze & Save Report
                         </Button>
