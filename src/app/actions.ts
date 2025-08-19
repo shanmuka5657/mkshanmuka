@@ -3,7 +3,7 @@
 
 import { adminDb } from '@/lib/firebase-admin';
 import type { AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
-import { FieldValue } from 'firebase-admin/firestore';
+import { firestore } from 'firebase-admin';
 
 /**
  * Saves a new credit report analysis to Firestore using the Admin SDK.
@@ -21,14 +21,14 @@ export async function saveReportSummaryAction(
 
   // Prepare the data for Firestore, now including the full analysis result
   const reportData = {
-    userId: userId, // This line was missing and is the cause of the issue
+    userId: userId,
     name: analysisResult.customerDetails.name,
     pan: analysisResult.customerDetails.pan,
     mobileNumber: analysisResult.customerDetails.mobileNumber,
     cibilScore: analysisResult.cibilScore,
     totalEmi: analysisResult.emiDetails.totalEmi,
     activeLoanCount: analysisResult.emiDetails.activeLoans.length,
-    createdAt: FieldValue.serverTimestamp(), // Use server-side timestamp
+    createdAt: firestore.FieldValue.serverTimestamp(), // Use server-side timestamp
     fullAnalysis: analysisResult, // Store the entire analysis object
     pdfDownloadUrl: pdfDownloadUrl || null,
   };
