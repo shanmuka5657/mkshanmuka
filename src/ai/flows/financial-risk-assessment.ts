@@ -22,7 +22,7 @@ const FinancialRiskInputSchema = z.object({
     .describe("The user's estimated monthly income in INR."),
 });
 export type FinancialRiskInput = {
-    analysisResult: AnalyzeCreditReportOutput;
+    analysisResult?: AnalyzeCreditReportOutput;
     estimatedIncome: number;
 };
 
