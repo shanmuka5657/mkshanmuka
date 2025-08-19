@@ -176,12 +176,10 @@ export default function CreditPage() {
     }
 
     setIsAnalyzing(true);
-    let output: AnalyzeCreditReportOutput | null = null;
-
+    
     try {
         // Step 1: Get AI Analysis
-        output = await analyzeCreditReport({ creditReportText: rawText });
-        
+        const output = await analyzeCreditReport({ creditReportText: rawText });
         if (!output) {
             throw new Error("AI returned an empty response.");
         }
@@ -195,13 +193,13 @@ export default function CreditPage() {
         // Step 3: Save summary with download URL using Server Action
         await saveReportSummaryAction(output, output.cibilScore, user.uid, downloadURL);
         
-        // Only show success toast after everything is successful
+        // Step 4: Show success toast
         toast({ 
             title: "Analysis Complete & Saved!", 
             description: "Your AI-powered insights are ready and the report summary has been saved to the dashboard." 
         });
 
-        // Step 4 (Optional, Background): Create a training candidate
+        // Step 5 (Optional, Background): Create a training candidate
         // This can fail without blocking the user flow
         getRiskAssessment({ analysisResult: output })
             .then(riskAssessmentForRating => getAiRating({ analysisResult: output, riskAssessment: riskAssessmentForRating.assessmentWithoutGuarantor }))
