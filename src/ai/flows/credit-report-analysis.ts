@@ -105,12 +105,8 @@ export type AnalyzeCreditReportOutput = z.infer<typeof AnalyzeCreditReportOutput
 export async function analyzeCreditReport(input: AnalyzeCreditReportInput): Promise<AnalyzeCreditReportOutput> {
     return withGenkitRetry(async () => {
         const genkit = await getGenkit();
-        const analyzeCreditReportFlow = genkit.getFlow('analyzeCreditReportFlow');
-        if (!analyzeCreditReportFlow) {
-            throw new Error("analyzeCreditReportFlow is not defined. Check your genkit initialization.");
-        }
-        // Use .run() to execute the flow
-        return analyzeCreditReportFlow.run(input);
+        // Use runFlow to execute the flow by name, which is the correct API for this Genkit version.
+        return genkit.runFlow('analyzeCreditReportFlow', input);
     });
 }
 
