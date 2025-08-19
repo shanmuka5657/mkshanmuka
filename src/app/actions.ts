@@ -36,7 +36,7 @@ export async function saveReportSummaryAction(
     const docRef = await reportsCollection.add(reportSummary);
     return { id: docRef.id };
   } catch (error) {
-    console.error('Error saving report to Firestore:', error);
+    console.error('Firestore save error:', error); // Enhanced logging
     throw new Error('Failed to save report to the database.');
   }
 }
