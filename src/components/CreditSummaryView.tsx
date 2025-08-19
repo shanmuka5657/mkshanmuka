@@ -597,7 +597,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
                                             onBlur={(e) => {
                                                 const newEmi = e.target.valueAsNumber;
                                                 const currentEmi = acc.manualEmi ?? Number(String(acc.emi).replace(/[^0-9.]+/g,"")) || 0;
-                                                if(newEmi !== currentEmi) {
+                                                if (newEmi !== currentEmi) {
                                                     initiateChange(index, { manualEmi: newEmi });
                                                 }
                                             }}
