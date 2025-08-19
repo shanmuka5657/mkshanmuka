@@ -6,7 +6,8 @@ import type { AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysi
 import { FieldValue } from 'firebase-admin/firestore';
 
 /**
- * Saves a new credit report analysis summary to Firestore using the Admin SDK.
+ * Saves a new credit report analysis to Firestore using the Admin SDK.
+ * This now saves the full analysis object.
  * This is a Server Action and runs only on the server.
  * @param analysisResult The full analysis output from the AI.
  * @param cibilScore The CIBIL score extracted from the report.
@@ -18,8 +19,8 @@ export async function saveReportSummaryAction(
   userId: string,
 ): Promise<{id: string}> {
 
-  // Prepare the data for Firestore
-  const reportSummary = {
+  // Prepare the data for Firestore, now including the full analysis result
+  const reportData = {
     userId: userId,
     name: analysisResult.customerDetails.name,
     pan: analysisResult.customerDetails.pan,
@@ -28,12 +29,13 @@ export async function saveReportSummaryAction(
     totalEmi: analysisResult.emiDetails.totalEmi,
     activeLoanCount: analysisResult.emiDetails.activeLoans.length,
     createdAt: FieldValue.serverTimestamp(), // Use server-side timestamp
+    fullAnalysis: analysisResult, // Store the entire analysis object
   };
 
   // Save the document to Firestore
   try {
     const reportsCollection = adminDb.collection('creditReports');
-    const docRef = await reportsCollection.add(reportSummary);
+    const docRef = await reportsCollection.add(reportData);
     return { id: docRef.id };
   } catch (error) {
     console.error('Firestore save error:', error); // Enhanced logging
