@@ -50,20 +50,22 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4">Loading report...</p>
-      </div>
+      <main className="flex justify-center items-center h-[calc(100vh-10rem)]">
+        <div className="flex items-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="ml-4">Loading report...</p>
+        </div>
+      </main>
     );
   }
 
   if (!report || !report.fullAnalysis) {
     return (
-        <div className="flex flex-col justify-center items-center h-screen text-center">
+        <main className="flex flex-col justify-center items-center h-[calc(100vh-10rem)] text-center">
             <h2 className="text-2xl font-semibold mb-2">Report Not Found</h2>
             <p className="text-muted-foreground mb-4">The report data is incomplete or could not be loaded.</p>
             <Button onClick={() => router.push('/dashboard')}>Back to Dashboard</Button>
-        </div>
+        </main>
     );
   }
   
