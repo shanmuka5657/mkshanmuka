@@ -5,13 +5,23 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, FileText, Eye } from 'lucide-react';
+import { Loader2, FileText, Eye, Home, Fingerprint, FileCheck2, MessageCircle, BrainCircuit } from 'lucide-react';
 import { getReportsForUser, CreditReportSummary } from '@/lib/firestore-service';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '@/lib/firebase-client';
+import { cn } from '@/lib/utils';
+
+const navItems = [
+  { href: '/dashboard', label: 'Dashboard', icon: Home },
+  { href: '/credit', label: 'Credit', icon: FileText },
+  { href: '/verify', label: 'Verify', icon: Fingerprint },
+  { href: '/cross-verify', label: 'Cross-Verify', icon: FileCheck2 },
+  { href: '/chat', label: 'Chat', icon: MessageCircle },
+  { href: '/trainer', label: 'Trainer', icon: BrainCircuit },
+];
 
 export default function DashboardPage() {
     const [reports, setReports] = useState<CreditReportSummary[]>([]);
@@ -75,18 +85,31 @@ export default function DashboardPage() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : !user ? (
-             <div className="text-center py-12 text-muted-foreground">
-                <FileText className="mx-auto h-12 w-12 mb-4"/>
-                <h3 className="text-lg font-semibold">Login to View Your Dashboard</h3>
-                <p className="mb-4 mt-2 max-w-md mx-auto">Please sign in to view your saved reports or analyze a new one.</p>
-                <div className="flex gap-4 justify-center">
-                    <Button asChild>
-                        <Link href="/login">Login</Link>
-                    </Button>
-                     <Button asChild variant="secondary">
-                        <Link href="/login">Analyze Report</Link>
-                    </Button>
+             <div className="relative text-center py-12 text-muted-foreground overflow-hidden">
+                <div className="relative z-10">
+                    <p className="mb-4 mt-2 max-w-md mx-auto">Please sign in to view your saved reports or analyze a new one.</p>
+                    <div className="flex gap-4 justify-center">
+                        <Button asChild>
+                            <Link href="/login">Login</Link>
+                        </Button>
+                         <Button asChild variant="secondary">
+                            <Link href="/login">Analyze Report</Link>
+                        </Button>
+                    </div>
                 </div>
+                 <div className="absolute inset-0 flex justify-center items-center blur-sm opacity-20 scale-125">
+                    <div className={`grid h-full w-full max-w-lg grid-cols-6 mx-auto font-medium`}>
+                        {navItems.map((item) => (
+                        <div
+                            key={item.href}
+                            className={cn('inline-flex flex-col items-center justify-center px-5 text-muted-foreground')}
+                        >
+                            <item.icon className="w-6 h-6 mb-1" />
+                            <span className="text-sm">{item.label}</span>
+                        </div>
+                        ))}
+                    </div>
+                 </div>
             </div>
           ) : reports.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
