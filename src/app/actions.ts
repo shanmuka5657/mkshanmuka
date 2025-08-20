@@ -18,7 +18,9 @@ export async function saveReportSummaryAction(
   userId: string,
   pdfDownloadUrl?: string
 ): Promise<{ id: string }> {
+  console.log("SERVER ACTION: Called with userId:", userId);
   if (!analysisResult || !userId) {
+    console.error("SERVER ACTION ERROR: Invalid analysis data or user ID provided.");
     throw new Error('Invalid analysis data or user ID provided.');
   }
 
@@ -35,14 +37,17 @@ export async function saveReportSummaryAction(
     fullAnalysis: analysisResult, // Store the entire analysis object
     pdfDownloadUrl: pdfDownloadUrl || null,
   };
+  console.log("SERVER ACTION: Prepared data for Firestore:", { ...reportData, fullAnalysis: "OMITTED FOR BREVITY" });
+
 
   // Save the document to Firestore
   try {
     const reportsCollection = adminDb.collection('creditReports');
     const docRef = await reportsCollection.add(reportData);
+    console.log("SERVER ACTION: Report saved to DB successfully with ID:", docRef.id);
     return { id: docRef.id };
   } catch (error) {
-    console.error('Firestore save error:', error); // Enhanced logging
+    console.error('SERVER ACTION Firestore save error:', error); // Enhanced logging
     throw new Error('Failed to save report to the database.');
   }
 }

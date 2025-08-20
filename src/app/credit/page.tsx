@@ -16,6 +16,7 @@ import {
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, storage } from '@/lib/firebase-client';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -90,6 +91,7 @@ export default function CreditPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<string | null>(null);
   const [isTextExtracted, setIsTextExtracted] = useState(false);
   
@@ -124,6 +126,7 @@ export default function CreditPage() {
     setIsAnalyzing(false);
     setActiveView(null);
     setIsTextExtracted(false);
+    setAnalysisError(null);
     if (creditFileInputRef.current) {
       creditFileInputRef.current.value = '';
     }
@@ -176,27 +179,40 @@ export default function CreditPage() {
     }
 
     setIsAnalyzing(true);
+    setAnalysisError(null);
     
     try {
         // Step 1: Get AI Analysis
+        console.log("CLIENT: Starting AI analysis...");
         const output = await analyzeCreditReport({ creditReportText: rawText });
+        console.log("CLIENT: AI Analysis Output:", output);
         if (!output) {
             throw new Error("AI returned an empty response.");
         }
         setAnalysisResult(output);
 
         // Step 2: Upload PDF to Firebase Storage
+        console.log("CLIENT: Starting upload for user:", user.uid);
         const storageRef = ref(storage, `credit_reports/${user.uid}/${Date.now()}_${creditFile.name}`);
+        console.log("CLIENT: Storage ref path:", storageRef.fullPath);
         const uploadResult = await uploadBytes(storageRef, creditFile);
+        console.log("CLIENT: Upload successful:", uploadResult);
         const downloadURL = await getDownloadURL(uploadResult.ref);
+        console.log("CLIENT: File available at:", downloadURL);
         
         // Step 3: Save summary with download URL using Server Action
-        await saveReportSummaryAction(output, user.uid, downloadURL);
+        console.log("CLIENT: Calling saveReportSummaryAction...");
+        const saveResult = await saveReportSummaryAction(output, user.uid, downloadURL);
         
         // Step 4: Show success toast
         toast({ 
             title: "Analysis Complete & Saved!", 
-            description: "Your AI-powered insights are ready and the report summary has been saved to the dashboard." 
+            description: "Your AI-powered insights are ready. The report summary has been saved to the dashboard.",
+            action: (
+                <Button asChild variant="secondary" size="sm">
+                    <Link href={`/credit/${saveResult.id}`}>View Report</Link>
+                </Button>
+            )
         });
 
         // Step 5 (Optional, Background): Create a training candidate
@@ -207,10 +223,10 @@ export default function CreditPage() {
             .catch(e => console.error("Failed to create training candidate:", e));
 
     } catch (error: any) {
-        console.error("Analysis or Save Error: ", error);
+        console.error("CLIENT: Analysis or Save Error: ", error);
         const errorMessage = error.message || "An unknown error occurred.";
         let errorTitle = "An Error Occurred";
-        let userFriendlyMessage = "Something went wrong. Please try again.";
+        let userFriendlyMessage = "Something went wrong. Please try again. Check browser and server logs for details.";
 
         if (errorMessage.includes('429')) {
             errorTitle = "Rate Limit Reached";
@@ -224,8 +240,12 @@ export default function CreditPage() {
         } else if (errorMessage.includes('Failed to save report')) {
              errorTitle = "Could not save report";
              userFriendlyMessage = "The analysis was successful, but the report could not be saved to the database. Please check server logs.";
+        } else if (errorMessage.toLowerCase().includes('storage') && errorMessage.toLowerCase().includes('permission')) {
+            errorTitle = "Storage Permission Error";
+            userFriendlyMessage = "Could not upload PDF. Please check your Firebase Storage security rules to ensure you have write permissions.";
         }
 
+        setAnalysisError(userFriendlyMessage);
          toast({
             variant: "destructive",
             title: errorTitle,
@@ -330,6 +350,18 @@ export default function CreditPage() {
         </CardContent>
         </Card>
         
+        {analysisError && (
+            <Card className="border-destructive">
+                <CardHeader>
+                    <CardTitle className="text-destructive">Analysis Failed</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p>{analysisError}</p>
+                    <Button onClick={resetState} className="mt-4">Try Again</Button>
+                </CardContent>
+            </Card>
+        )}
+
         <Card>
         <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg"><User className="text-primary"/>Credit Score & Consumer Information</CardTitle>
