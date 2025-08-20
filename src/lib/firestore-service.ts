@@ -8,7 +8,10 @@ import {
   Timestamp,
   orderBy,
   limit,
+  doc,
+  getDoc,
 } from 'firebase/firestore';
+import type { AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
 
 // This is the shape of the summary data we store in Firestore.
 export interface CreditReportSummary {
@@ -21,6 +24,8 @@ export interface CreditReportSummary {
   totalEmi: number;
   activeLoanCount: number;
   createdAt: Timestamp;
+  fullAnalysis?: AnalyzeCreditReportOutput;
+  pdfDownloadUrl?: string;
 }
 
 /**
@@ -31,12 +36,19 @@ export interface CreditReportSummary {
  */
 export async function getReportsForUser(userId: string): Promise<CreditReportSummary[]> {
   const reportsCollection = collection(db, 'creditReports');
-  const q = query(reportsCollection, where('userId', '==', userId));
+  const q = query(
+    reportsCollection, 
+    where('userId', '==', userId), 
+    orderBy('createdAt', 'desc')
+  );
   const querySnapshot = await getDocs(q);
 
   const reports: CreditReportSummary[] = [];
   querySnapshot.forEach((doc) => {
-    reports.push({ id: doc.id, ...doc.data() } as CreditReportSummary);
+    const data = doc.data();
+    // We can exclude the large 'fullAnalysis' field from this list view if needed for performance
+    // but for now, we'll keep it simple.
+    reports.push({ id: doc.id, ...data } as CreditReportSummary);
   });
 
   return reports;
@@ -59,4 +71,21 @@ export async function getRecentReports(): Promise<CreditReportSummary[]> {
   });
 
   return reports;
+}
+
+/**
+ * Fetches a single credit report by its document ID.
+ * @param reportId The ID of the document to fetch from Firestore.
+ * @returns A promise that resolves to the full credit report summary object, or null if not found.
+ */
+export async function getReportById(reportId: string): Promise<CreditReportSummary | null> {
+    const reportDocRef = doc(db, 'creditReports', reportId);
+    const docSnap = await getDoc(reportDocRef);
+
+    if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as CreditReportSummary;
+    } else {
+        console.log("No such document!");
+        return null;
+    }
 }

@@ -5,29 +5,43 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, FileText } from 'lucide-react';
-import { getRecentReports, CreditReportSummary } from '@/lib/firestore-service';
+import { Loader2, FileText, Eye } from 'lucide-react';
+import { getReportsForUser, CreditReportSummary } from '@/lib/firestore-service';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '@/lib/firebase-client';
 
 export default function DashboardPage() {
     const [reports, setReports] = useState<CreditReportSummary[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
+    const [user, userLoading] = useAuthState(auth);
 
     useEffect(() => {
+        if (userLoading) {
+            // Still checking for user, do nothing yet
+            return;
+        }
+
+        if (!user) {
+            // If no user, stop loading and we'll show the login prompt
+            setIsLoading(false);
+            return;
+        }
+
         const fetchReports = async () => {
+            setIsLoading(true);
             try {
-                const fetchedReports = await getRecentReports();
-                // Reports are already sorted by Firestore
+                const fetchedReports = await getReportsForUser(user.uid);
                 setReports(fetchedReports);
             } catch (error) {
                 console.error("Failed to fetch reports:", error);
                 toast({
                     variant: "destructive",
                     title: "Error",
-                    description: "Could not fetch saved reports from the database.",
+                    description: "Could not fetch your saved reports.",
                 });
             } finally {
                 setIsLoading(false);
@@ -35,7 +49,7 @@ export default function DashboardPage() {
         };
 
         fetchReports();
-    }, [toast]);
+    }, [user, userLoading, toast]);
     
   return (
     <main className="container mx-auto p-4 md:p-8 space-y-8">
@@ -56,9 +70,23 @@ export default function DashboardPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {isLoading || userLoading ? (
             <div className="flex justify-center items-center h-40">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : !user ? (
+             <div className="text-center py-12 text-muted-foreground">
+                <FileText className="mx-auto h-12 w-12 mb-4"/>
+                <h3 className="text-lg font-semibold">Login to View Your Dashboard</h3>
+                <p className="mb-4 mt-2 max-w-md mx-auto">Please sign in to view your saved reports or analyze a new one.</p>
+                <div className="flex gap-4 justify-center">
+                    <Button asChild>
+                        <Link href="/login">Login</Link>
+                    </Button>
+                     <Button asChild variant="secondary">
+                        <Link href="/credit">Analyze Report</Link>
+                    </Button>
+                </div>
             </div>
           ) : reports.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
@@ -81,6 +109,7 @@ export default function DashboardPage() {
                     <TableHead>Total EMI</TableHead>
                     <TableHead>Active Loans</TableHead>
                     <TableHead>Date Added</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -97,6 +126,13 @@ export default function DashboardPage() {
                        <TableCell>₹{report.totalEmi.toLocaleString('en-IN')}</TableCell>
                       <TableCell>{report.activeLoanCount}</TableCell>
                       <TableCell>{report.createdAt.toDate().toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <Button asChild variant="outline" size="sm">
+                            <Link href={`/credit/${report.id}`}>
+                                <Eye className="mr-2 h-4 w-4" /> View Report
+                            </Link>
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
