@@ -110,6 +110,9 @@ export default function LoginPage() {
          if (error.code === 'auth/operation-not-allowed') {
              errorMessage = 'Mobile number sign-in is not enabled for this project. Please enable it in your Firebase console under Authentication > Sign-in method.';
          }
+         if (error.code === 'auth/captcha-check-failed') {
+            errorMessage = "Failed to verify reCAPTCHA. For local development, ensure 'localhost' is an authorized domain in your Firebase project's Authentication settings.";
+         }
          toast({
             variant: 'destructive',
             title: 'Failed to Send OTP',

@@ -116,10 +116,14 @@ export default function SignupPage() {
             description: `An OTP has been sent to ${fullPhoneNumber}.`,
         });
     } catch (error: any) {
+         let errorMessage = error.message || 'Please check the mobile number and try again.';
+         if (error.code === 'auth/captcha-check-failed') {
+            errorMessage = "Failed to verify reCAPTCHA. For local development, ensure 'localhost' is an authorized domain in your Firebase project's Authentication settings.";
+         }
          toast({
             variant: 'destructive',
             title: 'Failed to Send OTP',
-            description: error.message || 'Please check the mobile number and try again.',
+            description: errorMessage,
         });
     } finally {
         setIsLoading(false);
