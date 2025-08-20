@@ -13,11 +13,11 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, UserPlus } from 'lucide-react';
+import { Loader2, UserPlus, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { auth } from '@/lib/firebase-client';
 
 export default function SignupPage() {
@@ -25,6 +25,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -43,12 +44,17 @@ export default function SignupPage() {
     }
 
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await sendEmailVerification(userCredential.user);
+      
       toast({
-        title: 'Signup Successful',
-        description: 'Welcome! You are now being redirected.',
+        title: 'Verification Email Sent',
+        description: 'Please check your inbox to activate your account.',
       });
-      router.push('/dashboard');
+
+      setIsSuccess(true);
+      // Don't redirect immediately. Show a success message instead.
+
     } catch (error: any) {
       let errorMessage = 'An unknown error occurred.';
       switch (error.code) {
@@ -74,6 +80,29 @@ export default function SignupPage() {
       setIsLoading(false);
     }
   };
+
+  if (isSuccess) {
+    return (
+        <div className="flex items-center justify-center min-h-screen bg-muted/30">
+            <Card className="w-full max-w-sm text-center">
+                 <CardHeader>
+                    <div className="mx-auto bg-green-100 p-3 rounded-full mb-4">
+                        <CheckCircle className="h-8 w-8 text-green-600" />
+                    </div>
+                    <CardTitle>Account Created!</CardTitle>
+                    <CardDescription>
+                        A verification link has been sent to <strong>{email}</strong>. Please check your inbox to activate your account.
+                    </CardDescription>
+                </CardHeader>
+                <CardFooter>
+                    <Button asChild className="w-full">
+                        <Link href="/login">Back to Login</Link>
+                    </Button>
+                </CardFooter>
+            </Card>
+        </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted/30">

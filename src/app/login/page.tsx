@@ -17,7 +17,7 @@ import { Loader2, KeyRound } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase-client';
 
 export default function LoginPage() {
@@ -32,7 +32,20 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      if (!userCredential.user.emailVerified) {
+        // User's email is not verified
+        toast({
+          variant: 'destructive',
+          title: 'Email Not Verified',
+          description: 'Please check your inbox and click the verification link to activate your account.',
+        });
+        await signOut(auth); // Sign the user out
+        setIsLoading(false);
+        return;
+      }
+
       toast({
         title: 'Login Successful',
         description: "Welcome back!",
