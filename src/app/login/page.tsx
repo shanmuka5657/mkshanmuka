@@ -46,12 +46,13 @@ export default function LoginPage() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
 
-    // Redirect if user is already logged in
-    if (user && !loading) {
-      router.push(redirectPath);
+      // Redirect if user is already logged in
+      if (user && !loading) {
+ router.push(redirectPath);
+      }
     }
   }, [user, loading, router, redirectPath]);
-  
+
   useEffect(() => {
     if (typeof window !== 'undefined' && !window.recaptchaVerifier) {
       const recaptchaContainer = document.getElementById('recaptcha-container');
