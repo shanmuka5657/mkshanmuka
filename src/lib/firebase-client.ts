@@ -18,8 +18,13 @@ const clientConfig = {
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
+
+// Basic validation to ensure environment variables are loaded
+if (!clientConfig.apiKey || !clientConfig.projectId) {
+  console.error("Firebase config is missing. Make sure your .env file is set up correctly.");
+}
+
 
 let app: FirebaseApp;
 let auth: Auth;
