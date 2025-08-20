@@ -1,145 +1,21 @@
 {
   "name": "CreditWise AI",
   "short_name": "CreditWise",
-  "description": "Advanced AI Credit Score Analyzer & ML Model Trainer",
+  "description": "Advanced AI Credit Score Analyzer & ML Model Trainer by CreditWise AI",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F0F2F5",
   "theme_color": "#3F51B5",
-  "scope": "/",
-  "lang": "en-US",
-  "categories": [
-    "finance",
-    "utilities"
-  ],
   "icons": [
     {
-      "src": "https://placehold.co/192x192.png",
+      "src": "icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
+      "type": "image/png"
     },
     {
-      "src": "https://placehold.co/512x512.png",
+      "src": "icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "https://placehold.co/192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "https://placehold.co/512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
-  ],
-  "file_handlers": [
-    {
-      "action": "/credit",
-      "accept": {
-        "application/pdf": [
-          ".pdf"
-        ]
-      }
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Analyze Credit Report",
-      "short_name": "Analyze",
-      "description": "Upload and analyze a new CIBIL report",
-      "url": "/credit",
-      "icons": [
-        {
-          "src": "https://placehold.co/96x96.png",
-          "sizes": "96x96"
-        }
-      ]
-    },
-    {
-      "name": "Verify Document",
-      "short_name": "Verify",
-      "description": "Run a forensic analysis on a PDF",
-      "url": "/verify",
-      "icons": [
-        {
-          "src": "https://placehold.co/96x96.png",
-          "sizes": "96x96"
-        }
-      ]
-    }
-  ],
-  "share_target": {
-    "action": "/credit",
-    "method": "POST",
-    "enctype": "multipart/form-data",
-    "params": {
-      "title": "title",
-      "text": "text",
-      "url": "url",
-      "files": [
-        {
-          "name": "pdf",
-          "accept": [
-            "application/pdf",
-            ".pdf"
-          ]
-        }
-      ]
-    }
-  },
-  "handle_links": "auto",
-  "protocol_handlers": [
-    {
-      "protocol": "web+creditwise",
-      "url": "/?url=%s"
-    }
-  ],
-  "display_override": [
-    "window-controls-overlay",
-    "standalone"
-  ],
-  "edge_side_panel": {
-    "preferred_width": 480
-  },
-  "widgets": [
-    {
-      "name": "CreditWise AI Tools",
-      "description": "Quickly access analysis tools",
-      "tag": "credit-tools",
-      "icons": [
-        {
-          "src": "https://placehold.co/192x192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ],
-      "screenshots": [
-        {
-          "src": "https://placehold.co/600x400.png",
-          "sizes": "600x400",
-          "type": "image/png",
-          "label": "CreditWise AI Tools Widget"
-        }
-      ],
-      "template": "tool_list_template",
-      "data": {
-        "items": [
-          {
-            "label": "Analyze Report",
-            "url": "/credit"
-          },
-          {
-            "label": "Verify PDF",
-            "url": "/verify"
-          }
-        ]
-      }
+      "type": "image/png"
     }
   ]
 }
