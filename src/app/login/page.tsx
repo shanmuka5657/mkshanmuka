@@ -47,17 +47,20 @@ export default function LoginPage() {
   }, [user, loading, router]);
   
   useEffect(() => {
-    // This sets up the reCAPTCHA verifier when the component mounts
-    // It's attached to the window object to be globally accessible on this page
     if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'invisible',
-        'callback': (response: any) => {
-          // reCAPTCHA solved, allow signInWithPhoneNumber.
-        }
-      });
+      // Ensure the container exists and is visible (though invisible reCAPTCHA doesn't need a visible element)
+      const recaptchaContainer = document.getElementById('recaptcha-container');
+      if (recaptchaContainer) {
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainer, {
+          'size': 'invisible',
+          'callback': (response: any) => {
+            // reCAPTCHA solved, allow signInWithPhoneNumber.
+          }
+        });
+      }
     }
   }, []);
+
 
   const handleSuccessfulLogin = (user: User) => {
     if (!user.emailVerified && user.providerData.some(p => p.providerId === 'password')) {
@@ -159,13 +162,13 @@ export default function LoginPage() {
 
   return (
     <main className="container flex items-center justify-center p-4">
-      <div id="recaptcha-container"></div>
       <div className="w-full max-w-md">
         <Tabs defaultValue="email">
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="email">Email</TabsTrigger>
                 <TabsTrigger value="mobile">Mobile Number</TabsTrigger>
             </TabsList>
+            <div id="recaptcha-container"></div>
             <TabsContent value="email">
                 <Card className="border-none shadow-none">
                     <form onSubmit={handleEmailLogin}>

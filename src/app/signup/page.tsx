@@ -41,14 +41,17 @@ export default function SignupPage() {
   const [otpSent, setOtpSent] = useState(false);
 
   useEffect(() => {
-    // This sets up the reCAPTCHA verifier when the component mounts
-    // It's attached to the window object to be globally accessible on this page
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-      'size': 'invisible',
-      'callback': (response: any) => {
-        // reCAPTCHA solved, allow signInWithPhoneNumber.
+    if (!window.recaptchaVerifier) {
+      const recaptchaContainer = document.getElementById('recaptcha-container');
+      if (recaptchaContainer) {
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainer, {
+          'size': 'invisible',
+          'callback': (response: any) => {
+            // reCAPTCHA solved, allow signInWithPhoneNumber.
+          }
+        });
       }
-    });
+    }
   }, []);
 
 
@@ -182,13 +185,13 @@ export default function SignupPage() {
 
   return (
     <main className="container flex items-center justify-center p-4">
-      <div id="recaptcha-container"></div>
       <div className="w-full max-w-md">
         <Tabs defaultValue="email">
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="email">Email</TabsTrigger>
                 <TabsTrigger value="mobile">Mobile Number</TabsTrigger>
             </TabsList>
+            <div id="recaptcha-container"></div>
             <TabsContent value="email">
                 <Card className="border-none shadow-none">
                     <form onSubmit={handleEmailSignup}>
