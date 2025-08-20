@@ -35,13 +35,17 @@ export default function LoginPage() {
   const [activeTab, setActiveTab] = useState('email');
 
   useEffect(() => {
-    const redirect = searchParams.get('redirect');
-    if (redirect) {
-      setRedirectPath(redirect);
+    if (typeof window !== 'undefined') {
+      const redirect = searchParams.get('redirect');
+      if (redirect) {
+        setRedirectPath(redirect);
+      }
     }
   }, [searchParams]);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+
     // Redirect if user is already logged in
     if (user && !loading) {
       router.push(redirectPath);
