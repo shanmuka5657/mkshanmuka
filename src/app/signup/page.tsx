@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -17,19 +17,42 @@ import { Loader2, UserPlus, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
 import { auth } from '@/lib/firebase-client';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
 
 export default function SignupPage() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  // Common state
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
-  const handleSignup = async (e: React.FormEvent) => {
+  // Email state
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  // Phone state
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [otpSent, setOtpSent] = useState(false);
+
+  useEffect(() => {
+    // This sets up the reCAPTCHA verifier when the component mounts
+    // It's attached to the window object to be globally accessible on this page
+    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      'size': 'invisible',
+      'callback': (response: any) => {
+        // reCAPTCHA solved, allow signInWithPhoneNumber.
+      }
+    });
+  }, []);
+
+
+  const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
@@ -53,8 +76,6 @@ export default function SignupPage() {
       });
 
       setIsSuccess(true);
-      // Don't redirect immediately. Show a success message instead.
-
     } catch (error: any) {
       let errorMessage = 'An unknown error occurred.';
       switch (error.code) {
@@ -80,6 +101,53 @@ export default function SignupPage() {
       setIsLoading(false);
     }
   };
+  
+  const handlePhoneSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+        const fullPhoneNumber = `+91${phone}`; // Assuming Indian numbers for now
+        const verifier = window.recaptchaVerifier;
+        const result = await signInWithPhoneNumber(auth, fullPhoneNumber, verifier);
+        setConfirmationResult(result);
+        setOtpSent(true);
+        toast({
+            title: 'OTP Sent',
+            description: `An OTP has been sent to ${fullPhoneNumber}.`,
+        });
+    } catch (error: any) {
+         toast({
+            variant: 'destructive',
+            title: 'Failed to Send OTP',
+            description: error.message || 'Please check the mobile number and try again.',
+        });
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!confirmationResult) return;
+      setIsLoading(true);
+
+      try {
+          await confirmationResult.confirm(otp);
+          toast({
+            title: 'Signup Successful!',
+            description: "Your account has been created.",
+          });
+          setIsSuccess(true); // Show a generic success screen
+      } catch (error: any) {
+          toast({
+            variant: 'destructive',
+            title: 'OTP Verification Failed',
+            description: error.message || 'The OTP is incorrect. Please try again.',
+        });
+      } finally {
+          setIsLoading(false);
+      }
+  };
 
   if (isSuccess) {
     return (
@@ -89,14 +157,18 @@ export default function SignupPage() {
                     <div className="mx-auto bg-green-100 p-3 rounded-full mb-4">
                         <CheckCircle className="h-8 w-8 text-green-600" />
                     </div>
-                    <CardTitle>Account Created!</CardTitle>
+                    <CardTitle>Verification Required!</CardTitle>
                     <CardDescription>
-                        A verification link has been sent to <strong>{email}</strong>. Please check your inbox to activate your account.
+                        {email ? (
+                            <>A verification link has been sent to <strong>{email}</strong>. Please check your inbox to activate your account.</>
+                        ) : (
+                            <>Your account has been created successfully!</>
+                        )}
                     </CardDescription>
                 </CardHeader>
                 <CardFooter>
                     <Button asChild className="w-full">
-                        <Link href="/login">Back to Login</Link>
+                        <Link href="/login">Proceed to Login</Link>
                     </Button>
                 </CardFooter>
             </Card>
@@ -106,68 +178,135 @@ export default function SignupPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted/30">
+      <div id="recaptcha-container"></div>
       <Card className="w-full max-w-sm">
-        <form onSubmit={handleSignup}>
-          <CardHeader className="text-center">
-            <div className="mx-auto bg-primary/10 p-3 rounded-full mb-4">
-                <UserPlus className="h-8 w-8 text-primary" />
-            </div>
-            <CardTitle>Create an Account</CardTitle>
-            <CardDescription>
-              Enter your details below to get started.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="John Doe"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="m@example.com"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
-                placeholder="Must be at least 6 characters"
-              />
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign Up
-            </Button>
-             <p className="text-xs text-muted-foreground text-center">
-                Already have an account?{' '}
-                <Link href="/login" className="text-primary hover:underline font-semibold">
-                    Sign In
-                </Link>
-            </p>
-          </CardFooter>
-        </form>
+        <Tabs defaultValue="email">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="email">Email</TabsTrigger>
+                <TabsTrigger value="mobile">Mobile Number</TabsTrigger>
+            </TabsList>
+            <TabsContent value="email">
+                <form onSubmit={handleEmailSignup}>
+                    <CardHeader className="text-center">
+                        <div className="mx-auto bg-primary/10 p-3 rounded-full mb-4">
+                            <UserPlus className="h-8 w-8 text-primary" />
+                        </div>
+                        <CardTitle>Create an Account</CardTitle>
+                        <CardDescription>
+                        Enter your details below to get started with email.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                        <Label htmlFor="name">Name</Label>
+                        <Input
+                            id="name"
+                            type="text"
+                            placeholder="John Doe"
+                            required
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            disabled={isLoading}
+                        />
+                        </div>
+                        <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                            id="email"
+                            type="email"
+                            placeholder="m@example.com"
+                            required
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            disabled={isLoading}
+                        />
+                        </div>
+                        <div className="space-y-2">
+                        <Label htmlFor="password">Password</Label>
+                        <Input
+                            id="password"
+                            type="password"
+                            required
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            disabled={isLoading}
+                            placeholder="Must be at least 6 characters"
+                        />
+                        </div>
+                    </CardContent>
+                    <CardFooter className="flex flex-col gap-4">
+                        <Button type="submit" className="w-full" disabled={isLoading}>
+                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Sign Up with Email
+                        </Button>
+                        <p className="text-xs text-muted-foreground text-center">
+                            Already have an account?{' '}
+                            <Link href="/login" className="text-primary hover:underline font-semibold">
+                                Sign In
+                            </Link>
+                        </p>
+                    </CardFooter>
+                </form>
+            </TabsContent>
+            <TabsContent value="mobile">
+                 <form onSubmit={otpSent ? handleVerifyOtp : handlePhoneSignup}>
+                    <CardHeader className="text-center">
+                        <div className="mx-auto bg-primary/10 p-3 rounded-full mb-4">
+                            <UserPlus className="h-8 w-8 text-primary" />
+                        </div>
+                        <CardTitle>Create an Account</CardTitle>
+                        <CardDescription>
+                         {otpSent ? "Enter the OTP we sent to your phone." : "Enter your mobile number to get an OTP."}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                         {!otpSent ? (
+                            <div className="space-y-2">
+                                <Label htmlFor="phone">Mobile Number</Label>
+                                <div className="flex items-center">
+                                    <span className="p-2 border rounded-l-md bg-muted text-muted-foreground text-sm">+91</span>
+                                    <Input
+                                        id="phone"
+                                        type="tel"
+                                        placeholder="9876543210"
+                                        required
+                                        value={phone}
+                                        onChange={(e) => setPhone(e.target.value)}
+                                        disabled={isLoading}
+                                        className="rounded-l-none"
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                <Label htmlFor="otp">One-Time Password (OTP)</Label>
+                                <Input
+                                    id="otp"
+                                    type="text"
+                                    placeholder="Enter 6-digit OTP"
+                                    required
+                                    value={otp}
+                                    onChange={(e) => setOtp(e.target.value)}
+                                    disabled={isLoading}
+                                />
+                            </div>
+                        )}
+                    </CardContent>
+                     <CardFooter className="flex flex-col gap-4">
+                        <Button type="submit" className="w-full" disabled={isLoading}>
+                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                         {otpSent ? 'Verify OTP & Sign Up' : 'Send OTP'}
+                        </Button>
+                         <p className="text-xs text-muted-foreground text-center">
+                            Already have an account?{' '}
+                            <Link href="/login" className="text-primary hover:underline font-semibold">
+                                Sign In
+                            </Link>
+                        </p>
+                    </CardFooter>
+                </form>
+            </TabsContent>
+        </Tabs>
       </Card>
     </div>
   );
