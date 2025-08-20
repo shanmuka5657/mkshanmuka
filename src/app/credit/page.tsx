@@ -17,6 +17,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, storage } from '@/lib/firebase-client';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -98,11 +99,39 @@ export default function CreditPage() {
   const { toast } = useToast()
   const creditFileInputRef = useRef<HTMLInputElement>(null);
   const [user, loading] = useAuthState(auth);
+  const router = useRouter();
   
   useEffect(() => {
-    // Correctly set the workerSrc for pdfjs-dist
     GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${version}/legacy/build/pdf.worker.min.mjs`;
   }, []);
+
+  // Effect to restore state from sessionStorage on page load
+  useEffect(() => {
+    if (user && sessionStorage.getItem('pendingAnalysisFile')) {
+      const pendingFile = JSON.parse(sessionStorage.getItem('pendingAnalysisFile')!);
+      const pendingRawText = sessionStorage.getItem('pendingAnalysisRawText')!;
+      
+      const byteCharacters = atob(pendingFile.data.split(',')[1]);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: pendingFile.type });
+      const restoredFile = new File([blob], pendingFile.name, { type: pendingFile.type });
+
+      setCreditFile(restoredFile);
+      setCreditFileName(restoredFile.name);
+      setRawText(pendingRawText);
+      setIsTextExtracted(true);
+      
+      sessionStorage.removeItem('pendingAnalysisFile');
+      sessionStorage.removeItem('pendingAnalysisRawText');
+
+      // Automatically trigger analysis
+      handleAnalyzeCreditReport(restoredFile, pendingRawText);
+    }
+  }, [user]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = event.target.files;
@@ -146,10 +175,9 @@ export default function CreditPage() {
             const text = await page.getTextContent();
             textContent += text.items.map(item => 'str' in item ? item.str : '').join(' ');
           }
-          // Clean up the text before setting it
           const cleanedText = textContent
-            .replace(/\s+/g, ' ') // Replace multiple whitespace characters with a single space
-            .replace(/(\r\n|\n|\r)/gm, " ") // Replace newlines with spaces
+            .replace(/\s+/g, ' ')
+            .replace(/(\r\n|\n|\r)/gm, " ")
             .trim();
           setRawText(cleanedText);
           setIsTextExtracted(true);
@@ -168,13 +196,32 @@ export default function CreditPage() {
     }
   };
   
-  const handleAnalyzeCreditReport = async () => {
-    if (!rawText || !creditFile) {
+ const handleAnalyzeCreditReport = async (fileToAnalyze?: File, textToAnalyze?: string) => {
+    const currentFile = fileToAnalyze || creditFile;
+    const currentText = textToAnalyze || rawText;
+
+    if (!currentText || !currentFile) {
         toast({ variant: 'destructive', title: 'Error', description: 'No report text to analyze.' });
         return;
     }
-     if (!user) {
-      toast({ variant: 'destructive', title: 'Not Logged In', description: 'You must be logged in to analyze and save a report.' });
+
+    if (loading) return; // Wait until auth state is confirmed
+
+    if (!user) {
+      toast({ title: 'Please Sign In', description: 'You need to be logged in to analyze a report. Redirecting you to login...' });
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const fileData = {
+          name: currentFile.name,
+          type: currentFile.type,
+          data: e.target?.result
+        };
+        sessionStorage.setItem('pendingAnalysisFile', JSON.stringify(fileData));
+        sessionStorage.setItem('pendingAnalysisRawText', currentText);
+        router.push('/login?redirect=/credit');
+      };
+      reader.readAsDataURL(currentFile);
       return;
     }
 
@@ -182,29 +229,16 @@ export default function CreditPage() {
     setAnalysisError(null);
     
     try {
-        // Step 1: Get AI Analysis
-        console.log("CLIENT: Starting AI analysis...");
-        const output = await analyzeCreditReport({ creditReportText: rawText });
-        console.log("CLIENT: AI Analysis Output:", output);
-        if (!output) {
-            throw new Error("AI returned an empty response.");
-        }
+        const output = await analyzeCreditReport({ creditReportText: currentText });
+        if (!output) throw new Error("AI returned an empty response.");
         setAnalysisResult(output);
 
-        // Step 2: Upload PDF to Firebase Storage
-        console.log("CLIENT: Starting upload for user:", user.uid);
-        const storageRef = ref(storage, `credit_reports/${user.uid}/${Date.now()}_${creditFile.name}`);
-        console.log("CLIENT: Storage ref path:", storageRef.fullPath);
-        const uploadResult = await uploadBytes(storageRef, creditFile);
-        console.log("CLIENT: Upload successful:", uploadResult);
+        const storageRef = ref(storage, `credit_reports/${user.uid}/${Date.now()}_${currentFile.name}`);
+        const uploadResult = await uploadBytes(storageRef, currentFile);
         const downloadURL = await getDownloadURL(uploadResult.ref);
-        console.log("CLIENT: File available at:", downloadURL);
         
-        // Step 3: Save summary with download URL using Server Action
-        console.log("CLIENT: Calling saveReportSummaryAction...");
         const saveResult = await saveReportSummaryAction(output, user.uid, downloadURL);
         
-        // Step 4: Show success toast
         toast({ 
             title: "Analysis Complete & Saved!", 
             description: "Your AI-powered insights are ready. The report summary has been saved to the dashboard.",
@@ -215,8 +249,6 @@ export default function CreditPage() {
             )
         });
 
-        // Step 5 (Optional, Background): Create a training candidate
-        // This can fail without blocking the user flow
         getRiskAssessment({ analysisResult: output })
             .then(riskAssessmentForRating => getAiRating({ analysisResult: output, riskAssessment: riskAssessmentForRating.assessmentWithoutGuarantor }))
             .then(aiRatingOutput => addTrainingCandidate(aiRatingOutput))
@@ -324,11 +356,10 @@ export default function CreditPage() {
             
             {isReadyForAnalysis && (
                 <div className="mt-4">
-                    <Button onClick={handleAnalyzeCreditReport} size="lg" disabled={loading || !user}>
+                    <Button onClick={() => handleAnalyzeCreditReport()} size="lg" disabled={loading}>
                         <Sparkles className="mr-2 h-5 w-5"/>
                         Analyze & Save Report
                     </Button>
-                     {!user && !loading && <p className="text-xs text-muted-foreground mt-2">Please <Link href="/login" className="underline text-primary">sign in</Link> to analyze and save reports.</p>}
                 </div>
             )}
             
