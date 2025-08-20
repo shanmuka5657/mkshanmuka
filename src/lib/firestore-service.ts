@@ -36,20 +36,22 @@ export interface CreditReportSummary {
  */
 export async function getReportsForUser(userId: string): Promise<CreditReportSummary[]> {
   const reportsCollection = collection(db, 'creditReports');
+  // The query was failing because a composite index is required to filter by userId and order by createdAt.
+  // As a workaround, we will filter first, then sort the results in the client.
+  // The correct long-term fix is to create the index in the Firebase Console.
   const q = query(
     reportsCollection, 
-    where('userId', '==', userId), 
-    orderBy('createdAt', 'desc')
+    where('userId', '==', userId)
   );
   const querySnapshot = await getDocs(q);
 
   const reports: CreditReportSummary[] = [];
   querySnapshot.forEach((doc) => {
-    const data = doc.data();
-    // We can exclude the large 'fullAnalysis' field from this list view if needed for performance
-    // but for now, we'll keep it simple.
-    reports.push({ id: doc.id, ...data } as CreditReportSummary);
+    reports.push({ id: doc.id, ...doc.data() } as CreditReportSummary);
   });
+
+  // Sort the reports by date descending on the client side.
+  reports.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
 
   return reports;
 }
