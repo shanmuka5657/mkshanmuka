@@ -3,24 +3,16 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, UserPlus, CheckCircle } from 'lucide-react';
+import { Loader2, UserPlus, CheckCircle, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { createUserWithEmailAndPassword, sendEmailVerification, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
 import { auth } from '@/lib/firebase-client';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardFooter, CardTitle, CardDescription } from '@/components/ui/card';
 
 export default function SignupPage() {
   // Common state
@@ -39,16 +31,16 @@ export default function SignupPage() {
   const [otp, setOtp] = useState('');
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [otpSent, setOtpSent] = useState(false);
+  const [activeTab, setActiveTab] = useState('email');
 
   useEffect(() => {
-    // This effect should only run once, and only on the client side.
     if (typeof window !== 'undefined' && !window.recaptchaVerifier) {
       const recaptchaContainer = document.getElementById('recaptcha-container');
       if (recaptchaContainer) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainer, {
           'size': 'invisible',
           'callback': (response: any) => {
-            // reCAPTCHA solved, allow signInWithPhoneNumber.
+            // reCAPTCHA solved
           }
         });
       }
@@ -110,7 +102,7 @@ export default function SignupPage() {
     e.preventDefault();
     setIsLoading(true);
     try {
-        const fullPhoneNumber = `+91${phone}`; // Assuming Indian numbers for now
+        const fullPhoneNumber = `+91${phone}`;
         const verifier = window.recaptchaVerifier;
         const result = await signInWithPhoneNumber(auth, fullPhoneNumber, verifier);
         setConfirmationResult(result);
@@ -147,7 +139,7 @@ export default function SignupPage() {
             title: 'Signup Successful!',
             description: "Your account has been created.",
           });
-          setIsSuccess(true); // Show a generic success screen
+          setIsSuccess(true);
       } catch (error: any) {
           toast({
             variant: 'destructive',
@@ -158,6 +150,12 @@ export default function SignupPage() {
           setIsLoading(false);
       }
   };
+
+  const getWelcomeText = () => {
+      if (otpSent) return "Enter the OTP we sent to your phone.";
+      if (activeTab === 'email') return "Enter your details below to get started.";
+      return "Enter your mobile number to get an OTP.";
+  }
 
   if (isSuccess) {
     return (
@@ -187,140 +185,70 @@ export default function SignupPage() {
   }
 
   return (
-    <main className="container flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <Tabs defaultValue="email">
+    <main className="container flex flex-col items-center justify-center p-4">
+      <div id="recaptcha-container" />
+      <div className="w-full max-w-md mt-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="email">Email</TabsTrigger>
                 <TabsTrigger value="mobile">Mobile Number</TabsTrigger>
             </TabsList>
-            <div id="recaptcha-container" />
+            <div className="text-center py-8">
+                <Button variant="outline" size="icon" className="h-16 w-16 rounded-full mx-auto mb-6">
+                    <UserPlus className="h-8 w-8" />
+                </Button>
+                <h1 className="text-3xl font-bold">Create an Account</h1>
+                <p className="text-muted-foreground mt-2">{getWelcomeText()}</p>
+            </div>
             <TabsContent value="email">
-                <Card>
-                    <form onSubmit={handleEmailSignup}>
-                        <CardHeader className="text-center">
-                            <div className="mx-auto bg-primary/10 p-3 rounded-full mb-4">
-                                <UserPlus className="h-8 w-8 text-primary" />
-                            </div>
-                            <CardTitle>Create an Account</CardTitle>
-                            <CardDescription>
-                            Enter your details below to get started with email.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                            <Label htmlFor="name">Name</Label>
-                            <Input
-                                id="name"
-                                type="text"
-                                placeholder="John Doe"
-                                required
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                disabled={isLoading}
-                            />
-                            </div>
-                            <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                placeholder="m@example.com"
-                                required
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                disabled={isLoading}
-                            />
-                            </div>
-                            <div className="space-y-2">
-                            <Label htmlFor="password">Password</Label>
-                            <Input
-                                id="password"
-                                type="password"
-                                required
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                disabled={isLoading}
-                                placeholder="Must be at least 6 characters"
-                            />
-                            </div>
-                        </CardContent>
-                        <CardFooter className="flex flex-col gap-4">
-                            <Button type="submit" className="w-full" disabled={isLoading}>
-                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Sign Up with Email
-                            </Button>
-                            <p className="text-xs text-muted-foreground text-center">
-                                Already have an account?{' '}
-                                <Link href="/login" className="text-primary hover:underline font-semibold">
-                                    Sign In
-                                </Link>
-                            </p>
-                        </CardFooter>
-                    </form>
-                </Card>
+                <form onSubmit={handleEmailSignup} className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="name">Name</Label>
+                        <Input id="name" type="text" placeholder="John Doe" required value={name} onChange={(e) => setName(e.target.value)} disabled={isLoading} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="password">Password</Label>
+                        <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading} placeholder="Must be at least 6 characters" />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Sign Up with Email
+                    </Button>
+                </form>
             </TabsContent>
             <TabsContent value="mobile">
-                <Card>
-                    <form onSubmit={otpSent ? handleVerifyOtp : handlePhoneSignup}>
-                        <CardHeader className="text-center">
-                            <div className="mx-auto bg-primary/10 p-3 rounded-full mb-4">
-                                <UserPlus className="h-8 w-8 text-primary" />
+                <form onSubmit={otpSent ? handleVerifyOtp : handlePhoneSignup} className="space-y-4">
+                     {!otpSent ? (
+                        <div className="space-y-2">
+                            <Label htmlFor="phone">Mobile Number</Label>
+                            <div className="flex items-center">
+                                <span className="p-2 border rounded-l-md bg-muted text-muted-foreground text-sm">+91</span>
+                                <Input id="phone" type="tel" placeholder="9876543210" required value={phone} onChange={(e) => setPhone(e.target.value)} disabled={isLoading} className="rounded-l-none" />
                             </div>
-                            <CardTitle>Create an Account</CardTitle>
-                            <CardDescription>
-                            {otpSent ? "Enter the OTP we sent to your phone." : "Enter your mobile number to get an OTP."}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {!otpSent ? (
-                                <div className="space-y-2">
-                                    <Label htmlFor="phone">Mobile Number</Label>
-                                    <div className="flex items-center">
-                                        <span className="p-2 border rounded-l-md bg-muted text-muted-foreground text-sm">+91</span>
-                                        <Input
-                                            id="phone"
-                                            type="tel"
-                                            placeholder="9876543210"
-                                            required
-                                            value={phone}
-                                            onChange={(e) => setPhone(e.target.value)}
-                                            disabled={isLoading}
-                                            className="rounded-l-none"
-                                        />
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="space-y-2">
-                                    <Label htmlFor="otp">One-Time Password (OTP)</Label>
-                                    <Input
-                                        id="otp"
-                                        type="text"
-                                        placeholder="Enter 6-digit OTP"
-                                        required
-                                        value={otp}
-                                        onChange={(e) => setOtp(e.target.value)}
-                                        disabled={isLoading}
-                                    />
-                                </div>
-                            )}
-                        </CardContent>
-                        <CardFooter className="flex flex-col gap-4">
-                            <Button type="submit" className="w-full" disabled={isLoading}>
-                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {otpSent ? 'Verify OTP & Sign Up' : 'Send OTP'}
-                            </Button>
-                            <p className="text-xs text-muted-foreground text-center">
-                                Already have an account?{' '}
-                                <Link href="/login" className="text-primary hover:underline font-semibold">
-                                    Sign In
-                                </Link>
-                            </p>
-                        </CardFooter>
-                    </form>
-                </Card>
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            <Label htmlFor="otp">One-Time Password (OTP)</Label>
+                            <Input id="otp" type="text" placeholder="Enter 6-digit OTP" required value={otp} onChange={(e) => setOtp(e.target.value)} disabled={isLoading} />
+                        </div>
+                    )}
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {otpSent ? 'Verify OTP & Sign Up' : 'Send OTP'}
+                    </Button>
+                </form>
             </TabsContent>
         </Tabs>
+        <p className="text-xs text-muted-foreground text-center mt-6">
+            Already have an account?{' '}
+            <Link href="/login" className="text-primary hover:underline font-semibold">
+                Sign In
+            </Link>
+        </p>
       </div>
     </main>
   );

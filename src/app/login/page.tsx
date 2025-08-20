@@ -3,17 +3,9 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, LogIn } from 'lucide-react';
+import { Loader2, LogIn, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -21,6 +13,7 @@ import { signInWithEmailAndPassword, RecaptchaVerifier, signInWithPhoneNumber, C
 import { auth } from '@/lib/firebase-client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthState } from 'react-firebase-hooks/auth';
+import { Card, CardContent } from '@/components/ui/card';
 
 export default function LoginPage() {
   // Common state
@@ -38,6 +31,7 @@ export default function LoginPage() {
   const [otp, setOtp] = useState('');
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [otpSent, setOtpSent] = useState(false);
+  const [activeTab, setActiveTab] = useState('email');
 
   useEffect(() => {
     // Redirect if user is already logged in
@@ -47,15 +41,13 @@ export default function LoginPage() {
   }, [user, loading, router]);
   
   useEffect(() => {
-    // This effect should only run once, and only on the client side.
     if (typeof window !== 'undefined' && !window.recaptchaVerifier) {
-      // Ensure the container exists.
       const recaptchaContainer = document.getElementById('recaptcha-container');
       if (recaptchaContainer) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainer, {
           'size': 'invisible',
           'callback': (response: any) => {
-            // reCAPTCHA solved, allow signInWithPhoneNumber.
+            // reCAPTCHA solved
           }
         });
       }
@@ -64,7 +56,6 @@ export default function LoginPage() {
 
 
   const handleSuccessfulLogin = (user: User) => {
-    // Check for providerData to ensure this is an email login before checking for verification
     if (user.providerData.some(p => p.providerId === 'password') && !user.emailVerified) {
         toast({
             variant: 'destructive',
@@ -117,7 +108,7 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     try {
-        const fullPhoneNumber = `+91${phone}`; // Assuming Indian numbers
+        const fullPhoneNumber = `+91${phone}`;
         const verifier = window.recaptchaVerifier;
         const result = await signInWithPhoneNumber(auth, fullPhoneNumber, verifier);
         setConfirmationResult(result);
@@ -164,128 +155,73 @@ export default function LoginPage() {
       }
   };
 
+  const getWelcomeText = () => {
+      if (otpSent) return "Enter the OTP we sent to your phone.";
+      if (activeTab === 'email') return "Enter your email below to log in to your account.";
+      return "Enter your mobile number to get an OTP.";
+  }
+
   return (
-    <main className="container flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <Tabs defaultValue="email">
+    <main className="container flex flex-col items-center justify-center p-4">
+      <div id="recaptcha-container" />
+      <div className="w-full max-w-md mt-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="email">Email</TabsTrigger>
                 <TabsTrigger value="mobile">Mobile Number</TabsTrigger>
             </TabsList>
-            <div id="recaptcha-container" />
+            <div className="text-center py-8">
+                <Button variant="outline" size="icon" className="h-16 w-16 rounded-full mx-auto mb-6">
+                    <ArrowRight className="h-8 w-8" />
+                </Button>
+                <h1 className="text-3xl font-bold">Welcome Back!</h1>
+                <p className="text-muted-foreground mt-2">{getWelcomeText()}</p>
+            </div>
             <TabsContent value="email">
-                <Card>
-                    <form onSubmit={handleEmailLogin}>
-                        <CardHeader className="text-center">
-                            <div className="mx-auto bg-primary/10 p-3 rounded-full mb-4">
-                                <LogIn className="h-8 w-8 text-primary" />
-                            </div>
-                            <CardTitle>Welcome Back!</CardTitle>
-                            <CardDescription>
-                            Enter your email below to log in to your account.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                placeholder="m@example.com"
-                                required
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                disabled={isLoading}
-                            />
-                            </div>
-                            <div className="space-y-2">
-                            <Label htmlFor="password">Password</Label>
-                            <Input
-                                id="password"
-                                type="password"
-                                required
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                disabled={isLoading}
-                            />
-                            </div>
-                        </CardContent>
-                        <CardFooter className="flex flex-col gap-4">
-                            <Button type="submit" className="w-full" disabled={isLoading}>
-                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Sign In with Email
-                            </Button>
-                            <p className="text-xs text-muted-foreground text-center">
-                                Don't have an account?{' '}
-                                <Link href="/signup" className="text-primary hover:underline font-semibold">
-                                    Sign Up
-                                </Link>
-                            </p>
-                        </CardFooter>
-                    </form>
-                </Card>
+                <form onSubmit={handleEmailLogin} className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="password">Password</Label>
+                        <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading} />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Sign In with Email
+                    </Button>
+                </form>
             </TabsContent>
             <TabsContent value="mobile">
-                <Card>
-                    <form onSubmit={otpSent ? handleVerifyOtp : handlePhoneLogin}>
-                        <CardHeader className="text-center">
-                            <div className="mx-auto bg-primary/10 p-3 rounded-full mb-4">
-                                <LogIn className="h-8 w-8 text-primary" />
+                <form onSubmit={otpSent ? handleVerifyOtp : handlePhoneLogin} className="space-y-4">
+                    {!otpSent ? (
+                        <div className="space-y-2">
+                            <Label htmlFor="phone">Mobile Number</Label>
+                            <div className="flex items-center">
+                                <span className="p-2 border rounded-l-md bg-muted text-muted-foreground text-sm">+91</span>
+                                <Input id="phone" type="tel" placeholder="9876543210" required value={phone} onChange={(e) => setPhone(e.target.value)} disabled={isLoading} className="rounded-l-none" />
                             </div>
-                            <CardTitle>Welcome Back!</CardTitle>
-                            <CardDescription>
-                            {otpSent ? "Enter the OTP we sent to your phone." : "Enter your mobile number to get an OTP."}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {!otpSent ? (
-                                <div className="space-y-2">
-                                    <Label htmlFor="phone">Mobile Number</Label>
-                                    <div className="flex items-center">
-                                        <span className="p-2 border rounded-l-md bg-muted text-muted-foreground text-sm">+91</span>
-                                        <Input
-                                            id="phone"
-                                            type="tel"
-                                            placeholder="9876543210"
-                                            required
-                                            value={phone}
-                                            onChange={(e) => setPhone(e.target.value)}
-                                            disabled={isLoading}
-                                            className="rounded-l-none"
-                                        />
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="space-y-2">
-                                    <Label htmlFor="otp">One-Time Password (OTP)</Label>
-                                    <Input
-                                        id="otp"
-                                        type="text"
-                                        placeholder="Enter 6-digit OTP"
-                                        required
-                                        value={otp}
-                                        onChange={(e) => setOtp(e.target.value)}
-                                        disabled={isLoading}
-                                    />
-                                </div>
-                            )}
-                        </CardContent>
-                        <CardFooter className="flex flex-col gap-4">
-                            <Button type="submit" className="w-full" disabled={isLoading}>
-                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {otpSent ? 'Verify OTP & Sign In' : 'Send OTP'}
-                            </Button>
-                            <p className="text-xs text-muted-foreground text-center">
-                                Don't have an account?{' '}
-                                <Link href="/signup" className="text-primary hover:underline font-semibold">
-                                    Sign Up
-                                </Link>
-                            </p>
-                        </CardFooter>
-                    </form>
-                </Card>
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            <Label htmlFor="otp">One-Time Password (OTP)</Label>
+                            <Input id="otp" type="text" placeholder="Enter 6-digit OTP" required value={otp} onChange={(e) => setOtp(e.target.value)} disabled={isLoading} />
+                        </div>
+                    )}
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {otpSent ? 'Verify OTP & Sign In' : 'Send OTP'}
+                    </Button>
+                </form>
             </TabsContent>
         </Tabs>
+        <p className="text-xs text-muted-foreground text-center mt-6">
+            Don't have an account?{' '}
+            <Link href="/signup" className="text-primary hover:underline font-semibold">
+                Sign Up
+            </Link>
+        </p>
       </div>
     </main>
   );
