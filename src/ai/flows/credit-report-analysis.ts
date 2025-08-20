@@ -97,6 +97,11 @@ const AnalyzeCreditReportOutputSchema = z.object({
     totalEmi: z.number().describe('The calculated total of all monthly EMI payments for active loans.'),
     activeLoans: z.array(LoanDetailSchema).describe("A list of all active loans with their details."),
   }).describe("Detailed breakdown of active loans and total EMI."),
+  usage: z.object({
+      inputTokens: z.number().optional(),
+      outputTokens: z.number().optional(),
+      totalTokens: z.number().optional(),
+  }).optional().describe("Token usage for the generation call."),
 });
 export type AnalyzeCreditReportOutput = z.infer<typeof AnalyzeCreditReportOutputSchema>;
 
@@ -155,10 +160,12 @@ const analyzeCreditReportFlow = ai.defineFlow(
     outputSchema: AnalyzeCreditReportOutputSchema,
   },
   async (input: AnalyzeCreditReportInput) => {
-    const { output } = await prompt(input);
+    const { output, usage } = await prompt(input);
     if (!output) {
       throw new Error("AI failed to analyze the report.");
     }
+     // Attach usage data to the output
+    output.usage = usage;
     return output;
   }
 );

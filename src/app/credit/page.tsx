@@ -11,7 +11,9 @@ import {
   ClipboardCheck,
   BarChart,
   User,
-  Sparkles
+  Sparkles,
+  DollarSign,
+  Cpu
 } from 'lucide-react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, storage } from '@/lib/firebase-client';
@@ -74,13 +76,21 @@ const initialAnalysis: AnalyzeCreditReportOutput = {
   emiDetails: {
     totalEmi: 0,
     activeLoans: [],
+  },
+  usage: {
+    inputTokens: 0,
+    outputTokens: 0,
+    totalTokens: 0,
   }
 };
 
 
-const SummaryBox = ({ title, value, isLoading = false, valueClassName = '' }: { title: string; value: string | number; isLoading?: boolean; valueClassName?: string }) => (
+const SummaryBox = ({ title, value, isLoading = false, valueClassName = '', icon: Icon }: { title: string; value: string | number; isLoading?: boolean; valueClassName?: string, icon?: React.ElementType }) => (
   <Card className="text-center p-3 bg-muted/30">
-    <CardDescription className="text-xs text-muted-foreground">{title}</CardDescription>
+    <CardDescription className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+      {Icon && <Icon className="h-3 w-3" />}
+      {title}
+    </CardDescription>
     {isLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin" /> : <CardTitle className={cn("text-lg font-bold", valueClassName)}>{value}</CardTitle>}
   </Card>
 );
@@ -305,9 +315,17 @@ export default function CreditPage() {
     }
   }
 
-  const { customerDetails, reportSummary, cibilScore } = analysisResult || initialAnalysis;
+  const { customerDetails, reportSummary, cibilScore, usage } = analysisResult || initialAnalysis;
   const isAnalysisComplete = !!analysisResult;
   const isReadyForAnalysis = isTextExtracted && !isAnalyzing && !isAnalysisComplete;
+
+  const calculateCost = () => {
+      if (!usage || !usage.inputTokens || !usage.outputTokens) return 0;
+      // Pricing for Gemini 1.5 Flash: $0.00013125 per 1K input tokens, $0.00039375 per 1K output tokens
+      const inputCost = (usage.inputTokens / 1000) * 0.00013125;
+      const outputCost = (usage.outputTokens / 1000) * 0.00039375;
+      return inputCost + outputCost;
+  }
   
   if (activeView && analysisResult) {
       return (
@@ -446,6 +464,15 @@ export default function CreditPage() {
                             <SummaryBox title="Most Recent Enquiry" value={reportSummary.enquirySummary.recentDate} />
                     </div>
                 </div>
+                 {isAnalysisComplete && usage?.totalTokens && (
+                    <div className="md:col-span-2">
+                        <h3 className="font-semibold mb-3">Analysis Cost</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                            <SummaryBox title="Tokens Used" value={usage.totalTokens.toLocaleString()} icon={Cpu} />
+                            <SummaryBox title="Estimated Cost" value={`$${calculateCost().toFixed(6)}`} icon={DollarSign} />
+                        </div>
+                    </div>
+                )}
             </CardContent>
         </Card>
 
