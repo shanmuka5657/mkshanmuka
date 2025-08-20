@@ -47,8 +47,9 @@ export default function LoginPage() {
   }, [user, loading, router]);
   
   useEffect(() => {
-    if (!window.recaptchaVerifier) {
-      // Ensure the container exists and is visible (though invisible reCAPTCHA doesn't need a visible element)
+    // This effect should only run once, and only on the client side.
+    if (typeof window !== 'undefined' && !window.recaptchaVerifier) {
+      // Ensure the container exists.
       const recaptchaContainer = document.getElementById('recaptcha-container');
       if (recaptchaContainer) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainer, {
@@ -63,7 +64,8 @@ export default function LoginPage() {
 
 
   const handleSuccessfulLogin = (user: User) => {
-    if (!user.emailVerified && user.providerData.some(p => p.providerId === 'password')) {
+    // Check for providerData to ensure this is an email login before checking for verification
+    if (user.providerData.some(p => p.providerId === 'password') && !user.emailVerified) {
         toast({
             variant: 'destructive',
             title: 'Verification Required',
@@ -130,6 +132,8 @@ export default function LoginPage() {
             errorMessage = "Failed to verify reCAPTCHA. For local development, ensure 'localhost' is an authorized domain in your Firebase project's Authentication settings.";
          } else if (error.code === 'auth/operation-not-allowed') {
             errorMessage = "Mobile number sign-in is not enabled. Please enable it in your Firebase project's Authentication settings.";
+         } else if (error.code === 'auth/too-many-requests') {
+            errorMessage = "You've tried to send an OTP too many times. Please wait a while before trying again.";
          }
          toast({
             variant: 'destructive',
@@ -168,9 +172,9 @@ export default function LoginPage() {
                 <TabsTrigger value="email">Email</TabsTrigger>
                 <TabsTrigger value="mobile">Mobile Number</TabsTrigger>
             </TabsList>
-            <div id="recaptcha-container"></div>
+            <div id="recaptcha-container" />
             <TabsContent value="email">
-                <Card className="border-none shadow-none">
+                <Card>
                     <form onSubmit={handleEmailLogin}>
                         <CardHeader className="text-center">
                             <div className="mx-auto bg-primary/10 p-3 rounded-full mb-4">
@@ -222,7 +226,7 @@ export default function LoginPage() {
                 </Card>
             </TabsContent>
             <TabsContent value="mobile">
-                <Card className="border-none shadow-none">
+                <Card>
                     <form onSubmit={otpSent ? handleVerifyOtp : handlePhoneLogin}>
                         <CardHeader className="text-center">
                             <div className="mx-auto bg-primary/10 p-3 rounded-full mb-4">

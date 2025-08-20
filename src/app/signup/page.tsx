@@ -41,7 +41,8 @@ export default function SignupPage() {
   const [otpSent, setOtpSent] = useState(false);
 
   useEffect(() => {
-    if (!window.recaptchaVerifier) {
+    // This effect should only run once, and only on the client side.
+    if (typeof window !== 'undefined' && !window.recaptchaVerifier) {
       const recaptchaContainer = document.getElementById('recaptcha-container');
       if (recaptchaContainer) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainer, {
@@ -122,6 +123,8 @@ export default function SignupPage() {
          let errorMessage = error.message || 'Please check the mobile number and try again.';
          if (error.code === 'auth/captcha-check-failed') {
             errorMessage = "Failed to verify reCAPTCHA. For local development, ensure 'localhost' is an authorized domain in your Firebase project's Authentication settings.";
+         } else if (error.code === 'auth/too-many-requests') {
+            errorMessage = "You've tried to send an OTP too many times. Please wait a while before trying again.";
          }
          toast({
             variant: 'destructive',
@@ -159,7 +162,7 @@ export default function SignupPage() {
   if (isSuccess) {
     return (
         <main className="container flex items-center justify-center p-4">
-            <Card className="w-full max-w-sm text-center border-none shadow-none">
+            <Card className="w-full max-w-sm text-center">
                  <CardHeader>
                     <div className="mx-auto bg-green-100 p-3 rounded-full mb-4">
                         <CheckCircle className="h-8 w-8 text-green-600" />
@@ -191,9 +194,9 @@ export default function SignupPage() {
                 <TabsTrigger value="email">Email</TabsTrigger>
                 <TabsTrigger value="mobile">Mobile Number</TabsTrigger>
             </TabsList>
-            <div id="recaptcha-container"></div>
+            <div id="recaptcha-container" />
             <TabsContent value="email">
-                <Card className="border-none shadow-none">
+                <Card>
                     <form onSubmit={handleEmailSignup}>
                         <CardHeader className="text-center">
                             <div className="mx-auto bg-primary/10 p-3 rounded-full mb-4">
@@ -258,7 +261,7 @@ export default function SignupPage() {
                 </Card>
             </TabsContent>
             <TabsContent value="mobile">
-                <Card className="border-none shadow-none">
+                <Card>
                     <form onSubmit={otpSent ? handleVerifyOtp : handlePhoneSignup}>
                         <CardHeader className="text-center">
                             <div className="mx-auto bg-primary/10 p-3 rounded-full mb-4">
