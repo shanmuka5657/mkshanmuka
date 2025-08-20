@@ -58,6 +58,11 @@ const SingleAssessmentSchema = z.object({
 const RiskAssessmentOutputSchema = z.object({
   assessmentWithGuarantor: SingleAssessmentSchema.describe("The complete risk assessment including all loans."),
   assessmentWithoutGuarantor: SingleAssessmentSchema.describe("The risk assessment performed after filtering out all loans where ownership is 'Guarantor'."),
+  usage: z.object({
+      inputTokens: z.number().optional(),
+      outputTokens: z.number().optional(),
+      totalTokens: z.number().optional(),
+  }).optional().describe("Token usage for the generation call."),
 });
 export type RiskAssessmentOutput = z.infer<typeof RiskAssessmentOutputSchema>;
 
@@ -116,7 +121,7 @@ const riskAssessmentFlow = ai.defineFlow(
     outputSchema: RiskAssessmentOutputSchema,
   },
   async (input: RiskAssessmentInput) => {
-    const {output} = await prompt(input);
+    const {output, usage} = await prompt(input);
     if (!output) {
       throw new Error("AI failed to provide a risk assessment.");
     }
@@ -133,6 +138,7 @@ const riskAssessmentFlow = ai.defineFlow(
     let ead2 = output.assessmentWithoutGuarantor.exposureAtDefault;
     output.assessmentWithoutGuarantor.expectedLoss = Math.round(pd2 * lgd2 * ead2);
 
+    output.usage = usage;
     return output;
   }
 );

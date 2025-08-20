@@ -37,7 +37,7 @@ import { FinancialsView } from '@/components/FinancialsView';
 import { saveReportSummaryAction } from '@/app/actions';
 import { addTrainingCandidate } from '@/lib/training-store';
 import { getAiRating } from '@/ai/flows/ai-rating';
-import { getRiskAssessment } from '@/ai/flows/risk-assessment';
+import { getRiskAssessment, RiskAssessmentOutput } from '@/ai/flows/risk-assessment';
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -102,6 +102,7 @@ export default function CreditPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(null);
+  const [riskAssessmentResult, setRiskAssessmentResult] = useState<RiskAssessmentOutput | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<string | null>(null);
   const [isTextExtracted, setIsTextExtracted] = useState(false);
@@ -162,6 +163,7 @@ export default function CreditPage() {
     setRawText('');
     setIsProcessing(false);
     setAnalysisResult(null);
+    setRiskAssessmentResult(null);
     setIsAnalyzing(false);
     setActiveView(null);
     setIsTextExtracted(false);
@@ -239,15 +241,19 @@ export default function CreditPage() {
     setAnalysisError(null);
     
     try {
-        const output = await analyzeCreditReport({ creditReportText: currentText });
-        if (!output) throw new Error("AI returned an empty response.");
-        setAnalysisResult(output);
+        const creditAnalysisOutput = await analyzeCreditReport({ creditReportText: currentText });
+        if (!creditAnalysisOutput) throw new Error("AI returned an empty response for credit analysis.");
+        setAnalysisResult(creditAnalysisOutput);
+
+        const riskAssessmentOutput = await getRiskAssessment({ analysisResult: creditAnalysisOutput });
+        if (!riskAssessmentOutput) throw new Error("AI returned an empty response for risk assessment.");
+        setRiskAssessmentResult(riskAssessmentOutput);
 
         const storageRef = ref(storage, `credit_reports/${user.uid}/${Date.now()}_${currentFile.name}`);
         const uploadResult = await uploadBytes(storageRef, currentFile);
         const downloadURL = await getDownloadURL(uploadResult.ref);
         
-        const saveResult = await saveReportSummaryAction(output, user.uid, downloadURL);
+        const saveResult = await saveReportSummaryAction(creditAnalysisOutput, user.uid, downloadURL);
         
         toast({ 
             title: "Analysis Complete & Saved!", 
@@ -259,8 +265,8 @@ export default function CreditPage() {
             )
         });
 
-        getRiskAssessment({ analysisResult: output })
-            .then(riskAssessmentForRating => getAiRating({ analysisResult: output, riskAssessment: riskAssessmentForRating.assessmentWithoutGuarantor }))
+        // This can run in the background without blocking the UI
+        getAiRating({ analysisResult: creditAnalysisOutput, riskAssessment: riskAssessmentOutput.assessmentWithoutGuarantor })
             .then(aiRatingOutput => addTrainingCandidate(aiRatingOutput))
             .catch(e => console.error("Failed to create training candidate:", e));
 
@@ -315,16 +321,24 @@ export default function CreditPage() {
     }
   }
 
-  const { customerDetails, reportSummary, cibilScore, usage } = analysisResult || initialAnalysis;
+  const { customerDetails, reportSummary, cibilScore } = analysisResult || initialAnalysis;
   const isAnalysisComplete = !!analysisResult;
   const isReadyForAnalysis = isTextExtracted && !isAnalyzing && !isAnalysisComplete;
 
   const calculateCost = () => {
-      if (!usage || !usage.inputTokens || !usage.outputTokens) return 0;
+      const creditUsage = analysisResult?.usage;
+      const riskUsage = riskAssessmentResult?.usage;
+
+      const totalInputTokens = (creditUsage?.inputTokens || 0) + (riskUsage?.inputTokens || 0);
+      const totalOutputTokens = (creditUsage?.outputTokens || 0) + (riskUsage?.outputTokens || 0);
+
+      if (totalInputTokens === 0 && totalOutputTokens === 0) return { totalTokens: 0, cost: 0 };
+
       // Pricing for Gemini 1.5 Flash: $0.00013125 per 1K input tokens, $0.00039375 per 1K output tokens
-      const inputCost = (usage.inputTokens / 1000) * 0.00013125;
-      const outputCost = (usage.outputTokens / 1000) * 0.00039375;
-      return inputCost + outputCost;
+      const inputCost = (totalInputTokens / 1000) * 0.00013125;
+      const outputCost = (totalOutputTokens / 1000) * 0.00039375;
+      
+      return { totalTokens: totalInputTokens + totalOutputTokens, cost: inputCost + outputCost };
   }
   
   if (activeView && analysisResult) {
@@ -464,15 +478,6 @@ export default function CreditPage() {
                             <SummaryBox title="Most Recent Enquiry" value={reportSummary.enquirySummary.recentDate} />
                     </div>
                 </div>
-                 {isAnalysisComplete && usage?.totalTokens && (
-                    <div className="md:col-span-2">
-                        <h3 className="font-semibold mb-3">Analysis Cost</h3>
-                        <div className="grid grid-cols-2 gap-3">
-                            <SummaryBox title="Tokens Used" value={usage.totalTokens.toLocaleString()} icon={Cpu} />
-                            <SummaryBox title="Estimated Cost" value={`$${calculateCost().toFixed(6)}`} icon={DollarSign} />
-                        </div>
-                    </div>
-                )}
             </CardContent>
         </Card>
 
@@ -481,6 +486,21 @@ export default function CreditPage() {
             onSelectView={setActiveView}
         />
 
+        {isAnalysisComplete && (
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg"><DollarSign className="text-primary" />Analysis Cost</CardTitle>
+                    <CardDescription>Estimated cost for the AI analysis (Credit Analysis + Risk Assessment). For educational purposes only.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                        <SummaryBox title="Total Tokens Used" value={calculateCost().totalTokens.toLocaleString()} icon={Cpu} />
+                        <SummaryBox title="Estimated Cost" value={`$${calculateCost().cost.toFixed(6)}`} icon={DollarSign} />
+                    </div>
+                </CardContent>
+            </Card>
+        )}
+        
         <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="item-1">
             <AccordionTrigger>
