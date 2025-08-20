@@ -1,66 +1,31 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Loader2, LogIn, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
-import { useToast } from '@/hooks/use-toast';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { signInWithEmailAndPassword, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, User } from 'firebase/auth';
-import { auth } from '@/lib/firebase-client';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuthState } from 'react-firebase-hooks/auth';
+import { Loader2, ArrowRight } from 'lucide-react';
 
-export default function LoginPage() {
-  // Common state
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [user, loading] = useAuthState(auth);
-  const [redirectPath, setRedirectPath] = useState('/dashboard');
+// Dynamically import the main login form component
+const LoginForm = lazy(() => import('@/components/LoginForm'));
 
-  // Email state
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
-  // Phone state
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
-  const [otpSent, setOtpSent] = useState(false);
-  const [activeTab, setActiveTab] = useState('email');
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const redirect = searchParams.get('redirect');
-      if (redirect) {
-        setRedirectPath(redirect);
-      }
-    }
-  }, [searchParams]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-
-      // Redirect if user is already logged in
-      if (user && !loading) {
- router.push(redirectPath);
-      }
-    }
-  }, [user, loading, router, redirectPath]);
-
+export default function LoginPageWrapper() {
   useEffect(() => {
     if (typeof window !== 'undefined' && !window.recaptchaVerifier) {
       const recaptchaContainer = document.getElementById('recaptcha-container');
       if (recaptchaContainer) {
+        // Import Firebase only on the client side
+        import('firebase/auth').then(({ RecaptchaVerifier, getAuth }) => {
+          const auth = getAuth();
+          if (auth) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainer, {
           'size': 'invisible',
           'callback': (response: any) => {
             // reCAPTCHA solved
+          }
+        });
+          } else {
+            console.error("Firebase Auth is not initialized.");
           }
         });
       }
