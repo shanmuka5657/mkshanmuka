@@ -106,10 +106,14 @@ export default function LoginPage() {
             description: `An OTP has been sent to ${fullPhoneNumber}.`,
         });
     } catch (error: any) {
+         let errorMessage = error.message || 'Please check the mobile number and try again.';
+         if (error.code === 'auth/operation-not-allowed') {
+             errorMessage = 'Mobile number sign-in is not enabled for this project. Please enable it in your Firebase console under Authentication > Sign-in method.';
+         }
          toast({
             variant: 'destructive',
             title: 'Failed to Send OTP',
-            description: error.message || 'Please check the mobile number and try again.',
+            description: errorMessage,
         });
     } finally {
         setIsLoading(false);
