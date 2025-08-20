@@ -129,7 +129,7 @@ export default function LoginPage() {
     } catch (error: any) {
          let errorMessage = error.message || 'Please check the mobile number and try again.';
          if (error.code === 'auth/captcha-check-failed') {
-            errorMessage = "Failed to verify reCAPTCHA. For local development, ensure 'localhost' is an authorized domain in your Firebase project's Authentication settings.";
+            errorMessage = "Failed to verify reCAPTCHA. For local development, ensure 'localhost' is an authorized domain in your Firebase project's Authentication settings AND check that your API key has no HTTP referrer restrictions in Google Cloud Console.";
          } else if (error.code === 'auth/operation-not-allowed') {
             errorMessage = "Mobile number sign-in is not enabled. Please enable it in your Firebase project's Authentication settings.";
          } else if (error.code === 'auth/too-many-requests') {
