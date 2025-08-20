@@ -328,6 +328,7 @@ export default function CreditPage() {
                         <Sparkles className="mr-2 h-5 w-5"/>
                         Analyze & Save Report
                     </Button>
+                     {!user && !loading && <p className="text-xs text-muted-foreground mt-2">Please <Link href="/login" className="underline text-primary">sign in</Link> to analyze and save reports.</p>}
                 </div>
             )}
             
