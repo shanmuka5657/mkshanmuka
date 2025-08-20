@@ -358,7 +358,7 @@ export default function CreditPage() {
                 <div className="mt-4">
                     <Button onClick={() => handleAnalyzeCreditReport()} size="lg" disabled={loading}>
                         <Sparkles className="mr-2 h-5 w-5"/>
-                        Analyze & Save Report
+                        Generate Report and Save
                     </Button>
                 </div>
             )}
