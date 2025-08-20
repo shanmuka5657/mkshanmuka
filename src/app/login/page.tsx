@@ -1,29 +1,32 @@
 
 'use client';
 
-import { useState, useEffect, lazy, Suspense } from 'react';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { Loader2, ArrowRight } from 'lucide-react';
+import { Suspense, lazy, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 
 // Dynamically import the main login form component
 const LoginForm = lazy(() => import('@/components/LoginForm'));
 
-export default function LoginPageWrapper() {
+function LoginPage() {
+  const searchParams = useSearchParams();
+  const redirectPath = searchParams.get('redirect') || '/dashboard';
+
   useEffect(() => {
+    // This effect ensures the reCAPTCHA verifier is initialized on the client side.
     if (typeof window !== 'undefined' && !window.recaptchaVerifier) {
       const recaptchaContainer = document.getElementById('recaptcha-container');
       if (recaptchaContainer) {
-        // Import Firebase only on the client side
+        // Import Firebase auth and initialize RecaptchaVerifier only on the client.
         import('firebase/auth').then(({ RecaptchaVerifier, getAuth }) => {
           const auth = getAuth();
           if (auth) {
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainer, {
-          'size': 'invisible',
-          'callback': (response: any) => {
-            // reCAPTCHA solved
-          }
-        });
+            window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainer, {
+              'size': 'invisible',
+              'callback': () => {
+                // reCAPTCHA solved
+              }
+            });
           } else {
             console.error("Firebase Auth is not initialized.");
           }
@@ -32,175 +35,26 @@ export default function LoginPageWrapper() {
     }
   }, []);
 
-
-  const handleSuccessfulLogin = (loggedInUser: User) => {
-    if (loggedInUser.providerData.some(p => p.providerId === 'password') && !loggedInUser.emailVerified) {
-        toast({
-            variant: 'destructive',
-            title: 'Verification Required',
-            description: 'Please verify your email address. Check your inbox for the verification link.',
-        });
-        auth.signOut();
-        return;
-    }
-    toast({
-      title: 'Login Successful!',
-      description: "Welcome back.",
-    });
-    router.push(redirectPath);
-  };
-
-  const handleEmailLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      handleSuccessfulLogin(userCredential.user);
-    } catch (error: any) {
-      let errorMessage = 'An unknown error occurred.';
-      switch (error.code) {
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-        case 'auth/invalid-credential':
-          errorMessage = 'Invalid credentials. Please check your email and password.';
-          break;
-        case 'auth/invalid-email':
-          errorMessage = 'Please enter a valid email address.';
-          break;
-        default:
-          errorMessage = 'An error occurred during login. Please try again.';
-          break;
-      }
-      toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: errorMessage,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  const handlePhoneLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    try {
-        const fullPhoneNumber = `+91${phone}`;
-        const verifier = window.recaptchaVerifier;
-        const result = await signInWithPhoneNumber(auth, fullPhoneNumber, verifier);
-        setConfirmationResult(result);
-        setOtpSent(true);
-        toast({
-            title: 'OTP Sent',
-            description: `An OTP has been sent to ${fullPhoneNumber}.`,
-        });
-    } catch (error: any) {
-         let errorMessage = error.message || 'Please check the mobile number and try again.';
-         if (error.code === 'auth/captcha-check-failed') {
-            errorMessage = "Failed to verify reCAPTCHA. For local development, ensure 'localhost' is an authorized domain in your Firebase project's Authentication settings AND check that your API key has no HTTP referrer restrictions in Google Cloud Console.";
-         } else if (error.code === 'auth/operation-not-allowed') {
-            errorMessage = "Mobile number sign-in is not enabled. Please enable it in your Firebase project's Authentication settings.";
-         } else if (error.code === 'auth/too-many-requests') {
-            errorMessage = "You've tried to send an OTP too many times. Please wait a while before trying again.";
-         }
-         toast({
-            variant: 'destructive',
-            title: 'Failed to Send OTP',
-            description: errorMessage,
-        });
-    } finally {
-        setIsLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!confirmationResult) return;
-      setIsLoading(true);
-
-      try {
-          const result = await confirmationResult.confirm(otp);
-          handleSuccessfulLogin(result.user);
-      } catch (error: any) {
-          toast({
-            variant: 'destructive',
-            title: 'OTP Verification Failed',
-            description: error.message || 'The OTP is incorrect. Please try again.',
-        });
-      } finally {
-          setIsLoading(false);
-      }
-  };
-
-  const getWelcomeText = () => {
-      if (otpSent) return "Enter the OTP we sent to your phone.";
-      if (activeTab === 'email') return "Enter your email below to log in to your account.";
-      return "Enter your mobile number to get an OTP.";
-  }
-
   return (
     <main className="container flex flex-col items-center justify-center p-4">
-      <div id="recaptcha-container" />
-      <div className="w-full max-w-md mt-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="text-center py-8">
-                <Button variant="outline" size="icon" className="h-16 w-16 rounded-full mx-auto mb-6">
-                    <ArrowRight className="h-8 w-8" />
-                </Button>
-                <h1 className="text-3xl font-bold">Welcome Back!</h1>
-                <p className="text-muted-foreground mt-2">{getWelcomeText()}</p>
-            </div>
-            <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="email">Email</TabsTrigger>
-                <TabsTrigger value="mobile">Mobile Number</TabsTrigger>
-            </TabsList>
-            <TabsContent value="email">
-                <form onSubmit={handleEmailLogin} className="space-y-4 mt-6">
-                    <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="password">Password</Label>
-                        <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading} />
-                    </div>
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Sign In with Email
-                    </Button>
-                </form>
-            </TabsContent>
-            <TabsContent value="mobile">
-                <form onSubmit={otpSent ? handleVerifyOtp : handlePhoneLogin} className="space-y-4 mt-6">
-                    {!otpSent ? (
-                        <div className="space-y-2">
-                            <Label htmlFor="phone">Mobile Number</Label>
-                            <div className="flex items-center">
-                                <span className="p-2 border rounded-l-md bg-muted text-muted-foreground text-sm">+91</span>
-                                <Input id="phone" type="tel" placeholder="9876543210" required value={phone} onChange={(e) => setPhone(e.target.value)} disabled={isLoading} className="rounded-l-none" />
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="space-y-2">
-                            <Label htmlFor="otp">One-Time Password (OTP)</Label>
-                            <Input id="otp" type="text" placeholder="Enter 6-digit OTP" required value={otp} onChange={(e) => setOtp(e.target.value)} disabled={isLoading} />
-                        </div>
-                    )}
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {otpSent ? 'Verify OTP & Sign In' : 'Send OTP'}
-                    </Button>
-                </form>
-            </TabsContent>
-        </Tabs>
-        <p className="text-xs text-muted-foreground text-center mt-6">
-            Don't have an account?{' '}
-            <Link href="/signup" className="text-primary hover:underline font-semibold">
-                Sign Up
-            </Link>
-        </p>
-      </div>
+       <div id="recaptcha-container" />
+       <Suspense fallback={<Loader2 className="animate-spin h-12 w-12" />}>
+         <LoginForm redirectPath={redirectPath} />
+       </Suspense>
     </main>
   );
+}
+
+
+// Wrap the page component in Suspense for the lazy-loaded LoginForm
+export default function LoginPageWrapper() {
+    return (
+        <Suspense fallback={
+            <div className="flex justify-center items-center h-screen">
+                <Loader2 className="animate-spin h-12 w-12" />
+            </div>
+        }>
+            <LoginPage />
+        </Suspense>
+    )
 }

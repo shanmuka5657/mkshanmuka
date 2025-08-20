@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -7,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, LogIn } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, type User } from 'firebase/auth';
 import { auth } from '@/lib/firebase-client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -114,15 +115,15 @@ export default function LoginForm({ redirectPath }: LoginFormProps) {
                 description: `An OTP has been sent to ${fullPhoneNumber}.`,
             });
         } catch (error: any) {
-            let errorMessage = error.message || 'Please check the mobile number and try again.';
-            if (error.code === 'auth/captcha-check-failed') {
+             let errorMessage = "Please check the mobile number and try again.";
+             if (error.code === 'auth/captcha-check-failed') {
                 errorMessage = "Failed to verify reCAPTCHA. For local development, ensure 'localhost' is an authorized domain in your Firebase project's Authentication settings AND check that your API key has no HTTP referrer restrictions in Google Cloud Console.";
-            } else if (error.code === 'auth/operation-not-allowed') {
+             } else if (error.code === 'auth/operation-not-allowed') {
                 errorMessage = "Mobile number sign-in is not enabled. Please enable it in your Firebase project's Authentication settings.";
-            } else if (error.code === 'auth/too-many-requests') {
+             } else if (error.code === 'auth/too-many-requests') {
                 errorMessage = "You've tried to send an OTP too many times. Please wait a while before trying again.";
-            }
-            toast({
+             }
+             toast({
                 variant: 'destructive',
                 title: 'Failed to Send OTP',
                 description: errorMessage,
