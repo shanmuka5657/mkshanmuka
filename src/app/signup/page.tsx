@@ -155,8 +155,8 @@ export default function SignupPage() {
 
   if (isSuccess) {
     return (
-        <div className="flex items-center justify-center min-h-screen bg-muted/30">
-            <Card className="w-full max-w-sm text-center">
+        <main className="container flex items-center justify-center p-4">
+            <Card className="w-full max-w-sm text-center border-none shadow-none">
                  <CardHeader>
                     <div className="mx-auto bg-green-100 p-3 rounded-full mb-4">
                         <CheckCircle className="h-8 w-8 text-green-600" />
@@ -176,142 +176,146 @@ export default function SignupPage() {
                     </Button>
                 </CardFooter>
             </Card>
-        </div>
+        </main>
     );
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-muted/30">
+    <main className="container flex items-center justify-center p-4">
       <div id="recaptcha-container"></div>
-      <Card className="w-full max-w-sm">
+      <div className="w-full max-w-md">
         <Tabs defaultValue="email">
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="email">Email</TabsTrigger>
                 <TabsTrigger value="mobile">Mobile Number</TabsTrigger>
             </TabsList>
             <TabsContent value="email">
-                <form onSubmit={handleEmailSignup}>
-                    <CardHeader className="text-center">
-                        <div className="mx-auto bg-primary/10 p-3 rounded-full mb-4">
-                            <UserPlus className="h-8 w-8 text-primary" />
-                        </div>
-                        <CardTitle>Create an Account</CardTitle>
-                        <CardDescription>
-                        Enter your details below to get started with email.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                        <Label htmlFor="name">Name</Label>
-                        <Input
-                            id="name"
-                            type="text"
-                            placeholder="John Doe"
-                            required
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            disabled={isLoading}
-                        />
-                        </div>
-                        <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                            id="email"
-                            type="email"
-                            placeholder="m@example.com"
-                            required
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            disabled={isLoading}
-                        />
-                        </div>
-                        <div className="space-y-2">
-                        <Label htmlFor="password">Password</Label>
-                        <Input
-                            id="password"
-                            type="password"
-                            required
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            disabled={isLoading}
-                            placeholder="Must be at least 6 characters"
-                        />
-                        </div>
-                    </CardContent>
-                    <CardFooter className="flex flex-col gap-4">
-                        <Button type="submit" className="w-full" disabled={isLoading}>
-                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Sign Up with Email
-                        </Button>
-                        <p className="text-xs text-muted-foreground text-center">
-                            Already have an account?{' '}
-                            <Link href="/login" className="text-primary hover:underline font-semibold">
-                                Sign In
-                            </Link>
-                        </p>
-                    </CardFooter>
-                </form>
+                <Card className="border-none shadow-none">
+                    <form onSubmit={handleEmailSignup}>
+                        <CardHeader className="text-center">
+                            <div className="mx-auto bg-primary/10 p-3 rounded-full mb-4">
+                                <UserPlus className="h-8 w-8 text-primary" />
+                            </div>
+                            <CardTitle>Create an Account</CardTitle>
+                            <CardDescription>
+                            Enter your details below to get started with email.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                            <Label htmlFor="name">Name</Label>
+                            <Input
+                                id="name"
+                                type="text"
+                                placeholder="John Doe"
+                                required
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                disabled={isLoading}
+                            />
+                            </div>
+                            <div className="space-y-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input
+                                id="email"
+                                type="email"
+                                placeholder="m@example.com"
+                                required
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                disabled={isLoading}
+                            />
+                            </div>
+                            <div className="space-y-2">
+                            <Label htmlFor="password">Password</Label>
+                            <Input
+                                id="password"
+                                type="password"
+                                required
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                disabled={isLoading}
+                                placeholder="Must be at least 6 characters"
+                            />
+                            </div>
+                        </CardContent>
+                        <CardFooter className="flex flex-col gap-4">
+                            <Button type="submit" className="w-full" disabled={isLoading}>
+                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Sign Up with Email
+                            </Button>
+                            <p className="text-xs text-muted-foreground text-center">
+                                Already have an account?{' '}
+                                <Link href="/login" className="text-primary hover:underline font-semibold">
+                                    Sign In
+                                </Link>
+                            </p>
+                        </CardFooter>
+                    </form>
+                </Card>
             </TabsContent>
             <TabsContent value="mobile">
-                 <form onSubmit={otpSent ? handleVerifyOtp : handlePhoneSignup}>
-                    <CardHeader className="text-center">
-                        <div className="mx-auto bg-primary/10 p-3 rounded-full mb-4">
-                            <UserPlus className="h-8 w-8 text-primary" />
-                        </div>
-                        <CardTitle>Create an Account</CardTitle>
-                        <CardDescription>
-                         {otpSent ? "Enter the OTP we sent to your phone." : "Enter your mobile number to get an OTP."}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                         {!otpSent ? (
-                            <div className="space-y-2">
-                                <Label htmlFor="phone">Mobile Number</Label>
-                                <div className="flex items-center">
-                                    <span className="p-2 border rounded-l-md bg-muted text-muted-foreground text-sm">+91</span>
+                <Card className="border-none shadow-none">
+                    <form onSubmit={otpSent ? handleVerifyOtp : handlePhoneSignup}>
+                        <CardHeader className="text-center">
+                            <div className="mx-auto bg-primary/10 p-3 rounded-full mb-4">
+                                <UserPlus className="h-8 w-8 text-primary" />
+                            </div>
+                            <CardTitle>Create an Account</CardTitle>
+                            <CardDescription>
+                            {otpSent ? "Enter the OTP we sent to your phone." : "Enter your mobile number to get an OTP."}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {!otpSent ? (
+                                <div className="space-y-2">
+                                    <Label htmlFor="phone">Mobile Number</Label>
+                                    <div className="flex items-center">
+                                        <span className="p-2 border rounded-l-md bg-muted text-muted-foreground text-sm">+91</span>
+                                        <Input
+                                            id="phone"
+                                            type="tel"
+                                            placeholder="9876543210"
+                                            required
+                                            value={phone}
+                                            onChange={(e) => setPhone(e.target.value)}
+                                            disabled={isLoading}
+                                            className="rounded-l-none"
+                                        />
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    <Label htmlFor="otp">One-Time Password (OTP)</Label>
                                     <Input
-                                        id="phone"
-                                        type="tel"
-                                        placeholder="9876543210"
+                                        id="otp"
+                                        type="text"
+                                        placeholder="Enter 6-digit OTP"
                                         required
-                                        value={phone}
-                                        onChange={(e) => setPhone(e.target.value)}
+                                        value={otp}
+                                        onChange={(e) => setOtp(e.target.value)}
                                         disabled={isLoading}
-                                        className="rounded-l-none"
                                     />
                                 </div>
-                            </div>
-                        ) : (
-                            <div className="space-y-2">
-                                <Label htmlFor="otp">One-Time Password (OTP)</Label>
-                                <Input
-                                    id="otp"
-                                    type="text"
-                                    placeholder="Enter 6-digit OTP"
-                                    required
-                                    value={otp}
-                                    onChange={(e) => setOtp(e.target.value)}
-                                    disabled={isLoading}
-                                />
-                            </div>
-                        )}
-                    </CardContent>
-                     <CardFooter className="flex flex-col gap-4">
-                        <Button type="submit" className="w-full" disabled={isLoading}>
-                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                         {otpSent ? 'Verify OTP & Sign Up' : 'Send OTP'}
-                        </Button>
-                         <p className="text-xs text-muted-foreground text-center">
-                            Already have an account?{' '}
-                            <Link href="/login" className="text-primary hover:underline font-semibold">
-                                Sign In
-                            </Link>
-                        </p>
-                    </CardFooter>
-                </form>
+                            )}
+                        </CardContent>
+                        <CardFooter className="flex flex-col gap-4">
+                            <Button type="submit" className="w-full" disabled={isLoading}>
+                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {otpSent ? 'Verify OTP & Sign Up' : 'Send OTP'}
+                            </Button>
+                            <p className="text-xs text-muted-foreground text-center">
+                                Already have an account?{' '}
+                                <Link href="/login" className="text-primary hover:underline font-semibold">
+                                    Sign In
+                                </Link>
+                            </p>
+                        </CardFooter>
+                    </form>
+                </Card>
             </TabsContent>
         </Tabs>
-      </Card>
-    </div>
+      </div>
+    </main>
   );
 }
