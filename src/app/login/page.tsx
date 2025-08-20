@@ -8,19 +8,20 @@ import { Label } from '@/components/ui/label';
 import { Loader2, LogIn, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { signInWithEmailAndPassword, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, User } from 'firebase/auth';
 import { auth } from '@/lib/firebase-client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { Card, CardContent } from '@/components/ui/card';
 
 export default function LoginPage() {
   // Common state
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [user, loading] = useAuthState(auth);
+  const [redirectPath, setRedirectPath] = useState('/dashboard');
 
   // Email state
   const [email, setEmail] = useState('');
@@ -34,11 +35,18 @@ export default function LoginPage() {
   const [activeTab, setActiveTab] = useState('email');
 
   useEffect(() => {
+    const redirect = searchParams.get('redirect');
+    if (redirect) {
+      setRedirectPath(redirect);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     // Redirect if user is already logged in
     if (user && !loading) {
-      router.push('/dashboard');
+      router.push(redirectPath);
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, redirectPath]);
   
   useEffect(() => {
     if (typeof window !== 'undefined' && !window.recaptchaVerifier) {
@@ -55,8 +63,8 @@ export default function LoginPage() {
   }, []);
 
 
-  const handleSuccessfulLogin = (user: User) => {
-    if (user.providerData.some(p => p.providerId === 'password') && !user.emailVerified) {
+  const handleSuccessfulLogin = (loggedInUser: User) => {
+    if (loggedInUser.providerData.some(p => p.providerId === 'password') && !loggedInUser.emailVerified) {
         toast({
             variant: 'destructive',
             title: 'Verification Required',
@@ -69,7 +77,7 @@ export default function LoginPage() {
       title: 'Login Successful!',
       description: "Welcome back.",
     });
-    router.push('/dashboard');
+    router.push(redirectPath);
   };
 
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -166,10 +174,6 @@ export default function LoginPage() {
       <div id="recaptcha-container" />
       <div className="w-full max-w-md mt-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="email">Email</TabsTrigger>
-                <TabsTrigger value="mobile">Mobile Number</TabsTrigger>
-            </TabsList>
             <div className="text-center py-8">
                 <Button variant="outline" size="icon" className="h-16 w-16 rounded-full mx-auto mb-6">
                     <ArrowRight className="h-8 w-8" />
@@ -177,8 +181,12 @@ export default function LoginPage() {
                 <h1 className="text-3xl font-bold">Welcome Back!</h1>
                 <p className="text-muted-foreground mt-2">{getWelcomeText()}</p>
             </div>
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="email">Email</TabsTrigger>
+                <TabsTrigger value="mobile">Mobile Number</TabsTrigger>
+            </TabsList>
             <TabsContent value="email">
-                <form onSubmit={handleEmailLogin} className="space-y-4">
+                <form onSubmit={handleEmailLogin} className="space-y-4 mt-6">
                     <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
                         <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} />
@@ -194,7 +202,7 @@ export default function LoginPage() {
                 </form>
             </TabsContent>
             <TabsContent value="mobile">
-                <form onSubmit={otpSent ? handleVerifyOtp : handlePhoneLogin} className="space-y-4">
+                <form onSubmit={otpSent ? handleVerifyOtp : handlePhoneLogin} className="space-y-4 mt-6">
                     {!otpSent ? (
                         <div className="space-y-2">
                             <Label htmlFor="phone">Mobile Number</Label>

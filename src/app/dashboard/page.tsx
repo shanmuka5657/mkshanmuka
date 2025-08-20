@@ -93,7 +93,7 @@ export default function DashboardPage() {
                             <Link href="/login">Login</Link>
                         </Button>
                          <Button asChild variant="secondary">
-                            <Link href="/login">Analyze Report</Link>
+                            <Link href="/login?redirect=/credit">Analyze Report</Link>
                         </Button>
                     </div>
                 </div>
