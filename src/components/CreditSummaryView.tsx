@@ -145,9 +145,14 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
         const consideredAccounts = detailedAccounts.filter(acc => acc.isConsidered);
         const totalSanctionedNum = consideredAccounts.reduce((sum, acc) => sum + Number(String(acc.sanctioned).replace(/[^0-9.-]+/g,"")), 0);
         const totalOutstandingNum = consideredAccounts.reduce((sum, acc) => sum + Number(String(acc.outstanding).replace(/[^0-9.-]+/g,"")), 0);
-        const totalEmiNum = activeAccounts.reduce((sum, acc) => {
-            if (acc.status.toLowerCase() !== 'active' && acc.status.toLowerCase() !== 'open') return sum;
-            return sum + getEmiValue(acc);
+        
+        // Correctly calculate total EMI based on accounts that are BOTH active AND considered
+        const totalEmiNum = consideredAccounts.reduce((sum, acc) => {
+            const status = acc.status.toLowerCase();
+            if (status === 'active' || status === 'open') {
+                return sum + getEmiValue(acc);
+            }
+            return sum;
         }, 0);
 
         const creditUtilization = totalSanctionedNum > 0 ? (totalOutstandingNum / totalSanctionedNum) * 100 : 0;
