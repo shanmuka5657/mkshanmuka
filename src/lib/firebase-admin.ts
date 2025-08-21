@@ -24,8 +24,7 @@ function getAdminApp() {
     // Log environment variables for debugging, but not the private key itself
     console.log('Initializing Firebase Admin for project:', serviceAccount.project_id);
     console.log('Using client email:', serviceAccount.client_email);
-    console.log('Firebase private key loaded:', !!serviceAccount.private_key);
-
+    
     return admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
     });
