@@ -667,11 +667,20 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
                             </TableRow>
                             <TableRow className={!acc.isConsidered ? 'bg-muted/50' : ''}>
                                 <TableCell colSpan={7} className="p-2">
-                                   <div className="flex gap-1 flex-wrap p-2 bg-background/50 rounded-md">
-                                        <span className="text-xs font-semibold mr-2 flex items-center">Payment History:</span>
-                                        {acc.monthlyPaymentHistory.map((pmt, i) => (
-                                        <DpdCircle key={i} value={pmt.status} />
-                                        ))}
+                                   <div className="flex flex-col gap-2 p-2 bg-background/50 rounded-md">
+                                        <div className="flex gap-1 flex-wrap">
+                                            <span className="text-xs font-semibold mr-2 flex items-center shrink-0">Payment History:</span>
+                                            {acc.monthlyPaymentHistory.length > 0 ? (
+                                                acc.monthlyPaymentHistory.map((pmt, i) => (
+                                                    <DpdCircle key={i} value={pmt.status} />
+                                                ))
+                                            ) : (
+                                                <span className="text-xs text-muted-foreground">No detailed history available.</span>
+                                            )}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">
+                                            <span className="font-semibold">Raw History String:</span> {acc.paymentHistory}
+                                        </div>
                                     </div>
                                 </TableCell>
                             </TableRow>
