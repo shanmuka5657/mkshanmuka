@@ -14,7 +14,7 @@ export function PrintHeader({ analysisResult }: PrintHeaderProps) {
   const { customerDetails, cibilScore } = analysisResult;
 
   return (
-    <div className="print-header hidden mb-6">
+    <div className="print-header mb-6">
         <div className="flex justify-between items-center border-b pb-4 mb-4">
             <Logo />
             <div className="text-right">
@@ -44,3 +44,5 @@ export function PrintHeader({ analysisResult }: PrintHeaderProps) {
     </div>
   );
 }
+
+    

@@ -101,6 +101,8 @@ export function RiskAssessmentView({ analysisResult, onBack }: RiskAssessmentVie
   const [assessment, setAssessment] = useState<RiskAssessmentOutput | null>(null);
   const { toast } = useToast();
   const reportRef = useRef<HTMLDivElement>(null);
+  const printHeaderRef = useRef<HTMLDivElement>(null);
+
 
   useEffect(() => {
     const runAnalysis = async () => {
@@ -124,15 +126,30 @@ export function RiskAssessmentView({ analysisResult, onBack }: RiskAssessmentVie
   }, [analysisResult, toast]);
 
   const handleDownload = async () => {
-    const element = reportRef.current;
-    if (!element) return;
+    const elementToCapture = reportRef.current;
+    const headerElement = printHeaderRef.current;
+
+    if (!elementToCapture || !headerElement) return;
 
     toast({ title: "Preparing Download", description: "Generating PDF, please wait..." });
 
-    const canvas = await html2canvas(element, {
+    // Temporarily make the header visible for capture
+    headerElement.style.display = 'block';
+
+    const canvas = await html2canvas(elementToCapture, {
       scale: 2,
       useCORS: true,
+       onclone: (document) => {
+            // Ensure the header is visible in the cloned document for rendering
+            const clonedHeader = document.querySelector('.print-header-capture');
+            if (clonedHeader) {
+                (clonedHeader as HTMLElement).style.display = 'block';
+            }
+        }
     });
+
+    // Hide the header again
+    headerElement.style.display = 'none';
 
     const pdf = new jsPDF({
       orientation: 'p',
@@ -180,7 +197,9 @@ export function RiskAssessmentView({ analysisResult, onBack }: RiskAssessmentVie
       </div>
       
       <div ref={reportRef} className="printable-area">
-        <PrintHeader analysisResult={analysisResult} />
+        <div ref={printHeaderRef} className="print-header-capture" style={{ display: 'none' }}>
+            <PrintHeader analysisResult={analysisResult} />
+        </div>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><ShieldAlert /> AI Risk Assessment</CardTitle>
@@ -206,3 +225,5 @@ export function RiskAssessmentView({ analysisResult, onBack }: RiskAssessmentVie
     </div>
   );
 }
+
+    
