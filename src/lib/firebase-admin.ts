@@ -10,35 +10,29 @@ function getAdminApp() {
     return admin.app();
   }
 
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  // The FIREBASE_ADMIN_SERVICE_ACCOUNT is a JSON string. We need to parse it.
+  const serviceAccountString = process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT;
 
-  if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !privateKey) {
-    console.error("Missing Firebase environment variables! Check your .env file.");
-    // Log which variables are missing for easier debugging
-    if (!process.env.FIREBASE_PROJECT_ID) console.error("FIREBASE_PROJECT_ID is not set.");
-    if (!process.env.FIREBASE_CLIENT_EMAIL) console.error("FIREBASE_CLIENT_EMAIL is not set.");
-    if (!privateKey) console.error("FIREBASE_PRIVATE_KEY is not set.");
-    throw new Error("Missing Firebase environment variables!");
+  if (!serviceAccountString) {
+    console.error("Missing Firebase environment variable: FIREBASE_ADMIN_SERVICE_ACCOUNT! Check your .env.local file.");
+    throw new Error("Missing Firebase environment variable!");
   }
 
-  const serviceAccount = {
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey,
-  };
-
   try {
+    const serviceAccount = JSON.parse(serviceAccountString);
+
     // Log environment variables for debugging, but not the private key itself
-    console.log('Initializing Firebase Admin for project:', process.env.FIREBASE_PROJECT_ID);
-    console.log('Using client email:', process.env.FIREBASE_CLIENT_EMAIL);
-    console.log('Firebase PRIVATE_KEY loaded:', !!privateKey);
+    console.log('Initializing Firebase Admin for project:', serviceAccount.project_id);
+    console.log('Using client email:', serviceAccount.client_email);
+    console.log('Firebase private key loaded:', !!serviceAccount.private_key);
 
     return admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+      credential: admin.credential.cert(serviceAccount),
     });
   } catch (error) {
     console.error('Firebase admin initialization error:', error);
-    throw new Error('Failed to initialize Firebase Admin SDK.'); // Throw error to indicate initialization failure
+    console.error('This might be due to a malformed JSON string in the FIREBASE_ADMIN_SERVICE_ACCOUNT environment variable.');
+    throw new Error('Failed to initialize Firebase Admin SDK.');
   }
 }
 
