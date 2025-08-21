@@ -38,6 +38,7 @@ import { saveReportSummaryAction } from '@/app/actions';
 import { addTrainingCandidate } from '@/lib/training-store';
 import { getAiRating } from '@/ai/flows/ai-rating';
 import { getRiskAssessment, RiskAssessmentOutput } from '@/ai/flows/risk-assessment';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -91,7 +92,7 @@ const SummaryBox = ({ title, value, isLoading = false, valueClassName = '', icon
       {Icon && <Icon className="h-3 w-3" />}
       {title}
     </CardDescription>
-    {isLoading ? <Loader2 className="h-6 w-6 mx-auto animate-spin" /> : <CardTitle className={cn("text-lg font-bold", valueClassName)}>{value}</CardTitle>}
+    {isLoading ? <Skeleton className="h-7 w-20 mx-auto mt-1" /> : <CardTitle className={cn("text-lg font-bold", valueClassName)}>{value}</CardTitle>}
   </Card>
 );
 
@@ -324,6 +325,8 @@ export default function CreditPage() {
   const { customerDetails, reportSummary, cibilScore } = analysisResult || initialAnalysis;
   const isAnalysisComplete = !!analysisResult;
   const isReadyForAnalysis = isTextExtracted && !isAnalyzing && !isAnalysisComplete;
+  const showSkeletons = isAnalyzing && !isAnalysisComplete;
+
 
   const calculateCost = () => {
       const creditUsage = analysisResult?.usage;
@@ -433,19 +436,35 @@ export default function CreditPage() {
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col items-center justify-center p-4">
                 <p className="text-sm text-muted-foreground">Official CIBIL Score</p>
-                <h2 className="text-6xl font-bold text-primary my-2">{cibilScore > 0 ? cibilScore : 'N/A'}</h2>
-                {cibilScore > 0 && <Progress value={cibilScore} maxValue={900} />}
+                {showSkeletons ? (
+                    <Skeleton className="h-[72px] w-40 my-2" />
+                ) : (
+                    <h2 className="text-6xl font-bold text-primary my-2">{cibilScore > 0 ? cibilScore : 'N/A'}</h2>
+                )}
+                {cibilScore > 0 && !showSkeletons && <Progress value={cibilScore} maxValue={900} />}
+                {showSkeletons && <Skeleton className="h-4 w-full" />}
             </div>
             <div>
                 <h3 className="font-semibold mb-3">AI-Extracted Consumer Information</h3>
-                <div className="space-y-2 text-sm">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Name</span> <strong>{customerDetails.name}</strong></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Date of Birth</span> <strong>{customerDetails.dateOfBirth}</strong></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Gender</span> <strong>{customerDetails.gender}</strong></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">PAN</span> <strong>{customerDetails.pan}</strong></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Mobile Number</span> <strong>{customerDetails.mobileNumber}</strong></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Address</span> <strong className="text-right">{customerDetails.address}</strong></div>
-                </div>
+                {showSkeletons ? (
+                    <div className="space-y-3">
+                        <Skeleton className="h-5 w-full" />
+                        <Skeleton className="h-5 w-3/4" />
+                        <Skeleton className="h-5 w-full" />
+                        <Skeleton className="h-5 w-1/2" />
+                        <Skeleton className="h-5 w-4/5" />
+                        <Skeleton className="h-5 w-full" />
+                    </div>
+                ) : (
+                    <div className="space-y-2 text-sm">
+                        <div className="flex justify-between"><span className="text-muted-foreground">Name</span> <strong>{customerDetails.name}</strong></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Date of Birth</span> <strong>{customerDetails.dateOfBirth}</strong></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Gender</span> <strong>{customerDetails.gender}</strong></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">PAN</span> <strong>{customerDetails.pan}</strong></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Mobile Number</span> <strong>{customerDetails.mobileNumber}</strong></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Address</span> <strong className="text-right">{customerDetails.address}</strong></div>
+                    </div>
+                )}
             </div>
         </CardContent>
         </Card>
@@ -459,23 +478,23 @@ export default function CreditPage() {
                 <div>
                     <h3 className="font-semibold mb-3">Account Summary</h3>
                     <div className="grid grid-cols-2 gap-3">
-                        <SummaryBox title="Total Accounts" value={reportSummary.accountSummary.total} />
-                        <SummaryBox title="Active Accounts" value={reportSummary.accountSummary.active} />
-                        <SummaryBox title="High Credit/Sanc. Amt" value={reportSummary.accountSummary.highCredit} />
-                        <SummaryBox title="Current Balance" value={reportSummary.accountSummary.currentBalance} valueClassName={reportSummary.accountSummary.currentBalance !== 'N/A' && reportSummary.accountSummary.currentBalance !== '₹0' ? "text-destructive" : ""} />
-                        <SummaryBox title="Overdue Amount" value={reportSummary.accountSummary.overdue} valueClassName={reportSummary.accountSummary.overdue !== 'N/A' && reportSummary.accountSummary.overdue !== '₹0' ? "text-destructive" : ""} />
-                        <SummaryBox title="Written-Off" value={reportSummary.accountSummary.writtenOff} />
-                        <SummaryBox title="Settled" value={reportSummary.accountSummary.settled} />
+                        <SummaryBox title="Total Accounts" value={reportSummary.accountSummary.total} isLoading={showSkeletons} />
+                        <SummaryBox title="Active Accounts" value={reportSummary.accountSummary.active} isLoading={showSkeletons} />
+                        <SummaryBox title="High Credit/Sanc. Amt" value={reportSummary.accountSummary.highCredit} isLoading={showSkeletons} />
+                        <SummaryBox title="Current Balance" value={reportSummary.accountSummary.currentBalance} isLoading={showSkeletons} valueClassName={reportSummary.accountSummary.currentBalance !== 'N/A' && reportSummary.accountSummary.currentBalance !== '₹0' ? "text-destructive" : ""} />
+                        <SummaryBox title="Overdue Amount" value={reportSummary.accountSummary.overdue} isLoading={showSkeletons} valueClassName={reportSummary.accountSummary.overdue !== 'N/A' && reportSummary.accountSummary.overdue !== '₹0' ? "text-destructive" : ""} />
+                        <SummaryBox title="Written-Off" value={reportSummary.accountSummary.writtenOff} isLoading={showSkeletons} />
+                        <SummaryBox title="Settled" value={reportSummary.accountSummary.settled} isLoading={showSkeletons} />
                     </div>
                 </div>
                     <div>
                     <h3 className="font-semibold mb-3">Enquiry Summary</h3>
                     <div className="grid grid-cols-2 gap-3">
-                            <SummaryBox title="Total Enquiries" value={reportSummary.enquirySummary.total} />
-                            <SummaryBox title="Last 30 Days" value={reportSummary.enquirySummary.past30Days} />
-                            <SummaryBox title="Last 12 Months" value={reportSummary.enquirySummary.past12Months} />
-                            <SummaryBox title="Last 24 Months" value={reportSummary.enquirySummary.past24Months} />
-                            <SummaryBox title="Most Recent Enquiry" value={reportSummary.enquirySummary.recentDate} />
+                            <SummaryBox title="Total Enquiries" value={reportSummary.enquirySummary.total} isLoading={showSkeletons} />
+                            <SummaryBox title="Last 30 Days" value={reportSummary.enquirySummary.past30Days} isLoading={showSkeletons} />
+                            <SummaryBox title="Last 12 Months" value={reportSummary.enquirySummary.past12Months} isLoading={showSkeletons} />
+                            <SummaryBox title="Last 24 Months" value={reportSummary.enquirySummary.past24Months} isLoading={showSkeletons} />
+                            <SummaryBox title="Most Recent Enquiry" value={reportSummary.enquirySummary.recentDate} isLoading={showSkeletons} />
                     </div>
                 </div>
             </CardContent>
