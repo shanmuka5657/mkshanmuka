@@ -470,13 +470,13 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="lg:col-span-2">
                 <CardHeader>
-                    <div className="flex justify-between items-center no-print">
+                    <div className="flex justify-between items-center">
                         <div>
                             <CardTitle>DPD Analysis</CardTitle>
                             <CardDescription>Days Past Due breakdown over the selected period.</CardDescription>
                         </div>
-                         <Select value={dpdFilter} onValueChange={setDpdFilter}>
-                            <SelectTrigger className="w-[180px]">
+                         <Select value={dpdFilter} onValueChange={setDpdFilter} >
+                            <SelectTrigger className="w-[180px] no-print">
                                 <SelectValue placeholder="Select period" />
                             </SelectTrigger>
                             <SelectContent>
