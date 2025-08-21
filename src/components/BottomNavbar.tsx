@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FileText, Fingerprint, FileCheck2, Home, BrainCircuit, MessageCircle, Construction } from 'lucide-react';
+import { FileText, Fingerprint, FileCheck2, Home, BrainCircuit, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Tooltip,
@@ -17,10 +17,10 @@ import { useToast } from '@/hooks/use-toast';
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home, enabled: true },
   { href: '/credit', label: 'Credit', icon: FileText, enabled: true },
-  { href: '/verify', label: 'Verify', icon: Construction, enabled: false },
-  { href: '/cross-verify', label: 'Cross-Verify', icon: Construction, enabled: false },
-  { href: '/chat', label: 'Chat', icon: Construction, enabled: false },
-  { href: '/trainer', label: 'Trainer', icon: Construction, enabled: false },
+  { href: '/verify', label: 'Verify', icon: Fingerprint, enabled: true },
+  { href: '/cross-verify', label: 'Cross-Verify', icon: FileCheck2, enabled: true },
+  { href: '/chat', label: 'Chat', icon: MessageCircle, enabled: true },
+  { href: '/trainer', label: 'Trainer', icon: BrainCircuit, enabled: true },
 ];
 
 const NavItem = ({ item }: { item: typeof navItems[0] }) => {
