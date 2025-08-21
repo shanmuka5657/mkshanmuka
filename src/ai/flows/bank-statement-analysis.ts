@@ -9,7 +9,7 @@
  * - BankStatementAnalysisOutput - The return type for the analyzeBankStatement function.
  */
 
-import {getGenkit} from '@/lib/genkit-server';
+import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const BankStatementAnalysisInputSchema = z.object({
@@ -70,20 +70,14 @@ export type BankStatementAnalysisOutput = z.infer<typeof BankStatementAnalysisOu
 export async function analyzeBankStatement(
   input: BankStatementAnalysisInput
 ): Promise<BankStatementAnalysisOutput> {
-  const genkit = await getGenkit();
-  const flow = genkit.defineFlow(
-    {
-      name: 'analyzeBankStatementFlow',
-      inputSchema: BankStatementAnalysisInputSchema,
-      outputSchema: BankStatementAnalysisOutputSchema,
-    },
-    async (input: BankStatementAnalysisInput) => {
-      const prompt = genkit.ai.definePrompt({
-        name: 'analyzeBankStatementPrompt',
-        model: genkit.ai.model('googleai/gemini-1.5-flash'),
-        input: {schema: BankStatementAnalysisInputSchema},
-        output: {schema: BankStatementAnalysisOutputSchema},
-        prompt: `You are an expert financial analyst specializing in Indian bank statements. Your task is to meticulously read the provided bank statement text and extract key financial insights.
+  return analyzeBankStatementFlow(input);
+}
+
+const prompt = ai.definePrompt({
+  name: 'analyzeBankStatementPrompt',
+  input: {schema: BankStatementAnalysisInputSchema},
+  output: {schema: BankStatementAnalysisOutputSchema},
+  prompt: `You are an expert financial analyst specializing in Indian bank statements. Your task is to meticulously read the provided bank statement text and extract key financial insights.
 
 **Extraction & Analysis Tasks:**
 
@@ -124,15 +118,19 @@ export async function analyzeBankStatement(
 
 Provide the final, consolidated output in the required structured format.
 `,
-      });
+});
 
-      const {output} = await prompt(input);
-      if (!output) {
-        throw new Error("AI failed to analyze the bank statement.");
-      }
-      return output;
+const analyzeBankStatementFlow = ai.defineFlow(
+  {
+    name: 'analyzeBankStatementFlow',
+    inputSchema: BankStatementAnalysisInputSchema,
+    outputSchema: BankStatementAnalysisOutputSchema,
+  },
+  async (input: BankStatementAnalysisInput) => {
+    const {output} = await prompt(input);
+    if (!output) {
+      throw new Error("AI failed to analyze the bank statement.");
     }
-  );
-
-  return flow(input);
-}
+    return output;
+  }
+);

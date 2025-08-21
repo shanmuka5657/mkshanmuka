@@ -9,7 +9,7 @@
  * - AiAgentChatOutput - The return type for the chat function.
  */
 
-import { getGenkit } from '@/lib/genkit-server';
+import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { textToSpeech } from './text-to-speech';
 
@@ -40,22 +40,16 @@ export type AiAgentChatOutput = z.infer<typeof AiAgentChatOutputSchema>;
 export async function aiAgentChat(
   input: AiAgentChatInput
 ): Promise<AiAgentChatOutput> {
-  const genkit = await getGenkit();
-  // Pass the genkit instance to the flow if needed, or define flows globally if they don't need instance access
-  const resolvedFlow = await aiAgentChatFlow;
- return resolvedFlow.run(input); // Assuming flow is defined globally now
+ return aiAgentChatFlow(input);
 }
 
-// Define the flow using the genkit instance asynchronously
-const aiAgentChatFlow = (async () => {
-  const genkit = await getGenkit();
-  return genkit.defineFlow(
+const aiAgentChatFlow = ai.defineFlow(
   {
-    name: 'aiAgentChatFlow', // Make sure flow name is unique if defining multiple flows
+    name: 'aiAgentChatFlow',
     inputSchema: AiAgentChatInputSchema,
     outputSchema: AiAgentChatOutputSchema,
   },
-  async ({ history, cibilReportAvailable, bankStatementAvailable }: AiAgentChatInput) => {
+  async ({ history, cibilReportAvailable, bankStatementAvailable }) => {
     
     let contextPrompt = '';
     if (cibilReportAvailable) {
@@ -78,7 +72,7 @@ The user has uploaded their bank statement. You have access to this document. Us
     
     If the user provides an image or document in their message, use it as additional context for your answer.`;
 
-    const llmResponse = await genkit.ai.generate({
+    const llmResponse = await ai.generate({
       model: 'gemini-1.5-flash',
       messages: [
           { role: 'system', content: [{ text: systemPrompt }] },
@@ -107,5 +101,4 @@ The user has uploaded their bank statement. You have access to this document. Us
         audioDataUri,
     };
   }
-  );
-})();
+);
