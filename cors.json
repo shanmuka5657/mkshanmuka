@@ -1,7 +1,7 @@
 
 [
   {
-    "origin": ["https://9000-firebase-studio-1753803349811.cluster-wurh6gchdjcjmwrw2tqtufvhss.cloudworkstations.dev", "http://localhost:3000"],
+    "origin": ["https://9000-firebase-studio-1753803349811.cluster-wurh6gchdjcjmwrw2tqtufvhss.cloudworkstations.dev", "http://localhost:3000", "https://studio--creditwise-ai-nd7s0.us-central1.hosted.app"],
     "method": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     "responseHeader": [
       "Content-Type",
