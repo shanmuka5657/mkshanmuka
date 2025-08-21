@@ -14,6 +14,7 @@ import {z} from 'genkit';
 import type { RiskAssessmentOutput } from './risk-assessment';
 import type { AnalyzeCreditReportOutput } from './credit-report-analysis';
 import { ai } from '@/ai/genkit';
+import { gemini15Flash } from '@genkit-ai/googleai';
 
 // Corrected the type for riskAssessment to expect a single assessment object.
 const AiRatingInputSchema = z.object({
@@ -65,6 +66,7 @@ export async function getAiRating(
 
 const prompt = ai.definePrompt({
   name: 'aiRatingPrompt',
+  model: gemini15Flash,
   input: {schema: AiRatingInputSchema},
   output: {schema: AiRatingOutputSchema},
   prompt: `You are an expert credit analyst. Your task is to provide a holistic AI-powered credit rating based on the provided structured credit report data and a pre-calculated risk assessment. Do NOT simply repeat the risk assessment. Your output should be a high-level, user-friendly summary.
