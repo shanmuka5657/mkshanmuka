@@ -102,6 +102,7 @@ export default function CreditPage() {
   const [rawText, setRawText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisStatus, setAnalysisStatus] = useState('');
   const [analysisResult, setAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(null);
   const [riskAssessmentResult, setRiskAssessmentResult] = useState<RiskAssessmentOutput | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
@@ -166,6 +167,7 @@ export default function CreditPage() {
     setAnalysisResult(null);
     setRiskAssessmentResult(null);
     setIsAnalyzing(false);
+    setAnalysisStatus('');
     setActiveView(null);
     setIsTextExtracted(false);
     setAnalysisError(null);
@@ -242,21 +244,26 @@ export default function CreditPage() {
     setAnalysisError(null);
     
     try {
+        setAnalysisStatus("Analyzing credit report...");
         const creditAnalysisOutput = await analyzeCreditReport({ creditReportText: currentText });
         if (!creditAnalysisOutput) throw new Error("AI returned an empty response for credit analysis.");
         setAnalysisResult(creditAnalysisOutput);
 
+        setAnalysisStatus("Performing risk assessment...");
         const riskAssessmentOutput = await getRiskAssessment({ analysisResult: creditAnalysisOutput });
         if (!riskAssessmentOutput) throw new Error("AI returned an empty response for risk assessment.");
         setRiskAssessmentResult(riskAssessmentOutput);
         
+        setAnalysisStatus("Generating AI rating...");
         const aiRatingOutput = await getAiRating({ analysisResult: creditAnalysisOutput, riskAssessment: riskAssessmentOutput.assessmentWithoutGuarantor });
         if (!aiRatingOutput) throw new Error("AI returned an empty response for AI rating.");
 
+        setAnalysisStatus("Uploading PDF securely...");
         const storageRef = ref(storage, `credit_reports/${user.uid}/${Date.now()}_${currentFile.name}`);
         const uploadResult = await uploadBytes(storageRef, currentFile);
         const downloadURL = await getDownloadURL(uploadResult.ref);
         
+        setAnalysisStatus("Saving report to dashboard...");
         const saveResult = await saveReportSummaryAction(creditAnalysisOutput, user.uid, downloadURL);
         
         toast({ 
@@ -303,6 +310,7 @@ export default function CreditPage() {
         });
     } finally {
         setIsAnalyzing(false);
+        setAnalysisStatus('');
     }
   };
   
@@ -402,7 +410,7 @@ export default function CreditPage() {
             {isAnalyzing && !isAnalysisComplete && (
                     <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    AI is analyzing your report... this may take a moment.
+                    {analysisStatus || 'AI is analyzing your report...'}
                 </div>
             )}
 
