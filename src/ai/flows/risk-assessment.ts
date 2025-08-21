@@ -13,6 +13,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import type { AnalyzeCreditReportOutput } from './credit-report-analysis';
+import { getAiRating } from './ai-rating';
 
 
 const RiskAssessmentInputSchema = z.object({
@@ -139,6 +140,17 @@ const riskAssessmentFlow = ai.defineFlow(
     output.assessmentWithoutGuarantor.expectedLoss = Math.round(pd2 * lgd2 * ead2);
 
     output.usage = usage;
+    
+    // Now, get the AI rating
+    if (input.analysisResult) {
+        const aiRatingOutput = await getAiRating({
+            analysisResult: input.analysisResult,
+            riskAssessment: output.assessmentWithoutGuarantor,
+        });
+        // We don't directly return the rating here, but this ensures it's part of the overall process
+        // In a real scenario, you might merge this into the output.
+    }
+
     return output;
   }
 );

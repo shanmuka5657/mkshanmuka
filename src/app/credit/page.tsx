@@ -35,8 +35,6 @@ import { RiskAssessmentView } from '@/components/RiskAssessmentView';
 import { AiRatingView } from '@/components/AiRatingView';
 import { FinancialsView } from '@/components/FinancialsView';
 import { saveReportSummaryAction } from '@/app/actions';
-import { addTrainingCandidate } from '@/lib/training-store';
-import { getAiRating } from '@/ai/flows/ai-rating';
 import { getRiskAssessment, RiskAssessmentOutput } from '@/ai/flows/risk-assessment';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -254,10 +252,6 @@ export default function CreditPage() {
         if (!riskAssessmentOutput) throw new Error("AI returned an empty response for risk assessment.");
         setRiskAssessmentResult(riskAssessmentOutput);
         
-        setAnalysisStatus("Generating AI rating...");
-        const aiRatingOutput = await getAiRating({ analysisResult: creditAnalysisOutput, riskAssessment: riskAssessmentOutput.assessmentWithoutGuarantor });
-        if (!aiRatingOutput) throw new Error("AI returned an empty response for AI rating.");
-
         setAnalysisStatus("Uploading PDF securely...");
         const storageRef = ref(storage, `credit_reports/${user.uid}/${Date.now()}_${currentFile.name}`);
         const uploadResult = await uploadBytes(storageRef, currentFile);
@@ -275,9 +269,6 @@ export default function CreditPage() {
                 </Button>
             )
         });
-
-        // Add the result to the training candidate pool
-        addTrainingCandidate(aiRatingOutput);
 
     } catch (error: any) {
         console.error("CLIENT: Analysis or Save Error: ", error);
