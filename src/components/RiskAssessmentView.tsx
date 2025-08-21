@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useState, useEffect } from "react";
-import { ArrowLeft, Loader2, ShieldAlert, Zap, GitCommit, ShieldCheck, ShieldClose, HelpCircle, TrendingUp, TrendingDown } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { ArrowLeft, Loader2, ShieldAlert, Zap, GitCommit, ShieldCheck, ShieldClose, HelpCircle, TrendingUp, TrendingDown, Download } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "./ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +12,10 @@ import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import { PrintHeader } from './PrintHeader';
+
 
 interface RiskAssessmentViewProps {
   analysisResult: AnalyzeCreditReportOutput;
@@ -96,6 +100,7 @@ export function RiskAssessmentView({ analysisResult, onBack }: RiskAssessmentVie
   const [isLoading, setIsLoading] = useState(true);
   const [assessment, setAssessment] = useState<RiskAssessmentOutput | null>(null);
   const { toast } = useToast();
+  const reportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const runAnalysis = async () => {
@@ -117,6 +122,31 @@ export function RiskAssessmentView({ analysisResult, onBack }: RiskAssessmentVie
 
     runAnalysis();
   }, [analysisResult, toast]);
+
+  const handleDownload = async () => {
+    const element = reportRef.current;
+    if (!element) return;
+
+    toast({ title: "Preparing Download", description: "Generating PDF, please wait..." });
+
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+    });
+
+    const pdf = new jsPDF({
+      orientation: 'p',
+      unit: 'px',
+      format: 'a4'
+    });
+
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, (canvas.height * pdfWidth) / canvas.width);
+    
+    pdf.save(`RiskAssessment_${analysisResult.customerDetails.name.replace(/ /g, '_')}.pdf`);
+    
+    toast({ title: "Download Ready!", description: "Your PDF has been downloaded." });
+  };
 
   if (isLoading) {
     return (
@@ -140,31 +170,39 @@ export function RiskAssessmentView({ analysisResult, onBack }: RiskAssessmentVie
 
   return (
     <div className="space-y-6">
-      <Button variant="outline" onClick={onBack} className="no-print">
-        <ArrowLeft className="mr-2 h-4 w-4" /> Back to Main View
-      </Button>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><ShieldAlert /> AI Risk Assessment</CardTitle>
-          <CardDescription>
-            A technical analysis of your credit profile, showing a side-by-side comparison of your risk with and without guarantor loans included.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-            <AssessmentColumn assessment={assessment.assessmentWithGuarantor} title="With Guarantor Loans" />
-            <AssessmentColumn assessment={assessment.assessmentWithoutGuarantor} title="Without Guarantor Loans" />
-        </CardContent>
-         <CardFooter>
-            <Alert>
-                <HelpCircle className="h-4 w-4" />
-                <AlertTitle>Why two assessments?</AlertTitle>
-                <AlertDescription>
-                    By separating your personal loans from loans where you are a guarantor, you can clearly see the financial risk and responsibility you've taken on for others. This helps lenders understand your direct liabilities versus your contingent liabilities.
-                </AlertDescription>
-            </Alert>
-        </CardFooter>
-      </Card>
+      <div className="flex justify-between items-center no-print">
+        <Button variant="outline" onClick={onBack}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Main View
+        </Button>
+        <Button onClick={handleDownload}>
+          <Download className="mr-2 h-4 w-4" /> Download Report
+        </Button>
+      </div>
+      
+      <div ref={reportRef} className="printable-area">
+        <PrintHeader analysisResult={analysisResult} />
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><ShieldAlert /> AI Risk Assessment</CardTitle>
+            <CardDescription>
+              A technical analysis of your credit profile, showing a side-by-side comparison of your risk with and without guarantor loans included.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+              <AssessmentColumn assessment={assessment.assessmentWithGuarantor} title="With Guarantor Loans" />
+              <AssessmentColumn assessment={assessment.assessmentWithoutGuarantor} title="Without Guarantor Loans" />
+          </CardContent>
+           <CardFooter>
+              <Alert>
+                  <HelpCircle className="h-4 w-4" />
+                  <AlertTitle>Why two assessments?</AlertTitle>
+                  <AlertDescription>
+                      By separating your personal loans from loans where you are a guarantor, you can clearly see the financial risk and responsibility you've taken on for others. This helps lenders understand your direct liabilities versus your contingent liabilities.
+                  </AlertDescription>
+              </Alert>
+          </CardFooter>
+        </Card>
+      </div>
     </div>
   );
 }

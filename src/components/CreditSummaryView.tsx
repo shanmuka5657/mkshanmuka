@@ -30,6 +30,7 @@ import { Label } from './ui/label';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { Textarea } from './ui/textarea';
+import { PrintHeader } from './PrintHeader';
 
 interface EnhancedAccountDetail extends AccountDetail {
   isConsidered: boolean;
@@ -146,10 +147,9 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
         const totalSanctionedNum = consideredAccounts.reduce((sum, acc) => sum + Number(String(acc.sanctioned).replace(/[^0-9.-]+/g,"")), 0);
         const totalOutstandingNum = consideredAccounts.reduce((sum, acc) => sum + Number(String(acc.outstanding).replace(/[^0-9.-]+/g,"")), 0);
         
-        // Correctly calculate total EMI based on accounts that are BOTH active AND considered
         const totalEmiNum = consideredAccounts.reduce((sum, acc) => {
             const status = acc.status.toLowerCase();
-            if (status === 'active' || status === 'open') {
+            if ((status === 'active' || status === 'open') && acc.isConsidered) {
                 return sum + getEmiValue(acc);
             }
             return sum;
@@ -381,25 +381,35 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
             scale: 2,
             useCORS: true,
             logging: true,
-            onclone: (document) => {
-                 document.querySelectorAll('button, input, [role="switch"], [role="combobox"]').forEach(el => {
-                    const nonInteractiveEl = document.createElement('div');
-                    nonInteractiveEl.innerHTML = (el as HTMLElement).innerText || (el as HTMLInputElement).value || '';
-                    if (el.parentElement) {
-                        el.parentElement.replaceChild(nonInteractiveEl, el);
-                    }
-                });
-            }
         });
 
         const pdf = new jsPDF({
             orientation: 'p',
             unit: 'px',
-            format: [canvas.width, canvas.height]
+            format: 'a4'
         });
 
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
-        pdf.save(`credit_summary_${analysisResult.customerDetails.name.replace(/ /g, '_')}.pdf`);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const ratio = canvasWidth / canvasHeight;
+        const pdfRatio = pdfWidth / pdfHeight;
+
+        let finalCanvasWidth, finalCanvasHeight;
+
+        if (ratio > pdfRatio) {
+            finalCanvasWidth = pdfWidth;
+            finalCanvasHeight = pdfWidth / ratio;
+        } else {
+            finalCanvasHeight = pdfHeight;
+            finalCanvasWidth = pdfHeight * ratio;
+        }
+
+        const imgData = canvas.toDataURL('image/png');
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, (canvas.height * pdfWidth) / canvas.width);
+        
+        pdf.save(`CreditSummary_${analysisResult.customerDetails.name.replace(/ /g, '_')}.pdf`);
         
         toast({ title: "Download Ready!", description: "Your PDF has been downloaded." });
     };
@@ -424,15 +434,18 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
 
   return (
     <>
-    <div className="space-y-6" ref={summaryRef}>
-        <div className="flex justify-between items-center mb-4">
-            <Button variant="outline" onClick={onBack}>
-                <ArrowLeft className="mr-2 h-4 w-4"/> Back to Main View
-            </Button>
-            <Button onClick={handleDownload}>
-                <Download className="mr-2 h-4 w-4" /> Download Summary
-            </Button>
-        </div>
+    <div className="flex justify-between items-center mb-4 no-print">
+        <Button variant="outline" onClick={onBack}>
+            <ArrowLeft className="mr-2 h-4 w-4"/> Back to Main View
+        </Button>
+        <Button onClick={handleDownload}>
+            <Download className="mr-2 h-4 w-4" /> Download Summary
+        </Button>
+    </div>
+
+    <div className="space-y-6 printable-area" ref={summaryRef}>
+        <PrintHeader analysisResult={analysisResult} />
+
         <Card>
             <CardHeader>
                 <CardTitle>Credit Summary</CardTitle>
@@ -457,7 +470,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="lg:col-span-2">
                 <CardHeader>
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center no-print">
                         <div>
                             <CardTitle>DPD Analysis</CardTitle>
                             <CardDescription>Days Past Due breakdown over the selected period.</CardDescription>
@@ -528,7 +541,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
             </CardHeader>
             <CardContent>
                  <Tabs defaultValue="Individual">
-                    <TabsList className="grid w-full grid-cols-3">
+                    <TabsList className="grid w-full grid-cols-3 no-print">
                         <TabsTrigger value="Individual">Individual</TabsTrigger>
                         <TabsTrigger value="Guarantor">Guarantor</TabsTrigger>
                         <TabsTrigger value="Joint">Joint</TabsTrigger>
@@ -579,7 +592,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
                                     <div className="font-semibold">{acc.type}</div>
                                     <div className="text-xs text-muted-foreground mb-2">({acc.ownership})</div>
                                     {acc.ownership !== 'Individual' && (
-                                    <div className="flex items-center space-x-2">
+                                    <div className="flex items-center space-x-2 no-print">
                                         <Switch
                                             id={accId}
                                             checked={acc.isConsidered}
@@ -597,7 +610,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
                                                 value={acc.status} 
                                                 onValueChange={(newStatus) => initiateChange(index, { status: newStatus as AccountDetail['status'] })}
                                             >
-                                                <SelectTrigger className={cn("w-fit border-none h-auto p-1.5 rounded-md text-xs", getStatusColor(acc.status), getStatusColor(acc.status) === 'bg-green-500' ? 'text-white' : '')}>
+                                                <SelectTrigger className={cn("w-fit border-none h-auto p-1.5 rounded-md text-xs no-print", getStatusColor(acc.status), getStatusColor(acc.status) === 'bg-green-500' ? 'text-white' : '')}>
                                                     <SelectValue/>
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -622,7 +635,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
                                     {isEmiEditable ? (
                                         <Input
                                             type="number"
-                                            className="w-24 h-8 text-right"
+                                            className="w-24 h-8 text-right no-print"
                                             defaultValue={getEmiValue(acc)}
                                             onBlur={(e) => {
                                                 const newEmi = e.target.valueAsNumber;
