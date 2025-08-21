@@ -128,7 +128,6 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
     const [dpdFilter, setDpdFilter] = useState('12');
     const [isAiSummaryLoading, startAiSummaryTransition] = useTransition();
     const summaryRef = useRef<HTMLDivElement>(null);
-    const printHeaderRef = useRef<HTMLDivElement>(null);
 
 
     const [behaviorAnalyses, setBehaviorAnalyses] = useState<Record<string, BehaviorAnalysisData | null>>({
@@ -373,40 +372,55 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
         setComment("");
     }
     
-    const handleDownload = async () => {
+     const handleDownload = async () => {
         const elementToCapture = summaryRef.current;
-        const headerElement = printHeaderRef.current;
-        if (!elementToCapture || !headerElement) return;
-        
+        if (!elementToCapture) return;
+
         toast({ title: "Preparing Download", description: "Generating PDF, please wait..." });
 
-        // Temporarily make the header visible for capture
-        headerElement.style.display = 'block';
+        // Temporarily add a class to the body to scope print styles
+        document.body.classList.add('generating-pdf');
 
         const canvas = await html2canvas(elementToCapture, {
-            scale: 2,
+            scale: 2, // Higher scale for better quality
             useCORS: true,
             logging: true,
-            onclone: (document) => {
-                // Ensure the header is visible in the cloned document for rendering
-                const clonedHeader = document.querySelector('.print-header-capture');
-                if (clonedHeader) {
-                    (clonedHeader as HTMLElement).style.display = 'block';
-                }
-            }
+            windowWidth: 1200, // Simulate a wider screen for better layout
         });
 
-        // Hide the header again
-        headerElement.style.display = 'none';
+        // Remove the class after capture
+        document.body.classList.remove('generating-pdf');
 
+        const imgData = canvas.toDataURL('image/png');
+        
+        // A4 page is 595 x 842 points
         const pdf = new jsPDF({
-            orientation: 'p',
-            unit: 'px',
+            orientation: 'portrait',
+            unit: 'pt',
             format: 'a4'
         });
 
         const pdfWidth = pdf.internal.pageSize.getWidth();
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, (canvas.height * pdfWidth) / canvas.width);
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const ratio = canvasWidth / canvasHeight;
+        
+        const imgWidth = pdfWidth - 40; // with some margin
+        const imgHeight = imgWidth / ratio;
+        
+        let heightLeft = imgHeight;
+        let position = 20; // top margin
+
+        pdf.addImage(imgData, 'PNG', 20, position, imgWidth, imgHeight);
+        heightLeft -= (pdfHeight - 40);
+
+        while (heightLeft > 0) {
+            position = heightLeft - imgHeight + 20; // move to next page content
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 20, position, imgWidth, imgHeight);
+            heightLeft -= (pdfHeight - 40);
+        }
         
         pdf.save(`CreditSummary_${analysisResult.customerDetails.name.replace(/ /g, '_')}.pdf`);
         
@@ -443,7 +457,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
     </div>
 
     <div className="space-y-6 printable-area" ref={summaryRef}>
-        <div ref={printHeaderRef} className="print-header-capture" style={{ display: 'none' }}>
+        <div className="print-header">
             <PrintHeader analysisResult={analysisResult} />
         </div>
 
@@ -706,5 +720,3 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
     </>
   );
 }
-
-    

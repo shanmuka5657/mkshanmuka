@@ -101,7 +101,6 @@ export function RiskAssessmentView({ analysisResult, onBack }: RiskAssessmentVie
   const [assessment, setAssessment] = useState<RiskAssessmentOutput | null>(null);
   const { toast } = useToast();
   const reportRef = useRef<HTMLDivElement>(null);
-  const printHeaderRef = useRef<HTMLDivElement>(null);
 
 
   useEffect(() => {
@@ -125,45 +124,57 @@ export function RiskAssessmentView({ analysisResult, onBack }: RiskAssessmentVie
     runAnalysis();
   }, [analysisResult, toast]);
 
-  const handleDownload = async () => {
-    const elementToCapture = reportRef.current;
-    const headerElement = printHeaderRef.current;
+   const handleDownload = async () => {
+        const elementToCapture = reportRef.current;
+        if (!elementToCapture) return;
 
-    if (!elementToCapture || !headerElement) return;
+        toast({ title: "Preparing Download", description: "Generating PDF, please wait..." });
+        
+        document.body.classList.add('generating-pdf');
 
-    toast({ title: "Preparing Download", description: "Generating PDF, please wait..." });
+        const canvas = await html2canvas(elementToCapture, {
+            scale: 2,
+            useCORS: true,
+            logging: true,
+            windowWidth: 1200,
+        });
 
-    // Temporarily make the header visible for capture
-    headerElement.style.display = 'block';
+        document.body.classList.remove('generating-pdf');
+        
+        const imgData = canvas.toDataURL('image/png');
 
-    const canvas = await html2canvas(elementToCapture, {
-      scale: 2,
-      useCORS: true,
-       onclone: (document) => {
-            // Ensure the header is visible in the cloned document for rendering
-            const clonedHeader = document.querySelector('.print-header-capture');
-            if (clonedHeader) {
-                (clonedHeader as HTMLElement).style.display = 'block';
-            }
+        const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'pt',
+            format: 'a4'
+        });
+
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const ratio = canvasWidth / canvasHeight;
+        
+        const imgWidth = pdfWidth - 40;
+        const imgHeight = imgWidth / ratio;
+        
+        let heightLeft = imgHeight;
+        let position = 20;
+
+        pdf.addImage(imgData, 'PNG', 20, position, imgWidth, imgHeight);
+        heightLeft -= (pdfHeight - 40);
+
+        while (heightLeft > 0) {
+            position = heightLeft - imgHeight + 20;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 20, position, imgWidth, imgHeight);
+            heightLeft -= (pdfHeight - 40);
         }
-    });
-
-    // Hide the header again
-    headerElement.style.display = 'none';
-
-    const pdf = new jsPDF({
-      orientation: 'p',
-      unit: 'px',
-      format: 'a4'
-    });
-
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, (canvas.height * pdfWidth) / canvas.width);
-    
-    pdf.save(`RiskAssessment_${analysisResult.customerDetails.name.replace(/ /g, '_')}.pdf`);
-    
-    toast({ title: "Download Ready!", description: "Your PDF has been downloaded." });
-  };
+        
+        pdf.save(`RiskAssessment_${analysisResult.customerDetails.name.replace(/ /g, '_')}.pdf`);
+        
+        toast({ title: "Download Ready!", description: "Your PDF has been downloaded." });
+    };
 
   if (isLoading) {
     return (
@@ -197,7 +208,7 @@ export function RiskAssessmentView({ analysisResult, onBack }: RiskAssessmentVie
       </div>
       
       <div ref={reportRef} className="printable-area">
-        <div ref={printHeaderRef} className="print-header-capture" style={{ display: 'none' }}>
+         <div className="print-header">
             <PrintHeader analysisResult={analysisResult} />
         </div>
         <Card>
@@ -225,5 +236,3 @@ export function RiskAssessmentView({ analysisResult, onBack }: RiskAssessmentVie
     </div>
   );
 }
-
-    

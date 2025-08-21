@@ -14,7 +14,7 @@ export function PrintHeader({ analysisResult }: PrintHeaderProps) {
   const { customerDetails, cibilScore } = analysisResult;
 
   return (
-    <div className="print-header mb-6">
+    <div className="print-header">
         <div className="flex justify-between items-center border-b pb-4 mb-4">
             <Logo />
             <div className="text-right">
@@ -24,7 +24,7 @@ export function PrintHeader({ analysisResult }: PrintHeaderProps) {
         </div>
         
         <Card>
-            <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <CardContent className="pt-6 grid grid-cols-2 gap-6">
                 <div className="flex flex-col items-center justify-center p-4">
                     <p className="text-sm text-muted-foreground">Official CIBIL Score</p>
                     <h2 className="text-6xl font-bold text-primary my-2">{cibilScore > 0 ? cibilScore : 'N/A'}</h2>
@@ -44,5 +44,3 @@ export function PrintHeader({ analysisResult }: PrintHeaderProps) {
     </div>
   );
 }
-
-    

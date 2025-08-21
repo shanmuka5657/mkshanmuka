@@ -62,10 +62,29 @@ body {
   }
 }
 
-/* Print-specific styles */
+/* Print-specific styles for html2canvas */
+.html2canvas-container {
+  width: 100% !important;
+  height: auto !important;
+}
+
+body.generating-pdf {
+  overflow: hidden;
+}
+
+.pdf-render-area {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 9999;
+  background: white;
+  width: 100%;
+}
+
 @media print {
   body {
     background-color: white !important;
+    color: black !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -76,18 +95,30 @@ body {
     display: block !important;
     padding: 0;
     margin: 0;
+    width: 100%;
+    box-shadow: none;
+    border: none;
   }
   .print-header {
     display: block !important;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #e2e8f0;
   }
-  main {
-    padding-bottom: 0 !important;
-  }
-  .card {
-    border: 1px solid #e2e8f0 !important;
+  main, .card {
+    padding: 0 !important;
+    margin: 0 !important;
     box-shadow: none !important;
+    border: none !important;
     page-break-inside: avoid;
   }
+  .card-content, .card-header {
+     padding: 0.5rem 0 !important;
+  }
+  h1,h2,h3,h4,h5,h6,p,span,strong,div {
+    color: black !important;
+  }
+  .text-primary {
+    color: #3F51B5 !important;
+  }
 }
-
-    
