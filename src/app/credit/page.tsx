@@ -249,6 +249,9 @@ export default function CreditPage() {
         const riskAssessmentOutput = await getRiskAssessment({ analysisResult: creditAnalysisOutput });
         if (!riskAssessmentOutput) throw new Error("AI returned an empty response for risk assessment.");
         setRiskAssessmentResult(riskAssessmentOutput);
+        
+        const aiRatingOutput = await getAiRating({ analysisResult: creditAnalysisOutput, riskAssessment: riskAssessmentOutput.assessmentWithoutGuarantor });
+        if (!aiRatingOutput) throw new Error("AI returned an empty response for AI rating.");
 
         const storageRef = ref(storage, `credit_reports/${user.uid}/${Date.now()}_${currentFile.name}`);
         const uploadResult = await uploadBytes(storageRef, currentFile);
@@ -266,10 +269,8 @@ export default function CreditPage() {
             )
         });
 
-        // This can run in the background without blocking the UI
-        getAiRating({ analysisResult: creditAnalysisOutput, riskAssessment: riskAssessmentOutput.assessmentWithoutGuarantor })
-            .then(aiRatingOutput => addTrainingCandidate(aiRatingOutput))
-            .catch(e => console.error("Failed to create training candidate:", e));
+        // Add the result to the training candidate pool
+        addTrainingCandidate(aiRatingOutput);
 
     } catch (error: any) {
         console.error("CLIENT: Analysis or Save Error: ", error);
