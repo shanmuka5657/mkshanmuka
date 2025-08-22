@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -86,13 +86,10 @@ export default function LoginForm({ redirectPath }: LoginFormProps) {
     const renderRecaptcha = () => {
         const recaptchaContainer = document.getElementById('recaptcha-container');
         if (recaptchaContainer) {
-            // This flag is recommended to avoid reCAPTCHA Enterprise errors
-            // during development when App Check is not configured.
             auth.settings.appVerificationDisabledForTesting = true;
             window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainer, {
                 'size': 'invisible'
             });
-            window.recaptchaVerifier.render();
         }
     }
 
@@ -100,6 +97,7 @@ export default function LoginForm({ redirectPath }: LoginFormProps) {
         setIsLoading(true);
         try {
             renderRecaptcha();
+            await window.recaptchaVerifier.render();
             const fullPhoneNumber = `+91${phone}`;
             const verifier = window.recaptchaVerifier;
             const result = await signInWithPhoneNumber(auth, fullPhoneNumber, verifier);
