@@ -17,6 +17,13 @@ interface LoginFormProps {
     redirectPath: string;
 }
 
+// Define the type on the window object
+declare global {
+  interface Window {
+    recaptchaVerifier: RecaptchaVerifier;
+  }
+}
+
 export default function LoginForm({ redirectPath }: LoginFormProps) {
     // Common state
     const [isLoading, setIsLoading] = useState(false);
@@ -35,10 +42,12 @@ export default function LoginForm({ redirectPath }: LoginFormProps) {
     const [otpSent, setOtpSent] = useState(false);
     
     useEffect(() => {
-        auth.settings.appVerificationDisabledForTesting = true;
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-          'size': 'invisible'
-        });
+        // Initialize reCAPTCHA verifier only once when the component mounts
+        if (!window.recaptchaVerifier) {
+            window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+                'size': 'invisible'
+            });
+        }
     }, []);
 
     const handleSuccessfulLogin = (loggedInUser: User) => {

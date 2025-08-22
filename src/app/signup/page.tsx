@@ -14,6 +14,13 @@ import { auth } from '@/lib/firebase-client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardFooter, CardTitle, CardDescription } from '@/components/ui/card';
 
+// Define the type on the window object
+declare global {
+  interface Window {
+    recaptchaVerifier: RecaptchaVerifier;
+  }
+}
+
 export default function SignupPage() {
   // Common state
   const [isLoading, setIsLoading] = useState(false);
@@ -34,10 +41,12 @@ export default function SignupPage() {
   const [activeTab, setActiveTab] = useState('email');
 
   useEffect(() => {
-    auth.settings.appVerificationDisabledForTesting = true;
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-      'size': 'invisible'
-    });
+    // Initialize reCAPTCHA verifier only once when the component mounts
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible'
+      });
+    }
   }, []);
 
 
