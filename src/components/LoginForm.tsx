@@ -34,23 +34,6 @@ export default function LoginForm({ redirectPath }: LoginFormProps) {
     const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
     const [otpSent, setOtpSent] = useState(false);
 
-    useEffect(() => {
-        if (typeof window !== 'undefined' && !window.recaptchaVerifier) {
-          // This flag is recommended to avoid reCAPTCHA Enterprise errors
-          // during development when App Check is not configured.
-          auth.settings.appVerificationDisabledForTesting = true;
-          const recaptchaContainer = document.getElementById('recaptcha-container');
-          if (recaptchaContainer) {
-            window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainer, {
-              'size': 'invisible',
-              'callback': (response: any) => {
-                // reCAPTCHA solved
-              }
-            });
-          }
-        }
-    }, []);
-
     const handleSuccessfulLogin = (loggedInUser: User) => {
         if (loggedInUser.providerData.some(p => p.providerId === 'password') && !loggedInUser.emailVerified) {
             toast({
@@ -99,11 +82,24 @@ export default function LoginForm({ redirectPath }: LoginFormProps) {
             setIsLoading(false);
         }
     };
+    
+    const renderRecaptcha = () => {
+        const recaptchaContainer = document.getElementById('recaptcha-container');
+        if (recaptchaContainer) {
+            // This flag is recommended to avoid reCAPTCHA Enterprise errors
+            // during development when App Check is not configured.
+            auth.settings.appVerificationDisabledForTesting = true;
+            window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainer, {
+                'size': 'invisible'
+            });
+            window.recaptchaVerifier.render();
+        }
+    }
 
-    const handlePhoneLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handlePhoneLogin = async () => {
         setIsLoading(true);
         try {
+            renderRecaptcha();
             const fullPhoneNumber = `+91${phone}`;
             const verifier = window.recaptchaVerifier;
             const result = await signInWithPhoneNumber(auth, fullPhoneNumber, verifier);
@@ -119,6 +115,8 @@ export default function LoginForm({ redirectPath }: LoginFormProps) {
                 errorMessage = "Failed to verify reCAPTCHA. For local development, ensure 'localhost' is an authorized domain in your Firebase project's Authentication settings AND check that your API key has no HTTP referrer restrictions in Google Cloud Console.";
             } else if (error.code === 'auth/too-many-requests') {
                 errorMessage = "You've tried to send an OTP too many times. Please wait a while before trying again.";
+            } else if (error.code === 'auth/network-request-failed') {
+                errorMessage = "Network error. Please check your internet connection and ensure your browser isn't blocking reCAPTCHA.";
             }
             toast({
                 variant: 'destructive',
@@ -186,8 +184,19 @@ export default function LoginForm({ redirectPath }: LoginFormProps) {
                     </form>
                 </TabsContent>
                 <TabsContent value="mobile">
-                    <form onSubmit={otpSent ? handleVerifyOtp : handlePhoneLogin} className="space-y-4">
-                        {!otpSent ? (
+                    {otpSent ? (
+                         <form onSubmit={handleVerifyOtp} className="space-y-4">
+                             <div className="space-y-2">
+                                <Label htmlFor="otp">One-Time Password (OTP)</Label>
+                                <Input id="otp" type="text" placeholder="Enter 6-digit OTP" required value={otp} onChange={(e) => setOtp(e.target.value)} disabled={isLoading} />
+                            </div>
+                             <Button type="submit" className="w-full" disabled={isLoading}>
+                                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Verify OTP & Sign In
+                            </Button>
+                         </form>
+                    ) : (
+                         <form onSubmit={(e) => { e.preventDefault(); handlePhoneLogin(); }} className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="phone">Mobile Number</Label>
                                 <div className="flex items-center">
@@ -195,17 +204,12 @@ export default function LoginForm({ redirectPath }: LoginFormProps) {
                                     <Input id="phone" type="tel" placeholder="9876543210" required value={phone} onChange={(e) => setPhone(e.target.value)} disabled={isLoading} className="rounded-l-none" />
                                 </div>
                             </div>
-                        ) : (
-                            <div className="space-y-2">
-                                <Label htmlFor="otp">One-Time Password (OTP)</Label>
-                                <Input id="otp" type="text" placeholder="Enter 6-digit OTP" required value={otp} onChange={(e) => setOtp(e.target.value)} disabled={isLoading} />
-                            </div>
-                        )}
-                        <Button type="submit" className="w-full" disabled={isLoading}>
-                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {otpSent ? 'Verify OTP & Sign In' : 'Send OTP'}
-                        </Button>
-                    </form>
+                            <Button type="submit" className="w-full" disabled={isLoading}>
+                                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Send OTP
+                            </Button>
+                        </form>
+                    )}
                 </TabsContent>
             </Tabs>
             <p className="text-xs text-muted-foreground text-center mt-6">
