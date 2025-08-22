@@ -14,7 +14,6 @@ function LoginPage() {
 
   return (
     <main className="container flex flex-col items-center justify-center p-4">
-       <div id="recaptcha-container" />
        <Suspense fallback={<Loader2 className="animate-spin h-12 w-12" />}>
          <LoginForm redirectPath={redirectPath} />
        </Suspense>
