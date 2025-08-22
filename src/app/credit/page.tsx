@@ -13,7 +13,8 @@ import {
   User,
   Sparkles,
   DollarSign,
-  Cpu
+  Cpu,
+  ChevronDown
 } from 'lucide-react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, storage } from '@/lib/firebase-client';
@@ -37,6 +38,12 @@ import { FinancialsView } from '@/components/FinancialsView';
 import { saveReportSummaryAction } from '@/app/actions';
 import { getRiskAssessment, RiskAssessmentOutput } from '@/ai/flows/risk-assessment';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -44,10 +51,10 @@ const initialAnalysis: AnalyzeCreditReportOutput = {
   customerDetails: {
     name: 'N/A',
     dateOfBirth: 'N/A',
-    pan: 'N/A',
+    pan: [],
     gender: 'N/A',
-    mobileNumber: 'N/A',
-    address: 'N/A',
+    mobileNumber: [],
+    address: [],
   },
   reportSummary: {
     accountSummary: {
@@ -93,6 +100,43 @@ const SummaryBox = ({ title, value, isLoading = false, valueClassName = '', icon
     {isLoading ? <Skeleton className="h-7 w-20 mx-auto mt-1" /> : <CardTitle className={cn("text-lg font-bold", valueClassName)}>{value}</CardTitle>}
   </Card>
 );
+
+const DetailWithDropdown = ({ label, values }: { label: string; values: string[] }) => {
+  if (!values || values.length === 0) {
+    return (
+      <div className="flex justify-between"><span className="text-muted-foreground">{label}</span> <strong>N/A</strong></div>
+    )
+  }
+
+  const primaryValue = values[0];
+  const otherValues = values.slice(1);
+
+  return (
+     <div className="flex justify-between items-center">
+        <span className="text-muted-foreground">{label}</span>
+        <div className="flex items-center gap-2">
+            <strong className="text-right">{primaryValue}</strong>
+            {otherValues.length > 0 && (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-6 p-1">
+                            <span className="sr-only">More</span>
+                            <ChevronDown className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        {otherValues.map((value, index) => (
+                            <DropdownMenuItem key={index} className="text-xs">
+                                {value}
+                            </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            )}
+        </div>
+    </div>
+  )
+}
 
 export default function CreditPage() {
   const [creditFile, setCreditFile] = useState<File | null>(null);
@@ -460,9 +504,9 @@ export default function CreditPage() {
                         <div className="flex justify-between"><span className="text-muted-foreground">Name</span> <strong>{customerDetails.name}</strong></div>
                         <div className="flex justify-between"><span className="text-muted-foreground">Date of Birth</span> <strong>{customerDetails.dateOfBirth}</strong></div>
                         <div className="flex justify-between"><span className="text-muted-foreground">Gender</span> <strong>{customerDetails.gender}</strong></div>
-                        <div className="flex justify-between"><span className="text-muted-foreground">PAN</span> <strong>{customerDetails.pan}</strong></div>
-                        <div className="flex justify-between"><span className="text-muted-foreground">Mobile Number</span> <strong>{customerDetails.mobileNumber}</strong></div>
-                        <div className="flex justify-between"><span className="text-muted-foreground">Address</span> <strong className="text-right">{customerDetails.address}</strong></div>
+                        <DetailWithDropdown label="PAN" values={customerDetails.pan} />
+                        <DetailWithDropdown label="Mobile Number" values={customerDetails.mobileNumber} />
+                        <DetailWithDropdown label="Address" values={customerDetails.address} />
                     </div>
                 )}
             </div>

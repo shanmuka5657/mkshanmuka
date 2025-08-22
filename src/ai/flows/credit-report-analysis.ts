@@ -23,10 +23,10 @@ export type AnalyzeCreditReportInput = z.infer<typeof AnalyzeCreditReportInputSc
 const CustomerDetailsSchema = z.object({
   name: z.string().describe('The full name of the consumer. Return "N/A" if not found.'),
   dateOfBirth: z.string().describe('The consumer\'s date of birth in DD-MM-YYYY format. Return "N/A" if not found.'),
-  pan: z.string().describe('The consumer\'s PAN ID. Return "N/A" if not found.'),
+  pan: z.array(z.string()).describe('A list of all unique PAN IDs found for the consumer. Return an empty array if none are found.'),
   gender: z.string().describe('The consumer\'s gender. Return "N/A" if not found.'),
-  mobileNumber: z.string().describe('The consumer\'s primary mobile number. Return "N/A" if not found.'),
-  address: z.string().describe('The consumer\'s primary address listed on the report. Return "N/A" if not found.'),
+  mobileNumber: z.array(z.string()).describe('A list of all unique mobile numbers found for the consumer. Return an empty array if none are found.'),
+  address: z.array(z.string()).describe('A list of all unique addresses listed on the report. Return an empty array if none are found.'),
 });
 
 const AccountSummarySchema = z.object({
@@ -119,9 +119,11 @@ const prompt = ai.definePrompt({
 1.  **CIBIL Score (cibilScore):** Find the primary CIBIL score in the report. It's often labeled "CIBIL SCORE" or "CREDITVISION SCORE". Extract the 3-digit number. If not found, you MUST return 0.
 
 2.  **Consumer Details (customerDetails):**
-    *   Find the "PERSONAL INFORMATION" or similar section.
-    *   Extract Name, Date of Birth (DD-MM-YYYY), PAN, Gender, Mobile Number, and the primary Address.
-    *   If a field is missing, you MUST return "N/A".
+    *   Find the "PERSONAL INFORMATION", "CONTACT INFORMATION", or similar sections.
+    *   Extract Name, Date of Birth (DD-MM-YYYY), and Gender.
+    *   **Multiple Entries:** Scan the entire document for ALL PANs, Mobile Numbers, and Addresses associated with the consumer. Collect all unique values for each.
+    *   Store these as arrays in the 'pan', 'mobileNumber', and 'address' fields.
+    *   If a field is missing, return an empty array or the appropriate "N/A" value.
 
 3.  **Report Summary (reportSummary):**
     *   **Account Summary:** Iterate through all accounts to calculate and extract these fields. DO NOT just look for a summary table.

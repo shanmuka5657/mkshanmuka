@@ -29,8 +29,8 @@ export async function saveReportSummaryAction(
   const reportData = {
     userId: userId,
     name: analysisResult.customerDetails.name || 'N/A',
-    pan: analysisResult.customerDetails.pan || 'N/A',
-    mobileNumber: analysisResult.customerDetails.mobileNumber || 'N/A',
+    pan: analysisResult.customerDetails.pan?.[0] || 'N/A', // Save primary PAN
+    mobileNumber: analysisResult.customerDetails.mobileNumber?.[0] || 'N/A', // Save primary mobile
     cibilScore: analysisResult.cibilScore || 0,
     totalEmi: analysisResult.emiDetails.totalEmi || 0,
     activeLoanCount: analysisResult.emiDetails.activeLoans.length || 0,
