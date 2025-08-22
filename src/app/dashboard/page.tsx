@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, FileText, Eye, Home, Fingerprint, FileCheck2, MessageCircle, BrainCircuit, Landmark, Calendar as CalendarIcon, X, PlusCircle } from 'lucide-react';
+import { Loader2, FileText, Eye, Home, Fingerprint, FileCheck2, MessageCircle, BrainCircuit, Landmark, Calendar as CalendarIcon, X, PlusCircle, Search } from 'lucide-react';
 import { getReportsForUser, CreditReportSummary } from '@/lib/firestore-service';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
+import { Input } from '@/components/ui/input';
 
 
 const navItems = [
@@ -34,6 +35,7 @@ export default function DashboardPage() {
     const { toast } = useToast();
     const [user, userLoading] = useAuthState(auth);
     const [selectedMonth, setSelectedMonth] = useState<Date | undefined>(undefined);
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         if (userLoading) {
@@ -68,14 +70,26 @@ export default function DashboardPage() {
     }, [user, userLoading, toast]);
     
     const filteredReports = useMemo(() => {
-        if (!selectedMonth) {
-            return reports;
+        let filtered = reports;
+
+        if (selectedMonth) {
+            filtered = filtered.filter(report => {
+                const reportDate = report.createdAt.toDate();
+                return reportDate.getFullYear() === selectedMonth.getFullYear() && reportDate.getMonth() === selectedMonth.getMonth();
+            });
         }
-        return reports.filter(report => {
-            const reportDate = report.createdAt.toDate();
-            return reportDate.getFullYear() === selectedMonth.getFullYear() && reportDate.getMonth() === selectedMonth.getMonth();
-        });
-    }, [reports, selectedMonth]);
+        
+        if (searchQuery) {
+            const lowercasedQuery = searchQuery.toLowerCase();
+            filtered = filtered.filter(report => 
+                report.name.toLowerCase().includes(lowercasedQuery) ||
+                report.pan.toLowerCase().includes(lowercasedQuery) ||
+                report.mobileNumber.toLowerCase().includes(lowercasedQuery)
+            );
+        }
+
+        return filtered;
+    }, [reports, selectedMonth, searchQuery]);
 
   return (
     <main className="container mx-auto p-4 md:p-8 space-y-8">
@@ -96,13 +110,23 @@ export default function DashboardPage() {
               Here is a list of all the customer credit reports you have analyzed and saved.
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col md:flex-row items-center gap-2">
+            <div className="relative w-full md:w-auto">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                    type="search"
+                    placeholder="Search name, PAN..."
+                    className="pl-8 sm:w-[200px] md:w-[200px] lg:w-[300px]"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+            </div>
              <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant={"outline"}
                     className={cn(
-                      "w-auto justify-start text-left font-normal",
+                      "w-full md:w-auto justify-start text-left font-normal",
                       !selectedMonth && "text-muted-foreground"
                     )}
                   >
@@ -126,7 +150,7 @@ export default function DashboardPage() {
                       <X className="h-4 w-4" />
                   </Button>
               )}
-              <Button asChild>
+              <Button asChild className="w-full md:w-auto">
                   <Link href="/credit">
                       <PlusCircle />
                       Analyze New Report
@@ -191,7 +215,7 @@ export default function DashboardPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredReports.map((report) => (
+                  {filteredReports.length > 0 ? filteredReports.map((report) => (
                     <TableRow key={report.id}>
                       <TableCell className="font-medium">{report.name}</TableCell>
                       <TableCell>{report.pan}</TableCell>
@@ -212,14 +236,13 @@ export default function DashboardPage() {
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
-                   {filteredReports.length === 0 && (
+                  )) : (
                         <TableRow>
                             <TableCell colSpan={8} className="text-center h-24 text-muted-foreground">
-                                No reports found for {selectedMonth ? format(selectedMonth, 'MMMM yyyy') : 'this period'}.
+                                No reports found matching your criteria.
                             </TableCell>
                         </TableRow>
-                    )}
+                  )}
                 </TableBody>
               </Table>
             </div>
