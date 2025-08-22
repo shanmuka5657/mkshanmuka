@@ -11,6 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { gemini15Flash } from '@genkit-ai/googleai';
 
 const BankStatementAnalysisInputSchema = z.object({
   statementText: z.string().describe('The full text extracted from the bank statement PDF.'),
@@ -75,6 +76,7 @@ export async function analyzeBankStatement(
 
 const prompt = ai.definePrompt({
   name: 'analyzeBankStatementPrompt',
+  model: gemini15Flash,
   input: {schema: BankStatementAnalysisInputSchema},
   output: {schema: BankStatementAnalysisOutputSchema},
   prompt: `You are an expert financial analyst specializing in Indian bank statements. Your task is to meticulously read the provided bank statement text and extract key financial insights.
