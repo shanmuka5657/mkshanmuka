@@ -70,12 +70,12 @@ export function BankStatementView({ analysisResult, onBack }: BankStatementViewP
         </CardHeader>
         <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div><strong className="block text-muted-foreground">Account Holder</strong> {summary.accountHolder}</div>
-                <div><strong className="block text-muted-foreground">Account Number</strong> {summary.accountNumber}</div>
-                <div><strong className="block text-muted-foreground">Bank Name</strong> {summary.bankName}</div>
-                <div><strong className="block text-muted-foreground">Statement Period</strong> {summary.statementPeriod}</div>
-                <div><strong className="block text-muted-foreground">Mobile Number</strong> {summary.mobileNumber}</div>
-                <div className="col-span-2 md:col-span-3"><strong className="block text-muted-foreground">Address</strong> {summary.address}</div>
+                <div><strong className="block text-muted-foreground">Account Holder</strong> <span className="break-words">{summary.accountHolder}</span></div>
+                <div><strong className="block text-muted-foreground">Account Number</strong> <span className="break-words">{summary.accountNumber}</span></div>
+                <div><strong className="block text-muted-foreground">Bank Name</strong> <span className="break-words">{summary.bankName}</span></div>
+                <div><strong className="block text-muted-foreground">Statement Period</strong> <span className="break-words">{summary.statementPeriod}</span></div>
+                <div><strong className="block text-muted-foreground">Mobile Number</strong> <span className="break-words">{summary.mobileNumber}</span></div>
+                <div className="col-span-2 md:col-span-3"><strong className="block text-muted-foreground">Address</strong> <span className="break-words">{summary.address}</span></div>
             </div>
         </CardContent>
       </Card>

@@ -28,6 +28,8 @@ const nextConfig = {
   },
   experimental: {
     serverActions: {
+      bodySizeLimit: '2mb', // Allow larger PDF uploads
+      serverActionsTimeout: 120000, // Increase timeout to 120 seconds (2 minutes)
       allowedOrigins: ['localhost:3000', 'your-production-domain.com']
     },
     serverComponentsExternalPackages: [
