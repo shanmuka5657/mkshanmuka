@@ -16,6 +16,7 @@ import {
   Cpu,
   ChevronDown,
   Shield,
+  PercentCircle,
 } from 'lucide-react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, storage } from '@/lib/firebase-client';
@@ -173,6 +174,31 @@ const AiScoreCard = ({ title, score, isLoading, tooltip }: { title: string, scor
     </TooltipProvider>
 );
 
+const getApprovalChance = (score: number): { chance: string; color: string; value: number } => {
+    if (score >= 781) return { chance: 'Very High', color: 'text-green-500', value: 90 };
+    if (score >= 731) return { chance: 'High', color: 'text-green-400', value: 80 };
+    if (score >= 681) return { chance: 'Good', color: 'text-blue-500', value: 65 };
+    if (score >= 631) return { chance: 'Fair', color: 'text-yellow-500', value: 50 };
+    if (score >= 581) return { chance: 'Low', color: 'text-orange-500', value: 30 };
+    if (score >= 300) return { chance: 'Very Low', color: 'text-red-500', value: 10 };
+    return { chance: 'N/A', color: 'text-muted-foreground', value: 0 };
+};
+
+const ApprovalChanceCard = ({ score, isLoading }: { score: number; isLoading: boolean }) => {
+    const { chance, color, value } = getApprovalChance(score);
+    return (
+        <Card className="p-3 text-center">
+            <CardDescription>Loan Approval Chance</CardDescription>
+            {isLoading ? (
+                <div className="h-10 my-1 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin"/></div>
+            ) : (
+                <CardTitle className={cn("text-4xl my-1", color)}>{chance}</CardTitle>
+            )}
+            <Progress value={value} className="h-2" />
+        </Card>
+    );
+};
+
 
 if (typeof window !== 'undefined') {
   GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.mjs`;
@@ -190,8 +216,6 @@ export default function CreditPage() {
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<string | null>(null);
   const [isTextExtracted, setIsTextExtracted] = useState(false);
-  const [customizedRiskScore, setCustomizedRiskScore] = useState<number | null>(null);
-  const [isCalculatingCustomScore, setIsCalculatingCustomScore] = useState(false);
   
   const { toast } = useToast()
   const creditFileInputRef = useRef<HTMLInputElement>(null);
@@ -227,45 +251,6 @@ export default function CreditPage() {
     }
   }, [user]);
 
-   const calculateCustomRiskScore = useCallback(async (currentAnalysis: AnalyzeCreditReportOutput) => {
-        if (!currentAnalysis) return;
-        setIsCalculatingCustomScore(true);
-        try {
-            const tempResult = await getRiskAssessment({ analysisResult: currentAnalysis });
-            setCustomizedRiskScore(tempResult.assessmentWithGuarantor.riskScore);
-        } catch (error) {
-            console.error("Failed to calculate custom risk score:", error);
-            toast({
-                variant: "destructive",
-                title: "Error Recalculating Score",
-                description: "Could not recalculate the custom risk score.",
-            });
-        } finally {
-            setIsCalculatingCustomScore(false);
-        }
-    }, [toast]);
-
-    const debouncedCalculateCustomRiskScore = useRef(
-        debounce(calculateCustomRiskScore, 1000)
-    ).current;
-    
-    // Effect to recalculate custom score when toggles change
-    useEffect(() => {
-        if (analysisResult) {
-            const consideredAccounts = (analysisResult.allAccounts as any[]).filter(acc => acc.isConsidered);
-            
-            // Avoid recalculating if nothing has changed from the "Without Guarantor" state initially
-            if (customizedRiskScore !== null || riskAssessmentResult) {
-                 const currentAnalysis: AnalyzeCreditReportOutput = {
-                    ...analysisResult,
-                    allAccounts: consideredAccounts,
-                };
-                debouncedCalculateCustomRiskScore(currentAnalysis);
-            }
-        }
-    }, [analysisResult, debouncedCalculateCustomRiskScore, riskAssessmentResult, customizedRiskScore]);
-
-
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = event.target.files;
     if (!selectedFiles || selectedFiles.length === 0) return;
@@ -286,7 +271,6 @@ export default function CreditPage() {
     setIsProcessing(false);
     setAnalysisResult(null);
     setRiskAssessmentResult(null);
-    setCustomizedRiskScore(null);
     setIsAnalyzing(false);
     setAnalysisStatus('');
     setActiveView(null);
@@ -379,7 +363,6 @@ export default function CreditPage() {
         const riskAssessmentOutput = await getRiskAssessment({ analysisResult: creditAnalysisOutput });
         if (!riskAssessmentOutput) throw new Error("AI returned an empty response for risk assessment.");
         setRiskAssessmentResult(riskAssessmentOutput);
-        setCustomizedRiskScore(riskAssessmentOutput.assessmentWithoutGuarantor.riskScore); // Initialize with this value
         
         setAnalysisStatus("Uploading PDF securely...");
         const storageRef = ref(storage, `credit_reports/${user.uid}/${Date.now()}_${currentFile.name}`);
@@ -479,20 +462,6 @@ export default function CreditPage() {
               {renderActiveView()}
           </main>
       );
-  }
-
-  function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
-    let timeout: ReturnType<typeof setTimeout> | null = null;
-  
-    const debounced = (...args: Parameters<F>) => {
-      if (timeout !== null) {
-        clearTimeout(timeout);
-        timeout = null;
-      }
-      timeout = setTimeout(() => func(...args), waitFor);
-    };
-  
-    return debounced as (...args: Parameters<F>) => void;
   }
 
   return (
@@ -615,8 +584,8 @@ export default function CreditPage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg"><Shield className="text-primary"/>AI Risk Score</CardTitle>
-                    <CardDescription>AI-generated risk score (0-100, higher is riskier), calculated under different scenarios.</CardDescription>
+                    <CardTitle className="flex items-center gap-2 text-lg"><Shield className="text-primary"/>AI Risk Score & Approval</CardTitle>
+                    <CardDescription>AI-generated risk score (0-100, higher is riskier) and estimated loan approval chance.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <AiScoreCard
@@ -631,12 +600,12 @@ export default function CreditPage() {
                         score={riskAssessmentResult?.assessmentWithoutGuarantor.riskScore ?? 0}
                         tooltip="Your personal risk, excluding loans guaranteed for others."
                     />
-                    <AiScoreCard
-                        title="User Customized"
-                        isLoading={isCalculatingCustomScore || (showSkeletons && !customizedRiskScore)}
-                        score={customizedRiskScore ?? 0}
-                        tooltip="This score will update in real-time as you include/exclude loans in the detailed view."
-                    />
+                    <div className="sm:col-span-2">
+                        <ApprovalChanceCard
+                            score={cibilScore}
+                            isLoading={showSkeletons}
+                        />
+                    </div>
                 </CardContent>
             </Card>
         </div>
@@ -711,3 +680,5 @@ export default function CreditPage() {
     </main>
   );
 }
+
+    
