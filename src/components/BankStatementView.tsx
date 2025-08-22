@@ -6,8 +6,9 @@ import type { BankStatementAnalysisOutput } from '@/ai/flows/bank-statement-anal
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { ArrowLeft, ArrowUpCircle, ArrowDownCircle, CheckCircle, AlertCircle, TrendingUp, TrendingDown, Landmark } from 'lucide-react';
+import { ArrowLeft, ArrowUpCircle, ArrowDownCircle, CheckCircle, AlertCircle, TrendingUp, TrendingDown, Landmark, DollarSign, Cpu } from 'lucide-react';
 import { Badge } from './ui/badge';
+import { cn } from '@/lib/utils';
 
 interface BankStatementViewProps {
   analysisResult: BankStatementAnalysisOutput;
@@ -29,9 +30,32 @@ const InfoCard = ({ title, value, icon }: { title: string; value: string; icon?:
     );
 };
 
+const SummaryBox = ({ title, value, isLoading = false, valueClassName = '', icon: Icon }: { title: string; value: string | number; isLoading?: boolean; valueClassName?: string, icon?: React.ElementType }) => (
+  <Card className="text-center p-3 bg-muted/30">
+    <CardDescription className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+      {Icon && <Icon className="h-3 w-3" />}
+      {title}
+    </CardDescription>
+    <CardTitle className={cn("text-lg font-bold", valueClassName)}>{value}</CardTitle>
+  </Card>
+);
+
 
 export function BankStatementView({ analysisResult, onBack }: BankStatementViewProps) {
-  const { summary, overview, detailedOverview, health, transactions } = analysisResult;
+  const { summary, overview, detailedOverview, health, transactions, usage } = analysisResult;
+  
+  const calculateCost = () => {
+      const totalInputTokens = usage?.inputTokens || 0;
+      const totalOutputTokens = usage?.outputTokens || 0;
+
+      if (totalInputTokens === 0 && totalOutputTokens === 0) return { totalTokens: 0, cost: 0 };
+
+      // Pricing for Gemini 1.5 Flash: $0.00013125 per 1K input tokens, $0.00039375 per 1K output tokens
+      const inputCost = (totalInputTokens / 1000) * 0.00013125;
+      const outputCost = (totalOutputTokens / 1000) * 0.00039375;
+      
+      return { totalTokens: totalInputTokens + totalOutputTokens, cost: inputCost + outputCost };
+  }
 
   return (
     <div className="space-y-6">
@@ -142,6 +166,23 @@ export function BankStatementView({ analysisResult, onBack }: BankStatementViewP
         </CardContent>
       </Card>
 
+        {usage && (
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg"><DollarSign className="text-primary" />Analysis Cost</CardTitle>
+                    <CardDescription>Estimated cost for the AI analysis. For educational purposes only.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                        <SummaryBox title="Total Tokens Used" value={calculateCost().totalTokens.toLocaleString()} icon={Cpu} />
+                        <SummaryBox title="Estimated Cost" value={`$${calculateCost().cost.toFixed(6)}`} icon={DollarSign} />
+                    </div>
+                </CardContent>
+            </Card>
+        )}
+
     </div>
   );
 }
+
+    

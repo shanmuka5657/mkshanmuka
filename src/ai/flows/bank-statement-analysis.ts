@@ -64,6 +64,11 @@ const BankStatementAnalysisOutputSchema = z.object({
   detailedOverview: DetailedOverviewSchema,
   health: FinancialHealthSchema,
   transactions: z.array(TransactionDetailSchema).describe("A list of the 10-15 most significant or recent transactions."),
+  usage: z.object({
+      inputTokens: z.number().optional(),
+      outputTokens: z.number().optional(),
+      totalTokens: z.number().optional(),
+  }).optional().describe("Token usage for the generation call."),
 });
 export type BankStatementAnalysisOutput = z.infer<typeof BankStatementAnalysisOutputSchema>;
 
@@ -94,11 +99,11 @@ const prompt = ai.definePrompt({
 2.  **Financial Overview (overview):**
     *   Calculate the sum of all credit (deposits) and debit (withdrawals) transactions.
     *   Calculate the average balance. If not explicitly mentioned, estimate it.
-    *   Analyze the credit transactions to identify recurring, salary-like deposits and provide an 'estimatedMonthlyIncome'.
+    *   Analyze the credit transactions to identify recurring, salary-like deposits and provide an 'estimatedMonthlyIncome'. This is your best guess of their monthly take-home pay.
 
 3.  **Detailed Financial Overview (detailedOverview):**
     *   Go through every transaction. Scrutinize the narration/description for keywords.
-    *   **Salary Credits**: Find transactions with "SALARY", "SAL", "WAGES" etc. Sum them up.
+    *   **Salary Credits**: Find transactions with "SALARY", "SAL", "WAGES" etc. Sum them up. This must be the total of ONLY the specific transactions you identify as salary.
     *   **Incentive Credits**: Find transactions with "INCENTIVE", "BONUS", "COMMISSION" etc. Sum them up.
     *   **Mandate Debits**: Find debit transactions with "MANDATE", "NACH", "ECS", "ACH", "SI" (Standing Instruction) often related to loan EMIs or bill payments. Sum them up.
     *   **Cheque Inward**: Find credit transactions with "CHQ-INWARD", "INWARD CLG", "CHEQUE DEPOSIT" etc. Sum them up.
@@ -131,10 +136,11 @@ const analyzeBankStatementFlow = ai.defineFlow(
     outputSchema: BankStatementAnalysisOutputSchema,
   },
   async (input: BankStatementAnalysisInput) => {
-    const {output} = await prompt(input);
+    const {output, usage} = await prompt(input);
     if (!output) {
       throw new Error("AI failed to analyze the bank statement.");
     }
+    output.usage = usage;
     return output;
   }
 );
