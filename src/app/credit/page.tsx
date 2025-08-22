@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { getDocument, GlobalWorkerOptions, version } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import {
   UploadCloud,
@@ -159,7 +159,7 @@ const AiScoreCard = ({ title, score, isLoading, tooltip }: { title: string, scor
                 <Card className="text-center p-3">
                     <CardDescription>{title}</CardDescription>
                     {isLoading ? (
-                        <Skeleton className="h-10 w-24 mx-auto my-1" />
+                        <div className="h-10 my-1 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin"/></div>
                     ) : (
                         <CardTitle className={cn("text-4xl my-1", getRatingStyles(score).text)}>{score}</CardTitle>
                     )}
@@ -186,6 +186,8 @@ export default function CreditPage() {
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<string | null>(null);
   const [isTextExtracted, setIsTextExtracted] = useState(false);
+  const [customizedRiskScore, setCustomizedRiskScore] = useState<number | null>(null);
+  const [isCalculatingCustomScore, setIsCalculatingCustomScore] = useState(false);
   
   const { toast } = useToast()
   const creditFileInputRef = useRef<HTMLInputElement>(null);
@@ -193,7 +195,7 @@ export default function CreditPage() {
   const router = useRouter();
   
   useEffect(() => {
-    GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${version}/legacy/build/pdf.worker.min.mjs`;
+    GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${version}/legacy/build/pdf.worker.min.js`;
   }, []);
 
   // Effect to restore state from sessionStorage on page load
@@ -224,6 +226,45 @@ export default function CreditPage() {
     }
   }, [user]);
 
+   const calculateCustomRiskScore = useCallback(async (currentAnalysis: AnalyzeCreditReportOutput) => {
+        if (!currentAnalysis) return;
+        setIsCalculatingCustomScore(true);
+        try {
+            const tempResult = await getRiskAssessment({ analysisResult: currentAnalysis });
+            setCustomizedRiskScore(tempResult.assessmentWithGuarantor.riskScore);
+        } catch (error) {
+            console.error("Failed to calculate custom risk score:", error);
+            toast({
+                variant: "destructive",
+                title: "Error Recalculating Score",
+                description: "Could not recalculate the custom risk score.",
+            });
+        } finally {
+            setIsCalculatingCustomScore(false);
+        }
+    }, [toast]);
+
+    const debouncedCalculateCustomRiskScore = useRef(
+        debounce(calculateCustomRiskScore, 1000)
+    ).current;
+    
+    // Effect to recalculate custom score when toggles change
+    useEffect(() => {
+        if (analysisResult) {
+            const consideredAccounts = (analysisResult.allAccounts as any[]).filter(acc => acc.isConsidered);
+            
+            // Avoid recalculating if nothing has changed from the "Without Guarantor" state initially
+            if (customizedRiskScore !== null || riskAssessmentResult) {
+                 const currentAnalysis: AnalyzeCreditReportOutput = {
+                    ...analysisResult,
+                    allAccounts: consideredAccounts,
+                };
+                debouncedCalculateCustomRiskScore(currentAnalysis);
+            }
+        }
+    }, [analysisResult, debouncedCalculateCustomRiskScore, riskAssessmentResult, customizedRiskScore]);
+
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = event.target.files;
     if (!selectedFiles || selectedFiles.length === 0) return;
@@ -244,6 +285,7 @@ export default function CreditPage() {
     setIsProcessing(false);
     setAnalysisResult(null);
     setRiskAssessmentResult(null);
+    setCustomizedRiskScore(null);
     setIsAnalyzing(false);
     setAnalysisStatus('');
     setActiveView(null);
@@ -325,12 +367,18 @@ export default function CreditPage() {
         setAnalysisStatus("Analyzing credit report...");
         const creditAnalysisOutput = await analyzeCreditReport({ creditReportText: currentText });
         if (!creditAnalysisOutput) throw new Error("AI returned an empty response for credit analysis.");
-        setAnalysisResult(creditAnalysisOutput);
+        
+        // Enhance with 'isConsidered' flag before setting state
+        const enhancedAccounts = creditAnalysisOutput.allAccounts.map(acc => ({ ...acc, isConsidered: true }));
+        const enhancedAnalysisResult = { ...creditAnalysisOutput, allAccounts: enhancedAccounts };
+        setAnalysisResult(enhancedAnalysisResult);
+
 
         setAnalysisStatus("Performing risk assessment...");
         const riskAssessmentOutput = await getRiskAssessment({ analysisResult: creditAnalysisOutput });
         if (!riskAssessmentOutput) throw new Error("AI returned an empty response for risk assessment.");
         setRiskAssessmentResult(riskAssessmentOutput);
+        setCustomizedRiskScore(riskAssessmentOutput.assessmentWithoutGuarantor.riskScore); // Initialize with this value
         
         setAnalysisStatus("Uploading PDF securely...");
         const storageRef = ref(storage, `credit_reports/${user.uid}/${Date.now()}_${currentFile.name}`);
@@ -430,6 +478,20 @@ export default function CreditPage() {
               {renderActiveView()}
           </main>
       );
+  }
+
+  function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+  
+    const debounced = (...args: Parameters<F>) => {
+      if (timeout !== null) {
+        clearTimeout(timeout);
+        timeout = null;
+      }
+      timeout = setTimeout(() => func(...args), waitFor);
+    };
+  
+    return debounced as (...args: Parameters<F>) => void;
   }
 
   return (
@@ -570,8 +632,8 @@ export default function CreditPage() {
                     />
                     <AiScoreCard
                         title="User Customized"
-                        isLoading={showSkeletons}
-                        score={0} // This will be calculated in a future step
+                        isLoading={isCalculatingCustomScore || (showSkeletons && !customizedRiskScore)}
+                        score={customizedRiskScore ?? 0}
                         tooltip="This score will update in real-time as you include/exclude loans in the detailed view."
                     />
                 </CardContent>
