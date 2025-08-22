@@ -1,11 +1,11 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, FileText, Eye, Home, Fingerprint, FileCheck2, MessageCircle, BrainCircuit, Landmark } from 'lucide-react';
+import { Loader2, FileText, Eye, Home, Fingerprint, FileCheck2, MessageCircle, BrainCircuit, Landmark, Calendar as CalendarIcon, X } from 'lucide-react';
 import { getReportsForUser, CreditReportSummary } from '@/lib/firestore-service';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,10 @@ import Link from 'next/link';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '@/lib/firebase-client';
 import { cn } from '@/lib/utils';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
@@ -29,6 +33,7 @@ export default function DashboardPage() {
     const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
     const [user, userLoading] = useAuthState(auth);
+    const [selectedMonth, setSelectedMonth] = useState<Date | undefined>(undefined);
 
     useEffect(() => {
         if (userLoading) {
@@ -62,6 +67,16 @@ export default function DashboardPage() {
         fetchReports();
     }, [user, userLoading, toast]);
     
+    const filteredReports = useMemo(() => {
+        if (!selectedMonth) {
+            return reports;
+        }
+        return reports.filter(report => {
+            const reportDate = report.createdAt.toDate();
+            return reportDate.getFullYear() === selectedMonth.getFullYear() && reportDate.getMonth() === selectedMonth.getMonth();
+        });
+    }, [reports, selectedMonth]);
+
   return (
     <main className="container mx-auto p-4 md:p-8 space-y-8">
       <div className="text-center">
@@ -74,11 +89,44 @@ export default function DashboardPage() {
       </div>
 
        <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><FileText /> Saved Credit Report Summaries</CardTitle>
-          <CardDescription>
-            Here is a list of all the customer credit reports you have analyzed and saved.
-          </CardDescription>
+        <CardHeader className="flex-col md:flex-row md:items-center md:justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2"><FileText /> Saved Credit Report Summaries</CardTitle>
+            <CardDescription>
+              Here is a list of all the customer credit reports you have analyzed and saved.
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+             <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-[240px] justify-start text-left font-normal",
+                      !selectedMonth && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedMonth ? format(selectedMonth, 'MMMM yyyy') : <span>Filter by month</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedMonth}
+                    onSelect={setSelectedMonth}
+                    captionLayout="dropdown-buttons"
+                    fromYear={2020}
+                    toYear={new Date().getFullYear()}
+                  />
+                </PopoverContent>
+              </Popover>
+              {selectedMonth && (
+                  <Button variant="ghost" size="icon" onClick={() => setSelectedMonth(undefined)}>
+                      <X className="h-4 w-4" />
+                  </Button>
+              )}
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading || userLoading ? (
@@ -94,7 +142,7 @@ export default function DashboardPage() {
                             <Link href="/login">Login</Link>
                         </Button>
                          <Button asChild variant="secondary">
-                            <Link href="/login?redirect=/credit">Analyze Report</Link>
+                            <Link href="/credit">Analyze Report</Link>
                         </Button>
                     </div>
                 </div>
@@ -137,7 +185,7 @@ export default function DashboardPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reports.map((report) => (
+                  {filteredReports.map((report) => (
                     <TableRow key={report.id}>
                       <TableCell className="font-medium">{report.name}</TableCell>
                       <TableCell>{report.pan}</TableCell>
@@ -159,6 +207,13 @@ export default function DashboardPage() {
                       </TableCell>
                     </TableRow>
                   ))}
+                   {filteredReports.length === 0 && (
+                        <TableRow>
+                            <TableCell colSpan={8} className="text-center h-24 text-muted-foreground">
+                                No reports found for {selectedMonth ? format(selectedMonth, 'MMMM yyyy') : 'this period'}.
+                            </TableCell>
+                        </TableRow>
+                    )}
                 </TableBody>
               </Table>
             </div>
