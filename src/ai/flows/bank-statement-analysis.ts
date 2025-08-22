@@ -86,8 +86,6 @@ const prompt = ai.definePrompt({
   output: {schema: BankStatementAnalysisOutputSchema},
   prompt: `You are an expert financial analyst specializing in Indian bank statements. Your task is to meticulously read the provided bank statement text and extract key financial insights.
 
-**CRITICAL RULE:** You must be extremely careful not to double-count transactions. The sums you provide in the 'detailedOverview' section must be a direct and verifiable total of the individual transactions you identify in the text.
-
 **Extraction & Analysis Tasks:**
 
 1.  **Account Summary (summary):**
@@ -102,6 +100,7 @@ const prompt = ai.definePrompt({
     *   Analyze the credit transactions to identify recurring, salary-like deposits and provide an 'estimatedMonthlyIncome'. This is your best guess of their monthly take-home pay.
 
 3.  **Detailed Financial Overview (detailedOverview):**
+    *   **CRITICAL RULE:** You must be extremely careful not to double-count transactions. The sums you provide in this section must be a direct and verifiable total of the individual transactions you identify in the text.
     *   Go through every transaction. Scrutinize the narration/description for keywords.
     *   **Salary Credits**: Find transactions with "SALARY", "SAL", "WAGES" etc. Sum them up. This must be the total of ONLY the specific transactions you identify as salary.
     *   **Incentive Credits**: Find transactions with "INCENTIVE", "BONUS", "COMMISSION" etc. Sum them up.
@@ -145,4 +144,3 @@ const analyzeBankStatementFlow = ai.defineFlow(
     return output;
   }
 );
-
