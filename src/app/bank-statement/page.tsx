@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, 'useState', useEffect, useRef } from 'react';
 import { getDocument, GlobalWorkerOptions, version } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import {
   UploadCloud,
@@ -23,7 +23,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 
 // PDFJS worker setup
 if (typeof window !== 'undefined') {
-    GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${version}/legacy/build/pdf.worker.min.mjs`;
+    GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.mjs`;
 }
 
 export default function BankStatementPage() {

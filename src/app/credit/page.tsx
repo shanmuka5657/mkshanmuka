@@ -174,6 +174,10 @@ const AiScoreCard = ({ title, score, isLoading, tooltip }: { title: string, scor
 );
 
 
+if (typeof window !== 'undefined') {
+  GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.mjs`;
+}
+
 export default function CreditPage() {
   const [creditFile, setCreditFile] = useState<File | null>(null);
   const [creditFileName, setCreditFileName] = useState('');
@@ -194,9 +198,6 @@ export default function CreditPage() {
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
   
-  useEffect(() => {
-    GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${version}/legacy/build/pdf.worker.min.js`;
-  }, []);
 
   // Effect to restore state from sessionStorage on page load
   useEffect(() => {
