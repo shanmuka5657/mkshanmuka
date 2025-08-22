@@ -34,6 +34,20 @@ export default function LoginForm({ redirectPath }: LoginFormProps) {
     const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
     const [otpSent, setOtpSent] = useState(false);
 
+    useEffect(() => {
+        if (typeof window !== 'undefined' && !window.recaptchaVerifier) {
+          const recaptchaContainer = document.getElementById('recaptcha-container');
+          if (recaptchaContainer) {
+            window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainer, {
+              'size': 'invisible',
+              'callback': (response: any) => {
+                // reCAPTCHA solved
+              }
+            });
+          }
+        }
+    }, []);
+
     const handleSuccessfulLogin = (loggedInUser: User) => {
         if (loggedInUser.providerData.some(p => p.providerId === 'password') && !loggedInUser.emailVerified) {
             toast({
