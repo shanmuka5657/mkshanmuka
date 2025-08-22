@@ -126,9 +126,9 @@ export default function LoginForm({ redirectPath }: LoginFormProps) {
         }
     };
     
-    const handlePhoneSubmit = (e: React.FormEvent) => {
+    const handlePhoneSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        handlePhoneLogin();
+        await handlePhoneLogin();
     };
 
     const handleVerifyOtp = async (e: React.FormEvent) => {

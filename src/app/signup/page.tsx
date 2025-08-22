@@ -126,9 +126,9 @@ export default function SignupPage() {
     }
   };
   
-  const handlePhoneSubmit = (e: React.FormEvent) => {
+  const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    handlePhoneSignup();
+    await handlePhoneSignup();
   };
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
