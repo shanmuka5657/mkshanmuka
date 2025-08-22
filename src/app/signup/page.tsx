@@ -86,7 +86,6 @@ export default function SignupPage() {
     const renderRecaptcha = () => {
         const recaptchaContainer = document.getElementById('recaptcha-container');
         if (recaptchaContainer) {
-            // This is the fix for the development environment
             auth.settings.appVerificationDisabledForTesting = true;
             window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainer, {
                 'size': 'invisible'
@@ -125,6 +124,11 @@ export default function SignupPage() {
     } finally {
         setIsLoading(false);
     }
+  };
+  
+  const handlePhoneSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handlePhoneSignup();
   };
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
@@ -232,7 +236,7 @@ export default function SignupPage() {
                         </Button>
                     </form>
                 ) : (
-                     <form onSubmit={(e) => { e.preventDefault(); handlePhoneSignup(); }} className="space-y-4">
+                     <form onSubmit={handlePhoneSubmit} className="space-y-4">
                          <div className="space-y-2">
                             <Label htmlFor="phone">Mobile Number</Label>
                             <div className="flex items-center">
