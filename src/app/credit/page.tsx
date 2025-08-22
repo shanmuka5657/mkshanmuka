@@ -14,7 +14,8 @@ import {
   Sparkles,
   DollarSign,
   Cpu,
-  ChevronDown
+  ChevronDown,
+  Shield,
 } from 'lucide-react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, storage } from '@/lib/firebase-client';
@@ -44,6 +45,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 
 const initialAnalysis: AnalyzeCreditReportOutput = {
@@ -137,6 +144,35 @@ const DetailWithDropdown = ({ label, values }: { label: string; values: string[]
     </div>
   )
 }
+
+const getRatingStyles = (score: number) => {
+    if (score <= 15) return { text: 'text-green-500' };
+    if (score <= 30) return { text: 'text-blue-500' };
+    if (score <= 45) return { text: 'text-yellow-500' };
+    return { text: 'text-red-500' };
+};
+
+const AiScoreCard = ({ title, score, isLoading, tooltip }: { title: string, score: number, isLoading: boolean, tooltip: string }) => (
+    <TooltipProvider>
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <Card className="text-center p-3">
+                    <CardDescription>{title}</CardDescription>
+                    {isLoading ? (
+                        <Skeleton className="h-10 w-24 mx-auto my-1" />
+                    ) : (
+                        <CardTitle className={cn("text-4xl my-1", getRatingStyles(score).text)}>{score}</CardTitle>
+                    )}
+                    <Progress value={score} className="h-2"/>
+                </Card>
+            </TooltipTrigger>
+            <TooltipContent>
+                <p>{tooltip}</p>
+            </TooltipContent>
+        </Tooltip>
+    </TooltipProvider>
+);
+
 
 export default function CreditPage() {
   const [creditFile, setCreditFile] = useState<File | null>(null);
@@ -473,45 +509,74 @@ export default function CreditPage() {
             </Card>
         )}
 
-        <Card>
-        <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg"><User className="text-primary"/>Credit Score & Consumer Information</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="flex flex-col items-center justify-center p-4">
-                <p className="text-sm text-muted-foreground">Official CIBIL Score</p>
-                {showSkeletons ? (
-                    <Skeleton className="h-[72px] w-40 my-2" />
-                ) : (
-                    <h2 className="text-6xl font-bold text-primary my-2">{cibilScore > 0 ? cibilScore : 'N/A'}</h2>
-                )}
-                {cibilScore > 0 && !showSkeletons && <Progress value={cibilScore} maxValue={900} />}
-                {showSkeletons && <Skeleton className="h-4 w-full" />}
-            </div>
-            <div>
-                <h3 className="font-semibold mb-3">AI-Extracted Consumer Information</h3>
-                {showSkeletons ? (
-                    <div className="space-y-3">
-                        <Skeleton className="h-5 w-full" />
-                        <Skeleton className="h-5 w-3/4" />
-                        <Skeleton className="h-5 w-full" />
-                        <Skeleton className="h-5 w-1/2" />
-                        <Skeleton className="h-5 w-4/5" />
-                        <Skeleton className="h-5 w-full" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg"><User className="text-primary"/>Credit Score & Consumer Information</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="flex flex-col items-center justify-center p-4">
+                        <p className="text-sm text-muted-foreground">Official CIBIL Score</p>
+                        {showSkeletons ? (
+                            <Skeleton className="h-[72px] w-40 my-2" />
+                        ) : (
+                            <h2 className="text-6xl font-bold text-primary my-2">{cibilScore > 0 ? cibilScore : 'N/A'}</h2>
+                        )}
+                        {cibilScore > 0 && !showSkeletons && <Progress value={cibilScore} maxValue={900} />}
+                        {showSkeletons && <Skeleton className="h-4 w-full" />}
                     </div>
-                ) : (
-                    <div className="space-y-2 text-sm">
-                        <div className="flex justify-between"><span className="text-muted-foreground">Name</span> <strong>{customerDetails.name}</strong></div>
-                        <div className="flex justify-between"><span className="text-muted-foreground">Date of Birth</span> <strong>{customerDetails.dateOfBirth}</strong></div>
-                        <div className="flex justify-between"><span className="text-muted-foreground">Gender</span> <strong>{customerDetails.gender}</strong></div>
-                        <DetailWithDropdown label="PAN" values={customerDetails.pan} />
-                        <DetailWithDropdown label="Mobile Number" values={customerDetails.mobileNumber} />
-                        <DetailWithDropdown label="Address" values={customerDetails.address} />
+                    <div>
+                        <h3 className="font-semibold mb-3">AI-Extracted Consumer Information</h3>
+                        {showSkeletons ? (
+                            <div className="space-y-3">
+                                <Skeleton className="h-5 w-full" />
+                                <Skeleton className="h-5 w-3/4" />
+                                <Skeleton className="h-5 w-full" />
+                                <Skeleton className="h-5 w-1/2" />
+                                <Skeleton className="h-5 w-4/5" />
+                                <Skeleton className="h-5 w-full" />
+                            </div>
+                        ) : (
+                            <div className="space-y-2 text-sm">
+                                <div className="flex justify-between"><span className="text-muted-foreground">Name</span> <strong>{customerDetails.name}</strong></div>
+                                <div className="flex justify-between"><span className="text-muted-foreground">Date of Birth</span> <strong>{customerDetails.dateOfBirth}</strong></div>
+                                <div className="flex justify-between"><span className="text-muted-foreground">Gender</span> <strong>{customerDetails.gender}</strong></div>
+                                <DetailWithDropdown label="PAN" values={customerDetails.pan} />
+                                <DetailWithDropdown label="Mobile Number" values={customerDetails.mobileNumber} />
+                                <DetailWithDropdown label="Address" values={customerDetails.address} />
+                            </div>
+                        )}
                     </div>
-                )}
-            </div>
-        </CardContent>
-        </Card>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg"><Shield className="text-primary"/>AI Risk Score</CardTitle>
+                    <CardDescription>AI-generated risk score (0-100, higher is riskier), calculated under different scenarios.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <AiScoreCard
+                        title="With Guarantor Loans"
+                        isLoading={showSkeletons}
+                        score={riskAssessmentResult?.assessmentWithGuarantor.riskScore ?? 0}
+                        tooltip="Risk including all loans where you are a guarantor."
+                    />
+                    <AiScoreCard
+                        title="Without Guarantor Loans"
+                        isLoading={showSkeletons}
+                        score={riskAssessmentResult?.assessmentWithoutGuarantor.riskScore ?? 0}
+                        tooltip="Your personal risk, excluding loans guaranteed for others."
+                    />
+                    <AiScoreCard
+                        title="User Customized"
+                        isLoading={showSkeletons}
+                        score={0} // This will be calculated in a future step
+                        tooltip="This score will update in real-time as you include/exclude loans in the detailed view."
+                    />
+                </CardContent>
+            </Card>
+        </div>
 
         <Card>
             <CardHeader>
