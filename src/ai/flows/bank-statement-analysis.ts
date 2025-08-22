@@ -81,6 +81,8 @@ const prompt = ai.definePrompt({
   output: {schema: BankStatementAnalysisOutputSchema},
   prompt: `You are an expert financial analyst specializing in Indian bank statements. Your task is to meticulously read the provided bank statement text and extract key financial insights.
 
+**CRITICAL RULE:** You must be extremely careful not to double-count transactions. The sums you provide in the 'detailedOverview' section must be a direct and verifiable total of the individual transactions you identify in the text.
+
 **Extraction & Analysis Tasks:**
 
 1.  **Account Summary (summary):**
@@ -136,3 +138,5 @@ const analyzeBankStatementFlow = ai.defineFlow(
     return output;
   }
 );
+
+    
