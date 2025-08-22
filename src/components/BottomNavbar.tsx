@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FileText, Fingerprint, FileCheck2, Home, BrainCircuit, MessageCircle } from 'lucide-react';
+import { FileText, Fingerprint, FileCheck2, Home, BrainCircuit, MessageCircle, Landmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Tooltip,
@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home, enabled: true },
   { href: '/credit', label: 'Credit', icon: FileText, enabled: true },
+  { href: '/bank-statement', label: 'Bank Stmt', icon: Landmark, enabled: true },
   { href: '/verify', label: 'Verify', icon: Fingerprint, enabled: true },
   { href: '/cross-verify', label: 'Cross-Verify', icon: FileCheck2, enabled: true },
   { href: '/chat', label: 'Chat', icon: MessageCircle, enabled: true },
@@ -27,7 +28,7 @@ const NavItem = ({ item }: { item: typeof navItems[0] }) => {
     const pathname = usePathname();
     const { toast } = useToast();
 
-    const isActive = item.href === '/credit' ? (pathname === '/credit' || pathname === '/') : pathname === item.href;
+    const isActive = pathname === item.href;
 
     const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
         if (!item.enabled) {
@@ -74,7 +75,7 @@ const NavItem = ({ item }: { item: typeof navItems[0] }) => {
 export function BottomNavbar() {
   return (
     <div className="fixed bottom-0 left-0 z-50 w-full h-20 bg-background border-t border-border no-print">
-      <div className={`grid h-full max-w-lg grid-cols-6 mx-auto font-medium`}>
+      <div className={`grid h-full max-w-lg grid-cols-7 mx-auto font-medium`}>
         {navItems.map((item) => (
             <NavItem key={item.href} item={item} />
         ))}

@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, FileText, Eye, Home, Fingerprint, FileCheck2, MessageCircle, BrainCircuit } from 'lucide-react';
+import { Loader2, FileText, Eye, Home, Fingerprint, FileCheck2, MessageCircle, BrainCircuit, Landmark } from 'lucide-react';
 import { getReportsForUser, CreditReportSummary } from '@/lib/firestore-service';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/credit', label: 'Credit', icon: FileText },
+  { href: '/bank-statement', label: 'Bank Stmt', icon: Landmark },
   { href: '/verify', label: 'Verify', icon: Fingerprint },
   { href: '/cross-verify', label: 'Cross-Verify', icon: FileCheck2 },
   { href: '/chat', label: 'Chat', icon: MessageCircle },
@@ -98,7 +99,7 @@ export default function DashboardPage() {
                     </div>
                 </div>
                  <div className="absolute inset-0 flex justify-center items-center blur-sm opacity-20 scale-125">
-                    <div className={`grid h-full w-full max-w-lg grid-cols-6 mx-auto font-medium`}>
+                    <div className={`grid h-full w-full max-w-lg grid-cols-7 mx-auto font-medium`}>
                         {navItems.map((item) => (
                         <div
                             key={item.href}
