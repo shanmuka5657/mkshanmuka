@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, FileText, Eye, Home, Fingerprint, FileCheck2, MessageCircle, BrainCircuit, Landmark, Calendar as CalendarIcon, X } from 'lucide-react';
+import { Loader2, FileText, Eye, Home, Fingerprint, FileCheck2, MessageCircle, BrainCircuit, Landmark, Calendar as CalendarIcon, X, PlusCircle } from 'lucide-react';
 import { getReportsForUser, CreditReportSummary } from '@/lib/firestore-service';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -102,7 +102,7 @@ export default function DashboardPage() {
                   <Button
                     variant={"outline"}
                     className={cn(
-                      "w-[240px] justify-start text-left font-normal",
+                      "w-auto justify-start text-left font-normal",
                       !selectedMonth && "text-muted-foreground"
                     )}
                   >
@@ -110,7 +110,7 @@ export default function DashboardPage() {
                     {selectedMonth ? format(selectedMonth, 'MMMM yyyy') : <span>Filter by month</span>}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent className="w-auto p-0" align="end">
                   <Calendar
                     mode="single"
                     selected={selectedMonth}
@@ -126,6 +126,12 @@ export default function DashboardPage() {
                       <X className="h-4 w-4" />
                   </Button>
               )}
+              <Button asChild>
+                  <Link href="/credit">
+                      <PlusCircle />
+                      Analyze New Report
+                  </Link>
+              </Button>
           </div>
         </CardHeader>
         <CardContent>
