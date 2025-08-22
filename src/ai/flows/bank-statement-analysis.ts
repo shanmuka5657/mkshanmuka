@@ -118,6 +118,7 @@ const prompt = ai.definePrompt({
 5.  **Transaction Highlights (transactions):**
     *   Identify the 10-15 most significant transactions. This includes large credits/debits, salary payments, loan EMIs, rent, etc.
     *   For each transaction, extract the date, description, type (credit/debit), and amount.
+    *   **CRITICAL FORMATTING:** The 'date' MUST be in DD-MM-YYYY format.
     *   Assign a logical 'category' to each transaction.
 
 **Bank Statement Text:**
@@ -145,4 +146,3 @@ const analyzeBankStatementFlow = ai.defineFlow(
   }
 );
 
-    
