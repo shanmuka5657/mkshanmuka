@@ -86,6 +86,7 @@ export default function SignupPage() {
     const renderRecaptcha = () => {
         const recaptchaContainer = document.getElementById('recaptcha-container');
         if (recaptchaContainer) {
+            // This is the fix for the development environment
             auth.settings.appVerificationDisabledForTesting = true;
             window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainer, {
                 'size': 'invisible'
