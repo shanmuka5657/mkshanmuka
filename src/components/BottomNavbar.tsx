@@ -17,11 +17,11 @@ import { useToast } from '@/hooks/use-toast';
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home, enabled: true },
   { href: '/credit', label: 'Credit', icon: FileText, enabled: true },
-  { href: '/bank-statement', label: 'Bank Stmt', icon: Landmark, enabled: true },
-  { href: '/verify', label: 'Verify', icon: Fingerprint, enabled: true },
-  { href: '/cross-verify', label: 'Cross-Verify', icon: FileCheck2, enabled: true },
-  { href: '/chat', label: 'Chat', icon: MessageCircle, enabled: true },
-  { href: '/trainer', label: 'Trainer', icon: BrainCircuit, enabled: true },
+  { href: '/bank-statement', label: 'Bank Stmt', icon: Landmark, enabled: false },
+  { href: '/verify', label: 'Verify', icon: Fingerprint, enabled: false },
+  { href: '/cross-verify', label: 'Cross-Verify', icon: FileCheck2, enabled: false },
+  { href: '/chat', label: 'Chat', icon: MessageCircle, enabled: false },
+  { href: '/trainer', label: 'Trainer', icon: BrainCircuit, enabled: false },
 ];
 
 const NavItem = ({ item }: { item: typeof navItems[0] }) => {
