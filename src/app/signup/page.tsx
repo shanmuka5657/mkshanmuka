@@ -33,6 +33,14 @@ export default function SignupPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [activeTab, setActiveTab] = useState('email');
 
+  useEffect(() => {
+    auth.settings.appVerificationDisabledForTesting = true;
+    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      'size': 'invisible'
+    });
+  }, []);
+
+
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -83,21 +91,9 @@ export default function SignupPage() {
     }
   };
   
-    const renderRecaptcha = () => {
-        const recaptchaContainer = document.getElementById('recaptcha-container');
-        if (recaptchaContainer) {
-            auth.settings.appVerificationDisabledForTesting = true;
-            window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainer, {
-                'size': 'invisible'
-            });
-        }
-    }
-
   const handlePhoneSignup = async () => {
     setIsLoading(true);
     try {
-        renderRecaptcha();
-        await window.recaptchaVerifier.render();
         const fullPhoneNumber = `+91${phone}`;
         const verifier = window.recaptchaVerifier;
         const result = await signInWithPhoneNumber(auth, fullPhoneNumber, verifier);

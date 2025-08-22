@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,6 +33,13 @@ export default function LoginForm({ redirectPath }: LoginFormProps) {
     const [otp, setOtp] = useState('');
     const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
     const [otpSent, setOtpSent] = useState(false);
+    
+    useEffect(() => {
+        auth.settings.appVerificationDisabledForTesting = true;
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          'size': 'invisible'
+        });
+    }, []);
 
     const handleSuccessfulLogin = (loggedInUser: User) => {
         if (loggedInUser.providerData.some(p => p.providerId === 'password') && !loggedInUser.emailVerified) {
@@ -83,21 +90,9 @@ export default function LoginForm({ redirectPath }: LoginFormProps) {
         }
     };
     
-    const renderRecaptcha = () => {
-        const recaptchaContainer = document.getElementById('recaptcha-container');
-        if (recaptchaContainer) {
-            auth.settings.appVerificationDisabledForTesting = true;
-            window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainer, {
-                'size': 'invisible'
-            });
-        }
-    }
-
     const handlePhoneLogin = async () => {
         setIsLoading(true);
         try {
-            renderRecaptcha();
-            await window.recaptchaVerifier.render();
             const fullPhoneNumber = `+91${phone}`;
             const verifier = window.recaptchaVerifier;
             const result = await signInWithPhoneNumber(auth, fullPhoneNumber, verifier);
