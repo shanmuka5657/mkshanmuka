@@ -35,6 +35,9 @@ export default function SignupPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined' && !window.recaptchaVerifier) {
+      // This flag is recommended to avoid reCAPTCHA Enterprise errors
+      // during development when App Check is not configured.
+      auth.settings.appVerificationDisabledForTesting = true;
       const recaptchaContainer = document.getElementById('recaptcha-container');
       if (recaptchaContainer) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainer, {
