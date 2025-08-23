@@ -7,7 +7,7 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
-import { ArrowLeft, Download, InfoIcon, Shield, Loader2 } from 'lucide-react';
+import { ArrowLeft, Download, InfoIcon, Shield, Loader2, MessageSquare, PlusCircle } from 'lucide-react';
 import {
   ChartContainer,
   ChartTooltip,
@@ -40,6 +40,7 @@ interface EnhancedAccountDetail extends AccountDetail {
 
 interface BaseAccount {
   emi?: string | number | null;
+  changeLog?: string[];
   // Include other common properties from AccountDetail if needed
 }
 
@@ -141,7 +142,6 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
         'Guarantor': null,
         'Joint': null,
     });
-    const [userChanges, setUserChanges] = useState<ChangeLog[]>([]);
     
     const [commentDialogOpen, setCommentDialogOpen] = useState(false);
     const [activeChange, setActiveChange] = useState<{index: number, updates: Partial<EnhancedAccountDetail>, oldAccount: EnhancedAccountDetail} | null>(null);
@@ -156,12 +156,12 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
             : {
                 ...acc,
                 isConsidered: true,
-                manualEmi: parseEmiString(acc.emi)
+                manualEmi: parseEmiString(acc.emi),
+                changeLog: acc.changeLog || [],
             }
         );
         setEditedAccounts(initialAccounts);
         setHasChanges(false);
-        setUserChanges([]);
     }, [analysisResult]);
 
 
@@ -331,39 +331,28 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
         setHasChanges(true);
         const newAccounts = [...editedAccounts];
         const currentEmi = getEmiValue(oldAccount);
-        newAccounts[index] = { ...oldAccount, ...updates };
-        setEditedAccounts(newAccounts);
-    
-        const changeLogs: string[] = [];
+        const newChangeLog = oldAccount.changeLog ? [...oldAccount.changeLog] : [];
+
         const accountName = `'${oldAccount.type}'`;
-        const logPrefix = `(S.No. ${index + 1}):`;
     
         if (updates.isConsidered !== undefined && updates.isConsidered !== oldAccount.isConsidered) {
-            let log = `${logPrefix} ${updates.isConsidered ? 'Included' : 'Excluded'} ${accountName} from calculations.`;
-            if (commentText) {
-                log += ` Reason: ${commentText}`;
-            }
-            changeLogs.push(log);
+            let log = `${updates.isConsidered ? 'Included' : 'Excluded'} account from calculations.`;
+            if (commentText) log += ` Reason: ${commentText}`;
+            newChangeLog.push(log);
         }
         if (updates.status && updates.status !== oldAccount.status) {
-            let log = `${logPrefix} Changed status of ${accountName} to '${updates.status}'.`;
-            if (commentText) {
-                log += ` Reason: ${commentText}`;
-            }
-            changeLogs.push(log);
+            let log = `Changed status to '${updates.status}'.`;
+            if (commentText) log += ` Reason: ${commentText}`;
+            newChangeLog.push(log);
         }
         if (updates.manualEmi !== undefined && updates.manualEmi !== currentEmi) {
-             let log = `${logPrefix} Updated EMI for ${accountName} to ₹${(updates.manualEmi || 0).toLocaleString('en-IN')}.`;
-             if (commentText) {
-                log += ` Reason: ${commentText}`;
-            }
-            changeLogs.push(log);
+             let log = `Updated EMI to ₹${(updates.manualEmi || 0).toLocaleString('en-IN')}.`;
+             if (commentText) log += ` Reason: ${commentText}`;
+            newChangeLog.push(log);
         }
-    
-        if (changeLogs.length > 0) {
-            const newChangeLogs: ChangeLog[] = changeLogs.map(log => ({ id: Date.now().toString() + Math.random(), text: log }));
-            setUserChanges(prev => [...prev, ...newChangeLogs]);
-        }
+
+        newAccounts[index] = { ...oldAccount, ...updates, changeLog: newChangeLog };
+        setEditedAccounts(newAccounts);
     }
 
     const handleCommentDialogSubmit = () => {
@@ -458,7 +447,6 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
                     description: "Your edits have been saved to the database.",
                 });
                 setHasChanges(false); // Reset changes flag
-                setUserChanges([]); // Clear log
                 
                 // CRITICAL: Call the onAssessRisk callback to update parent state
                 onAssessRisk(updatedAnalysisResult);
@@ -717,7 +705,7 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
                                 </TableCell>
                             </TableRow>
                             <TableRow className={!acc.isConsidered ? 'bg-muted/50' : ''}>
-                                <TableCell colSpan={7} className="p-2">
+                                <TableCell colSpan={7} className="py-2 px-4">
                                    <div className="flex flex-col gap-2 p-2 bg-background/50 rounded-md">
                                         <div className="flex gap-1 flex-wrap">
                                             <span className="text-xs font-semibold mr-2 flex items-center shrink-0">Payment History:</span>
@@ -732,6 +720,16 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
                                         <div className="text-xs text-muted-foreground">
                                             <span className="font-semibold">Raw History String:</span> {acc.paymentHistory}
                                         </div>
+                                        {acc.changeLog && acc.changeLog.length > 0 && (
+                                            <div className="mt-2 pt-2 border-t border-dashed">
+                                                <h4 className="text-xs font-semibold mb-1 flex items-center gap-1"><MessageSquare size={12}/>Manual Change Log:</h4>
+                                                <ul className="list-disc list-inside space-y-1 pl-1">
+                                                    {acc.changeLog.map((log, i) => (
+                                                        <li key={i} className="text-xs text-muted-foreground">{log}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -743,20 +741,7 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
           </div>
         </CardContent>
       </Card>
-       {userChanges.length > 0 && (
-         <Alert>
-             <InfoIcon className="h-4 w-4" />
-             <AlertTitle>Manual Changes Applied</AlertTitle>
-             <AlertDescription>
-                <p className="mb-2">The summary and analyses have been updated based on the following manual changes:</p>
-                <ul className="list-disc pl-5 space-y-1">
-                    {userChanges.map((change) => (
-                        <li key={change.id}>{change.text}</li>
-                    ))}
-                </ul>
-             </AlertDescription>
-         </Alert>
-        )}
+       
         <div className="flex justify-end pt-6 no-print">
             <Button 
                 size="lg" 
@@ -777,7 +762,7 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <Textarea 
-                placeholder="Type your comment here..."
+                placeholder="Type your comment here... (optional)"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
             />

@@ -74,7 +74,8 @@ const AccountDetailSchema = z.object({
     opened: z.string().describe("The date the account was opened in DD-MM-YYYY format. Use 'NA' if not applicable."),
     closed: z.string().describe("The date the account was closed in DD-MM-YYYY format. Use 'NA' if not applicable."),
     paymentHistory: z.string().describe("The raw payment history string (e.g., '000|000|STD...'). Use 'NA' if not applicable."),
-    monthlyPaymentHistory: z.array(MonthlyPaymentDetailSchema).describe("A structured list of monthly payment statuses derived from the payment history string. Each entry should have the month, year, and status. If payment history is 'NA', this should be an empty array.")
+    monthlyPaymentHistory: z.array(MonthlyPaymentDetailSchema).describe("A structured list of monthly payment statuses derived from the payment history string. Each entry should have the month, year, and status. If payment history is 'NA', this should be an empty array."),
+    changeLog: z.array(z.string()).optional().describe("A log of manual changes made to this account. This should be an empty array by default."),
 });
 export type AccountDetail = z.infer<typeof AccountDetailSchema>;
 
@@ -112,7 +113,7 @@ const prompt = ai.definePrompt({
     output: { schema: AnalyzeCreditReportOutputSchema },
     prompt: `You are an expert CIBIL report data extractor. Your ONLY job is to read the provided credit report text and extract all specified information in a single, comprehensive pass. Do NOT perform any summarizations or calculations beyond what is explicitly asked for.
 
-**CRITICAL RULE:** For every field you are asked to extract, if you cannot find the information in the provided text, you MUST return "N/A" for strings, 0 for numbers, or an empty array for lists. You must not leave any field blank or fail to return a value.
+**CRITICAL RULE:** For every field you are asked to extract, if you cannot find the information in the provided text, you MUST return "N/A" for strings, 0 for numbers, or an empty array for lists. You must not leave any field blank or fail to return a value. The 'changeLog' field MUST be an empty array by default.
 
 **Extraction Tasks:**
 
@@ -134,7 +135,7 @@ const prompt = ai.definePrompt({
 
 4.  **All Accounts (allAccounts):**
     *   Go to the "ACCOUNT INFORMATION" section. Iterate through EVERY account.
-    *   For each account, extract all fields defined in the AccountDetailSchema.
+    *   For each account, extract all fields defined in the AccountDetailSchema. The 'changeLog' field must be an empty array.
     *   **Monthly Payment History (monthlyPaymentHistory):** For each account, look for the payment history string which often has a date header (e.g., "Dec '23 | Nov '23 ..."). Parse this string. For each month-year-status triplet, create a structured object and add it to the 'monthlyPaymentHistory' array. If the date header is missing, you must infer the dates starting from the most recent month and going backwards. If the payment history is 'NA', this array MUST be empty.
     *   **CRITICAL FORMATTING:** Currency fields MUST be "₹X,XXX,XXX" (use "₹NaN" if not applicable). Dates MUST be "DD-MM-YYYY" (use "NA" if not applicable). 'paymentHistory' must be the raw, unaltered string.
 
