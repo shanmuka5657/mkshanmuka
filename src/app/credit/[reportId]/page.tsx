@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { notFound, useRouter, useSearchParams } from 'next/navigation';
 import { getReportById, CreditReportSummary } from '@/lib/firestore-service';
 import { CreditSummaryView } from '@/components/CreditSummaryView';
@@ -22,6 +22,9 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
   const { toast } = useToast();
   const [activeView, setActiveView] = useState<string | null>(null);
 
+  // Add state for the editable analysis result
+  const [editableAnalysisResult, setEditableAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(null);
+
   useEffect(() => {
     const initialView = searchParams.get('view');
     if (initialView) {
@@ -38,8 +41,10 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
     const fetchReport = async () => {
       try {
         const fetchedReport = await getReportById(params.reportId);
-        if (fetchedReport) {
+        if (fetchedReport && fetchedReport.fullAnalysis) {
           setReport(fetchedReport);
+          // Initialize the editable state with the fetched data
+          setEditableAnalysisResult(fetchedReport.fullAnalysis as AnalyzeCreditReportOutput);
         } else {
           // This will trigger the not-found UI
           notFound();
@@ -67,6 +72,13 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
     router.replace(`/credit/${params.reportId}`, undefined);
   };
 
+  const handleAssessRisk = useCallback((updatedAnalysis: AnalyzeCreditReportOutput) => {
+    setEditableAnalysisResult(updatedAnalysis);
+    setActiveView('risk');
+    router.replace(`/credit/${params.reportId}?view=risk`, undefined);
+  }, [router, params.reportId]);
+
+
   if (isLoading) {
     return (
       <main className="flex justify-center items-center h-[calc(100vh-10rem)]">
@@ -78,7 +90,7 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
     );
   }
 
-  if (!report || !report.fullAnalysis) {
+  if (!report || !editableAnalysisResult) {
     return (
         <main className="flex flex-col justify-center items-center h-[calc(100vh-10rem)] text-center">
             <h2 className="text-2xl font-semibold mb-2">Report Not Found</h2>
@@ -88,22 +100,46 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
     );
   }
 
-  const analysisResult = report.fullAnalysis as AnalyzeCreditReportOutput;
-
   switch (activeView) {
     case 'summary':
-      return <main className="container mx-auto p-4 md:p-8 space-y-6"><CreditSummaryView analysisResult={analysisResult} onBack={handleBack} /></main>;
+      return (
+        <main className="container mx-auto p-4 md:p-8 space-y-6">
+          <CreditSummaryView
+            analysisResult={editableAnalysisResult}
+            onBack={handleBack}
+            onAssessRisk={handleAssessRisk}
+          />
+        </main>
+      );
     case 'risk':
-      return <main className="container mx-auto p-4 md:p-8 space-y-6"><RiskAssessmentView analysisResult={analysisResult} onBack={handleBack} /></main>;
+      return (
+        <main className="container mx-auto p-4 md:p-8 space-y-6">
+          <RiskAssessmentView 
+            analysisResult={editableAnalysisResult} 
+            onBack={handleBack} />
+        </main>
+      );
     case 'rating':
-        return <main className="container mx-auto p-4 md:p-8 space-y-6"><AiRatingView analysisResult={analysisResult} onBack={handleBack} /></main>;
+        return (
+          <main className="container mx-auto p-4 md:p-8 space-y-6">
+            <AiRatingView 
+              analysisResult={editableAnalysisResult} 
+              onBack={handleBack} />
+          </main>
+        );
     case 'financials':
-        return <main className="container mx-auto p-4 md:p-8 space-y-6"><FinancialsView analysisResult={analysisResult} onBack={handleBack} /></main>;
+        return (
+          <main className="container mx-auto p-4 md:p-8 space-y-6">
+            <FinancialsView 
+              analysisResult={editableAnalysisResult} 
+              onBack={handleBack} />
+          </main>
+        );
     default:
        return (
         <main className="container mx-auto p-4 md:p-8 space-y-6">
             <CreditAnalysisLanding 
-                analysisResult={analysisResult} 
+                analysisResult={editableAnalysisResult} 
                 onSelectView={setActiveView}
             />
         </main>

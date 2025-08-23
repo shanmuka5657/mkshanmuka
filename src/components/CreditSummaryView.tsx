@@ -4,10 +4,10 @@
 import React, { useState, useMemo, useTransition, useEffect, useCallback, useRef } from 'react';
 import type { AnalyzeCreditReportOutput, AccountDetail } from '@/ai/flows/credit-report-analysis';
 import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
-import { ArrowLeft, Download, InfoIcon } from 'lucide-react';
+import { ArrowLeft, Download, InfoIcon, Shield } from 'lucide-react';
 import {
   ChartContainer,
   ChartTooltip,
@@ -50,6 +50,7 @@ type ChangeLog = {
 interface CreditSummaryViewProps {
   analysisResult: AnalyzeCreditReportOutput;
   onBack: () => void;
+  onAssessRisk: (updatedAnalysisResult: AnalyzeCreditReportOutput) => void;
 }
 
 const SummaryCard = ({ title, value, subValue }: { title: string; value: string | number; subValue?: string }) => (
@@ -120,7 +121,7 @@ const getEmiValue = (acc: BaseAccount | EnhancedAccountDetail): number => {
 
 type OwnershipType = 'Individual' | 'Guarantor' | 'Joint';
 
-export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewProps) {
+export function CreditSummaryView({ analysisResult, onBack, onAssessRisk }: CreditSummaryViewProps) {
     const { toast } = useToast();
     const [detailedAccounts, setDetailedAccounts] = useState<EnhancedAccountDetail[]>(
         analysisResult.allAccounts.map(acc => ({...acc, isConsidered: true }))
@@ -128,6 +129,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
     const [dpdFilter, setDpdFilter] = useState('12');
     const [isAiSummaryLoading, startAiSummaryTransition] = useTransition();
     const summaryRef = useRef<HTMLDivElement>(null);
+    const [hasChanges, setHasChanges] = useState(false);
 
 
     const [behaviorAnalyses, setBehaviorAnalyses] = useState<Record<string, BehaviorAnalysisData | null>>({
@@ -230,6 +232,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
         let onTimePayments = 0;
 
         accounts.forEach(acc => {
+            if (!acc.monthlyPaymentHistory) return;
             const historySlice = months === Infinity ? acc.monthlyPaymentHistory : acc.monthlyPaymentHistory.slice(0, months);
             
             paymentHistoryForAI.push({ accountType: acc.type, history: historySlice.map(p => p.status) });
@@ -326,6 +329,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
     };
     
     const applyChange = (index: number, updates: Partial<EnhancedAccountDetail>, oldAccount: EnhancedAccountDetail, commentText: string | null) => {
+        setHasChanges(true);
         const newAccounts = [...detailedAccounts];
         const currentEmi = getEmiValue(oldAccount);
         newAccounts[index] = { ...oldAccount, ...updates };
@@ -425,6 +429,20 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
         pdf.save(`CreditSummary_${analysisResult.customerDetails.name.replace(/ /g, '_')}.pdf`);
         
         toast({ title: "Download Ready!", description: "Your PDF has been downloaded." });
+    };
+
+    const handleAssessRiskClick = () => {
+        // Create a new analysisResult object with the updated accounts
+        const updatedAnalysisResult = {
+            ...analysisResult,
+            allAccounts: detailedAccounts,
+            // You may also need to update emiDetails if it's derived
+            emiDetails: {
+                ...analysisResult.emiDetails,
+                totalEmi: parseFloat(summaryData.totalEmi.replace(/[^0-9.]/g, ''))
+            }
+        };
+        onAssessRisk(updatedAnalysisResult);
     };
 
     const getDialogDescription = () => {
@@ -670,7 +688,7 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
                                    <div className="flex flex-col gap-2 p-2 bg-background/50 rounded-md">
                                         <div className="flex gap-1 flex-wrap">
                                             <span className="text-xs font-semibold mr-2 flex items-center shrink-0">Payment History:</span>
-                                            {acc.monthlyPaymentHistory.length > 0 ? (
+                                            {acc.monthlyPaymentHistory && acc.monthlyPaymentHistory.length > 0 ? (
                                                 acc.monthlyPaymentHistory.map((pmt, i) => (
                                                     <DpdCircle key={i} value={pmt.status} />
                                                 ))
@@ -706,6 +724,16 @@ export function CreditSummaryView({ analysisResult, onBack }: CreditSummaryViewP
              </AlertDescription>
          </Alert>
         )}
+        <div className="flex justify-end pt-6 no-print">
+            <Button 
+                size="lg" 
+                onClick={handleAssessRiskClick}
+                disabled={!hasChanges}
+            >
+                <Shield className="mr-2" />
+                Save & Assess AI Risk
+            </Button>
+        </div>
     </div>
      <AlertDialog open={commentDialogOpen} onOpenChange={setCommentDialogOpen}>
         <AlertDialogContent>
