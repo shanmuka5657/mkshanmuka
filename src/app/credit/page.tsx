@@ -251,11 +251,16 @@ export default function CreditPage() {
   };
   
   const handleBack = () => setActiveView(null);
+  
+  const handleAssessRisk = useCallback((updatedAnalysis: AnalyzeCreditReportOutput) => {
+    setAnalysisResult(updatedAnalysis);
+    setActiveView('risk');
+  }, []);
 
   if (activeView && analysisResult) {
       switch (activeView) {
         case 'summary':
-          return <main className="container mx-auto p-4 md:p-8 space-y-6"><CreditSummaryView analysisResult={analysisResult} onBack={handleBack} /></main>;
+          return <main className="container mx-auto p-4 md:p-8 space-y-6"><CreditSummaryView analysisResult={analysisResult} onBack={handleBack} onAssessRisk={handleAssessRisk} /></main>;
         case 'risk':
           return <main className="container mx-auto p-4 md:p-8 space-y-6"><RiskAssessmentView analysisResult={analysisResult} onBack={handleBack} /></main>;
         case 'rating':
