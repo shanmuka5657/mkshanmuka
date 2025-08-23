@@ -174,21 +174,19 @@ const AiScoreCard = ({ title, score, isLoading, tooltip }: { title: string, scor
     </TooltipProvider>
 );
 
-const getApprovalChance = (score: number): { chance: string; color: string; value: number } => {
-    if (score >= 781) return { chance: 'Very High', color: 'text-green-500', value: 90 };
-    if (score >= 731) return { chance: 'High', color: 'text-green-400', value: 80 };
-    if (score >= 681) return { chance: 'Good', color: 'text-blue-500', value: 65 };
-    if (score >= 631) return { chance: 'Fair', color: 'text-yellow-500', value: 50 };
-    if (score >= 581) return { chance: 'Low', color: 'text-orange-500', value: 30 };
-    if (score >= 300) return { chance: 'Very Low', color: 'text-red-500', value: 10 };
-    return { chance: 'N/A', color: 'text-muted-foreground', value: 0 };
+const getApprovalChanceFromRisk = (riskScore: number): { chance: string; color: string; value: number } => {
+    if (riskScore <= 15) return { chance: 'Very High', color: 'text-green-500', value: 90 };
+    if (riskScore <= 30) return { chance: 'High', color: 'text-blue-500', value: 75 };
+    if (riskScore <= 45) return { chance: 'Good', color: 'text-yellow-500', value: 60 };
+    if (riskScore <= 60) return { chance: 'Fair', color: 'text-orange-500', value: 40 };
+    return { chance: 'Low', color: 'text-red-500', value: 20 };
 };
 
-const ApprovalChanceCard = ({ score, isLoading }: { score: number; isLoading: boolean }) => {
-    const { chance, color, value } = getApprovalChance(score);
+const ApprovalChanceCard = ({ title, riskScore, isLoading }: { title: string; riskScore: number; isLoading: boolean }) => {
+    const { chance, color, value } = getApprovalChanceFromRisk(riskScore);
     return (
         <Card className="p-3 text-center">
-            <CardDescription>Loan Approval Chance</CardDescription>
+            <CardDescription>{title}</CardDescription>
             {isLoading ? (
                 <div className="h-10 my-1 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin"/></div>
             ) : (
@@ -600,12 +598,16 @@ export default function CreditPage() {
                         score={riskAssessmentResult?.assessmentWithoutGuarantor.riskScore ?? 0}
                         tooltip="Your personal risk, excluding loans guaranteed for others."
                     />
-                    <div className="sm:col-span-2">
-                        <ApprovalChanceCard
-                            score={cibilScore}
-                            isLoading={showSkeletons}
-                        />
-                    </div>
+                   <ApprovalChanceCard
+                        title="With Guarantor Loans"
+                        riskScore={riskAssessmentResult?.assessmentWithGuarantor.riskScore ?? 0}
+                        isLoading={showSkeletons}
+                    />
+                    <ApprovalChanceCard
+                        title="Without Guarantor Loans"
+                        riskScore={riskAssessmentResult?.assessmentWithoutGuarantor.riskScore ?? 0}
+                        isLoading={showSkeletons}
+                    />
                 </CardContent>
             </Card>
         </div>
