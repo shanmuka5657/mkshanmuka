@@ -262,7 +262,7 @@ export default function DashboardPage() {
                       <TableCell>{report.createdAt.toDate().toLocaleDateString()}</TableCell>
                       <TableCell>
                         <Button asChild variant="outline" size="sm">
-                            <Link href={`/credit/${report.id}`}>
+                            <Link href={`/credit/${report.id}?view=risk`}>
                                 <Eye className="mr-2 h-4 w-4" /> View Report
                             </Link>
                         </Button>
