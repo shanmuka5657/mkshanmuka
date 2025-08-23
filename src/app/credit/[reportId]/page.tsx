@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -21,7 +22,7 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
   const { toast } = useToast();
   const [activeView, setActiveView] = useState<string | null>(null);
 
-  // Add state for the editable analysis result
+  // This is now the single source of truth for the analysis data
   const [editableAnalysisResult, setEditableAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(null);
 
   useEffect(() => {
@@ -38,6 +39,7 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
     }
 
     const fetchReport = async () => {
+      setIsLoading(true);
       try {
         const fetchedReport = await getReportById(params.reportId);
         if (fetchedReport && fetchedReport.fullAnalysis) {

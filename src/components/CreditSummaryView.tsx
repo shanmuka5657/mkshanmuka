@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo, useTransition, useEffect, useCallback, useRef } from 'react';
@@ -148,12 +149,16 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
     
     // Effect to initialize state when the component mounts or the base analysisResult prop changes
     useEffect(() => {
-        const initialAccounts = analysisResult.allAccounts.map(acc => ({
-            ...acc,
-            isConsidered: true,
-            // Initialize manualEmi with the parsed value from the original report
-            manualEmi: parseEmiString(acc.emi)
-        }));
+        // Check if accounts in analysisResult are already enhanced. If not, enhance them.
+        const initialAccounts = analysisResult.allAccounts.map(acc => 
+            'isConsidered' in acc 
+            ? acc as EnhancedAccountDetail 
+            : {
+                ...acc,
+                isConsidered: true,
+                manualEmi: parseEmiString(acc.emi)
+            }
+        );
         setEditedAccounts(initialAccounts);
         setHasChanges(false);
         setUserChanges([]);
