@@ -144,6 +144,19 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
     const [commentDialogOpen, setCommentDialogOpen] = useState(false);
     const [activeChange, setActiveChange] = useState<{index: number, updates: Partial<EnhancedAccountDetail>, oldAccount: EnhancedAccountDetail} | null>(null);
     const [comment, setComment] = useState("");
+    
+    // Effect to re-initialize state if the base analysisResult prop changes
+    useEffect(() => {
+        setDetailedAccounts(analysisResult.allAccounts.map(acc => ({
+            ...acc,
+            isConsidered: true,
+            // Carry over manual EMI if it existed, otherwise initialize from acc.emi
+            manualEmi: acc.manualEmi !== undefined ? acc.manualEmi : parseEmiString(acc.emi)
+        } as EnhancedAccountDetail)));
+        setHasChanges(false);
+        setUserChanges([]);
+    }, [analysisResult]);
+
 
     const activeAccounts = useMemo(() => detailedAccounts.filter(acc => acc.status.toLowerCase() === 'active' || acc.status.toLowerCase() === 'open'), [detailedAccounts]);
 
@@ -439,8 +452,14 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
                 });
                 setHasChanges(false); // Reset changes flag
                 setUserChanges([]); // Clear log
+                
+                // CRITICAL: Call the onAssessRisk callback to update parent state
+                onAssessRisk(updatedAnalysisResult);
+            } else {
+                 // This is a new report, so just pass the data up without saving to DB
+                onAssessRisk(updatedAnalysisResult);
             }
-            onAssessRisk(updatedAnalysisResult);
+            
         } catch (error: any) {
             toast({
                 variant: "destructive",
