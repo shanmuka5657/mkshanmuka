@@ -54,7 +54,7 @@ interface CreditSummaryViewProps {
   onAssessRisk: (updatedAnalysisResult: AnalyzeCreditReportOutput) => void;
 }
 
-const SummaryCard = ({ title, value, subValue }: { title: string; value: string | number; subValue?: string }) => (
+const SummaryCard = ({ title, value, subValue }: { title: string | number; value: string | number; subValue?: string }) => (
     <div className="bg-background border rounded-lg p-4 flex-1 text-center min-w-[120px]">
         <p className="text-sm text-muted-foreground">{title}</p>
         <p className="text-2xl font-bold">{value}</p>
@@ -149,8 +149,6 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
 
     const summaryData = useMemo(() => {
         const consideredAccounts = detailedAccounts.filter(acc => acc.isConsidered);
-        const totalSanctionedNum = consideredAccounts.reduce((sum, acc) => sum + Number(String(acc.sanctioned).replace(/[^0-9.-]+/g,"")), 0);
-        const totalOutstandingNum = consideredAccounts.reduce((sum, acc) => sum + Number(String(acc.outstanding).replace(/[^0-9.-]+/g,"")), 0);
         
         const totalEmiNum = consideredAccounts.reduce((sum, acc) => {
             const status = acc.status.toLowerCase();
@@ -160,39 +158,19 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
             return sum;
         }, 0);
 
-        const creditUtilization = totalSanctionedNum > 0 ? (totalOutstandingNum / totalSanctionedNum) * 100 : 0;
-        
-        const statusCounts = consideredAccounts.reduce((counts, acc) => {
-            const status = acc.status.toLowerCase();
-            if (status.includes('written-off')) counts.writtenOff++;
-            else if (status.includes('doubtful')) counts.doubtful++;
-            else if (status.includes('settled')) counts.settled++;
-            else if (status.includes('closed')) counts.closed++;
-            else if (status.includes('active') || status.includes('open')) counts.active++;
-            return counts;
-        }, { active: 0, closed: 0, writtenOff: 0, doubtful: 0, settled: 0 });
-
         return {
-            totalAccounts: consideredAccounts.length,
-            activeAccounts: statusCounts.active,
-            closedAccounts: statusCounts.closed,
-            totalSanctioned: `₹${totalSanctionedNum.toLocaleString('en-IN')}`,
-            totalOutstanding: `₹${totalOutstandingNum.toLocaleString('en-IN')}`,
-            creditUtilization: `${creditUtilization.toFixed(2)}%`,
-            writtenOff: statusCounts.writtenOff,
-            doubtful: statusCounts.doubtful,
-            settled: statusCounts.settled,
+            ...analysisResult.reportSummary.accountSummary,
             totalEmi: `₹${totalEmiNum.toLocaleString('en-IN')}`
         };
-    }, [detailedAccounts]);
+    }, [detailedAccounts, analysisResult.reportSummary]);
     
     const dpdAnalysis = useMemo(() => {
         const months = dpdFilter === 'overall' ? Infinity : parseInt(dpdFilter);
         const analysis = { '1-30': 0, '31-60': 0, '61-90': 0, '90+': 0, 'ontime': 0, 'total': 0 };
         
         detailedAccounts.forEach(acc => {
-            const history = months === Infinity ? acc.monthlyPaymentHistory : acc.monthlyPaymentHistory.slice(0, months);
-            history.forEach(pmt => {
+            const history = months === Infinity ? acc.monthlyPaymentHistory : (acc.monthlyPaymentHistory || []).slice(0, months);
+            (history || []).forEach(pmt => {
                 const dpdStr = pmt.status;
                 if (dpdStr === 'XXX') return;
                 analysis.total++;
@@ -234,12 +212,11 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
         let onTimePayments = 0;
 
         accounts.forEach(acc => {
-            if (!acc.monthlyPaymentHistory) return;
-            const historySlice = months === Infinity ? acc.monthlyPaymentHistory : acc.monthlyPaymentHistory.slice(0, months);
+            const historySlice = months === Infinity ? acc.monthlyPaymentHistory : (acc.monthlyPaymentHistory || []).slice(0, months);
             
-            paymentHistoryForAI.push({ accountType: acc.type, history: historySlice.map(p => p.status) });
+            paymentHistoryForAI.push({ accountType: acc.type, history: (historySlice || []).map(p => p.status) });
 
-            historySlice.forEach((pmt, i) => {
+            (historySlice || []).forEach((pmt, i) => {
                  const month = `${pmt.month} '${pmt.year}`;
                  
                 if (pmt.status === 'XXX') return;
@@ -305,11 +282,11 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
 
 
     const pieChartData = useMemo(() => [
-        { name: 'Active', value: summaryData.activeAccounts, fill: 'hsl(var(--chart-1))' },
-        { name: 'Closed', value: summaryData.closedAccounts, fill: 'hsl(var(--chart-2))' },
-        { name: 'Written Off', value: summaryData.writtenOff, fill: 'hsl(var(--chart-3))' },
-        { name: 'Settled', value: summaryData.settled, fill: 'hsl(var(--chart-4))' },
-        { name: 'Doubtful', value: summaryData.doubtful, fill: 'hsl(var(--chart-5))' },
+        { name: 'Active', value: Number(summaryData.active), fill: 'hsl(var(--chart-1))' },
+        { name: 'Closed', value: Number(summaryData.closed), fill: 'hsl(var(--chart-2))' },
+        { name: 'Written Off', value: Number(summaryData.writtenOff), fill: 'hsl(var(--chart-3))' },
+        { name: 'Settled', value: Number(summaryData.settled), fill: 'hsl(var(--chart-4))' },
+        { name: 'Doubtful', value: Number(summaryData.doubtful), fill: 'hsl(var(--chart-5))' },
     ].filter(d => d.value > 0), [summaryData]);
 
     const chartConfig = {
@@ -443,17 +420,26 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
             emiDetails: {
                 ...analysisResult.emiDetails,
                 totalEmi: parseFloat(summaryData.totalEmi.replace(/[^0-9.]/g, ''))
+            },
+             reportSummary: {
+                ...analysisResult.reportSummary,
+                accountSummary: {
+                    ...summaryData,
+                }
             }
         };
 
         try {
-            await updateReportAction(reportId, updatedAnalysisResult);
-            toast({
-                title: "Changes Saved",
-                description: "Your edits have been saved to the database.",
-            });
-            setHasChanges(false); // Reset changes flag
-            setUserChanges([]); // Clear log
+            // Only save if it's an existing report
+            if (reportId) {
+                await updateReportAction(reportId, updatedAnalysisResult);
+                toast({
+                    title: "Changes Saved",
+                    description: "Your edits have been saved to the database.",
+                });
+                setHasChanges(false); // Reset changes flag
+                setUserChanges([]); // Clear log
+            }
             onAssessRisk(updatedAnalysisResult);
         } catch (error: any) {
             toast({
@@ -507,11 +493,11 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
             </CardHeader>
             <CardContent>
                 <div className="flex flex-wrap gap-4">
-                    <SummaryCard title="Total Accounts" value={summaryData.totalAccounts} />
-                    <SummaryCard title="Active Accounts" value={summaryData.activeAccounts} />
-                    <SummaryCard title="Closed Accounts" value={summaryData.closedAccounts} />
-                    <SummaryCard title="Total Sanctioned" value={summaryData.totalSanctioned} />
-                    <SummaryCard title="Total Outstanding" value={summaryData.totalOutstanding} />
+                    <SummaryCard title="Total Accounts" value={summaryData.total} />
+                    <SummaryCard title="Active Accounts" value={summaryData.active} />
+                    <SummaryCard title="Closed Accounts" value={summaryData.closed} />
+                    <SummaryCard title="Total Sanctioned" value={summaryData.highCredit} />
+                    <SummaryCard title="Total Outstanding" value={summaryData.currentBalance} />
                     <SummaryCard title="Credit Utilization" value={summaryData.creditUtilization} />
                     <SummaryCard title="Written Off" value={summaryData.writtenOff} />
                     <SummaryCard title="Doubtful" value={summaryData.doubtful} />
@@ -633,7 +619,7 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {detailedAccounts.map((acc, index) => {
+                {(detailedAccounts || []).map((acc, index) => {
                     const isStatusEditable = (acc.status.toLowerCase() === 'active' || acc.status.toLowerCase() === 'open') && Number(String(acc.outstanding).replace(/[^0-9.-]+/g,"")) === 0;
                     const isEmiEditable = (acc.status.toLowerCase() === 'active' || acc.status.toLowerCase() === 'open') && Number(String(acc.outstanding).replace(/[^0-9.-]+/g,"")) > 0 && (Number(String(acc.emi).replace(/[^0-9.-]+/g,"")) || 0) === 0;
                     const accId = `account-${index}`;
@@ -749,7 +735,7 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
             <Button 
                 size="lg" 
                 onClick={handleAssessRiskClick}
-                disabled={!hasChanges || isSaving}
+                disabled={isSaving}
             >
                 {isSaving ? <Loader2 className="mr-2 animate-spin" /> : <Shield className="mr-2" />}
                 {isSaving ? 'Saving...' : 'Save & Assess AI Risk'}

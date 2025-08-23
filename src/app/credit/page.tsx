@@ -31,7 +31,7 @@ import { CreditAnalysisLanding } from '@/components/CreditAnalysisLanding';
 
 
 if (typeof window !== 'undefined') {
-  GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.mjs`;
+  GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.js`;
 }
 
 export const getApprovalChanceFromRisk = (riskScore: number): { chance: string; color: string; value: number } => {
@@ -154,6 +154,46 @@ export default function CreditPage() {
     }
   };
   
+  const handleSaveAndNavigate = useCallback(async (finalAnalysisResult: AnalyzeCreditReportOutput) => {
+    if (!user || !creditFile) {
+        toast({ variant: 'destructive', title: 'Error', description: 'User or file not available for saving.' });
+        return;
+    }
+    
+    setIsAnalyzing(true);
+    setAnalysisError(null);
+
+    try {
+        setAnalysisStatus("Uploading PDF securely...");
+        const storageRef = ref(storage, `credit_reports/${user.uid}/${Date.now()}_${creditFile.name}`);
+        const uploadResult = await uploadBytes(storageRef, creditFile);
+        const downloadURL = await getDownloadURL(uploadResult.ref);
+
+        setAnalysisStatus("Saving updated report...");
+        const { id } = await saveReportSummaryAction(finalAnalysisResult, user.uid, downloadURL);
+        
+        toast({ 
+            title: "Report Saved!", 
+            description: "Your customized analysis has been saved.",
+        });
+        
+        // Navigate to the new report's detail page to run risk assessment
+        router.push(`/credit/${id}?view=risk`);
+
+    } catch (error: any) {
+        console.error("CLIENT: Save Error: ", error);
+        setAnalysisError(error.message || "Failed to save the report.");
+        toast({
+            variant: "destructive",
+            title: "Save Failed",
+            description: error.message || "Could not save the report.",
+        });
+    } finally {
+        setIsAnalyzing(false);
+        setAnalysisStatus('');
+    }
+  }, [user, creditFile, toast, router]);
+  
  const handleAnalyzeCreditReport = async (fileToAnalyze?: File, textToAnalyze?: string) => {
     const currentFile = fileToAnalyze || creditFile;
     const currentText = textToAnalyze || rawText;
@@ -190,29 +230,16 @@ export default function CreditPage() {
         setAnalysisStatus("Analyzing credit report...");
         const creditAnalysisOutput = await analyzeCreditReport({ creditReportText: currentText });
         if (!creditAnalysisOutput) throw new Error("AI returned an empty response for credit analysis.");
-        
-        // Enhance with 'isConsidered' flag before setting state
-        const enhancedAccounts = creditAnalysisOutput.allAccounts.map(acc => ({ ...acc, isConsidered: true }));
-        const enhancedAnalysisResult = { ...creditAnalysisOutput, allAccounts: enhancedAccounts };
-        setAnalysisResult(enhancedAnalysisResult);
-
+        setAnalysisResult(creditAnalysisOutput);
 
         setAnalysisStatus("Performing risk assessment...");
         const riskAssessmentOutput = await getRiskAssessment({ analysisResult: creditAnalysisOutput });
         if (!riskAssessmentOutput) throw new Error("AI returned an empty response for risk assessment.");
         setRiskAssessmentResult(riskAssessmentOutput);
         
-        setAnalysisStatus("Uploading PDF securely...");
-        const storageRef = ref(storage, `credit_reports/${user.uid}/${Date.now()}_${currentFile.name}`);
-        const uploadResult = await uploadBytes(storageRef, currentFile);
-        const downloadURL = await getDownloadURL(uploadResult.ref);
-        
-        setAnalysisStatus("Saving report to dashboard...");
-        await saveReportSummaryAction(creditAnalysisOutput, user.uid, downloadURL);
-        
         toast({ 
-            title: "Analysis Complete & Saved!", 
-            description: "Your AI-powered insights are ready. The report summary has been saved to the dashboard.",
+            title: "Initial Analysis Complete!", 
+            description: "Your AI-powered insights are ready. You can now review and save.",
         });
 
     } catch (error: any) {
@@ -252,16 +279,20 @@ export default function CreditPage() {
   
   const handleBack = () => setActiveView(null);
   
+  // This is now the handler for the save button inside CreditSummaryView
   const handleAssessRisk = useCallback((updatedAnalysis: AnalyzeCreditReportOutput) => {
-    setAnalysisResult(updatedAnalysis);
-    setActiveView('risk');
-  }, []);
+    // On the new report page, "assessing risk" means saving the report first.
+    // The navigation to the risk page will happen after the save is successful.
+    handleSaveAndNavigate(updatedAnalysis);
+  }, [handleSaveAndNavigate]);
 
   if (activeView && analysisResult) {
       switch (activeView) {
         case 'summary':
-          return <main className="container mx-auto p-4 md:p-8 space-y-6"><CreditSummaryView analysisResult={analysisResult} onBack={handleBack} onAssessRisk={handleAssessRisk} /></main>;
+          return <main className="container mx-auto p-4 md:p-8 space-y-6"><CreditSummaryView analysisResult={analysisResult} onBack={handleBack} onAssessRisk={handleAssessRisk} reportId={''} /></main>;
         case 'risk':
+          // The risk view should ideally be on the [reportId] page after saving. 
+          // This provides a read-only view for now.
           return <main className="container mx-auto p-4 md:p-8 space-y-6"><RiskAssessmentView analysisResult={analysisResult} onBack={handleBack} /></main>;
         case 'rating':
           return <main className="container mx-auto p-4 md:p-8 space-y-6"><AiRatingView analysisResult={analysisResult} onBack={handleBack} /></main>;
@@ -327,7 +358,7 @@ export default function CreditPage() {
                     <div className="mt-4">
                         <Button onClick={() => handleAnalyzeCreditReport()} size="lg" disabled={loading}>
                             <Sparkles className="mr-2 h-5 w-5"/>
-                            Generate Report and Save
+                            Analyze Report
                         </Button>
                     </div>
                 )}
