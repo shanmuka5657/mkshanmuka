@@ -27,7 +27,7 @@ export function CreditAnalysisLanding({
 }: CreditAnalysisLandingProps) {
 
     const { customerDetails, cibilScore } = analysisResult;
-    const approvalChance = riskAssessmentResult ? getApprovalChanceFromRisk(riskAssessmentResult.assessmentWithoutGuarantor.riskScore) : null;
+    const approvalChance = riskAssessmentResult ? getApprovalChanceFromRisk(riskAssessmentResult.riskScore) : null;
     const showSkeletons = isLoading;
 
     return (
@@ -55,7 +55,7 @@ export function CreditAnalysisLanding({
                         <Shield className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                         {showSkeletons ? <Skeleton className="h-7 w-20" /> : <div className="text-2xl font-bold">{riskAssessmentResult?.assessmentWithoutGuarantor.riskScore ?? 'N/A'} <span className="text-sm text-muted-foreground">/ 100</span></div>}
+                         {showSkeletons ? <Skeleton className="h-7 w-20" /> : <div className="text-2xl font-bold">{riskAssessmentResult?.riskScore ?? 'N/A'} <span className="text-sm text-muted-foreground">/ 100</span></div>}
                     </CardContent>
                 </Card>
                  <Card>
