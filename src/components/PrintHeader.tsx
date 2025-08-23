@@ -34,9 +34,19 @@ export function PrintHeader({ analysisResult }: PrintHeaderProps) {
                     <div className="space-y-2 text-sm">
                         <div className="flex justify-between"><span className="text-muted-foreground">Name</span> <strong>{customerDetails.name}</strong></div>
                         <div className="flex justify-between"><span className="text-muted-foreground">Date of Birth</span> <strong>{customerDetails.dateOfBirth}</strong></div>
-                        <div className="flex justify-between"><span className="text-muted-foreground">PAN</span> <strong>{customerDetails.pan}</strong></div>
-                        <div className="flex justify-between"><span className="text-muted-foreground">Mobile Number</span> <strong>{customerDetails.mobileNumber}</strong></div>
-                        <div className="flex justify-between"><span className="text-muted-foreground">Address</span> <strong className="text-right">{customerDetails.address}</strong></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">PAN</span> <strong>{customerDetails.pan.join(', ')}</strong></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Mobile Number</span> <strong>{customerDetails.mobileNumber.join(', ')}</strong></div>
+                        <div className="flex flex-col"><span className="text-muted-foreground mb-1">Address</span>
+                            {customerDetails.address.length > 0 ? (
+                                <ol className="list-decimal list-inside text-right">
+                                    {customerDetails.address.map((addr, index) => (
+                                        <li key={index}><strong>{addr}</strong></li>
+                                    ))}
+                                </ol>
+                            ) : (
+                                <strong>N/A</strong>
+                            )}
+                        </div>
                     </div>
                 </div>
             </CardContent>
