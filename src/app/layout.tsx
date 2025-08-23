@@ -1,12 +1,11 @@
 
-import type {Metadata} from 'next';
+import type {Metadata, Viewport} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { BottomNavbar } from '@/components/BottomNavbar';
 import { Logo } from '@/components/ui/logo';
 import Script from 'next/script';
 import { UserNav } from '@/components/UserNav';
-import { DesktopModePrompt } from '@/components/DesktopModePrompt';
 
 export const metadata: Metadata = {
   title: 'CreditWise AI - AI Credit Analysis',
@@ -14,6 +13,11 @@ export const metadata: Metadata = {
   icons: {
     icon: '/logo.svg',
   },
+};
+
+export const viewport: Viewport = {
+  width: 1200,
+  initialScale: 1,
 };
 
 export default function RootLayout({
@@ -45,7 +49,6 @@ export default function RootLayout({
           <BottomNavbar />
         </div>
         <Toaster />
-        <DesktopModePrompt />
       </body>
     </html>
   );
