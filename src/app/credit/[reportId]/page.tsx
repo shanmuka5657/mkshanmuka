@@ -10,6 +10,9 @@ import { useToast } from '@/hooks/use-toast';
 import type { AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
 import { Button } from '@/components/ui/button';
 import { RiskAssessmentView } from '@/components/RiskAssessmentView';
+import { CreditAnalysisLanding } from '@/components/CreditAnalysisLanding';
+import { AiRatingView } from '@/components/AiRatingView';
+import { FinancialsView } from '@/components/FinancialsView';
 
 export default function ReportDetailPage({ params }: { params: { reportId: string } }) {
   const [report, setReport] = useState<CreditReportSummary | null>(null);
@@ -21,8 +24,8 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
 
   useEffect(() => {
     const initialView = searchParams.get('view');
-    if (initialView === 'risk') {
-      setActiveView('risk');
+    if (initialView) {
+      setActiveView(initialView);
     }
   }, [searchParams]);
 
@@ -57,6 +60,12 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
 
     fetchReport();
   }, [params.reportId, router, toast]);
+  
+  const handleBack = () => {
+    setActiveView(null);
+    // Remove the view query param from URL
+    router.replace(`/credit/${params.reportId}`, undefined);
+  };
 
   if (isLoading) {
     return (
@@ -79,32 +88,25 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
     );
   }
 
-  const handleBack = () => {
-    // If coming from a direct link, go to dashboard, otherwise just reset view
-    if (searchParams.get('view')) {
-      router.push('/dashboard');
-    } else {
-      setActiveView(null);
-    }
-  };
-  
-  if (activeView === 'risk') {
-    return (
+  const analysisResult = report.fullAnalysis as AnalyzeCreditReportOutput;
+
+  switch (activeView) {
+    case 'summary':
+      return <main className="container mx-auto p-4 md:p-8 space-y-6"><CreditSummaryView analysisResult={analysisResult} onBack={handleBack} /></main>;
+    case 'risk':
+      return <main className="container mx-auto p-4 md:p-8 space-y-6"><RiskAssessmentView analysisResult={analysisResult} onBack={handleBack} /></main>;
+    case 'rating':
+        return <main className="container mx-auto p-4 md:p-8 space-y-6"><AiRatingView analysisResult={analysisResult} onBack={handleBack} /></main>;
+    case 'financials':
+        return <main className="container mx-auto p-4 md:p-8 space-y-6"><FinancialsView analysisResult={analysisResult} onBack={handleBack} /></main>;
+    default:
+       return (
         <main className="container mx-auto p-4 md:p-8 space-y-6">
-            <RiskAssessmentView 
-                analysisResult={report.fullAnalysis as AnalyzeCreditReportOutput} 
-                onBack={handleBack}
+            <CreditAnalysisLanding 
+                analysisResult={analysisResult} 
+                onSelectView={setActiveView}
             />
         </main>
-    )
+       )
   }
-  
-  return (
-    <main className="container mx-auto p-4 md:p-8 space-y-6">
-        <CreditSummaryView 
-            analysisResult={report.fullAnalysis as AnalyzeCreditReportOutput} 
-            onBack={() => router.push('/dashboard')}
-        />
-    </main>
-  );
 }

@@ -57,10 +57,10 @@ export function AnalysisDashboard({ analysisResult, onSelectView }: AnalysisDash
             </CardHeader>
             <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <DashboardButton icon={BarChart} title="Credit Summary" disabled={!isReady} onClick={() => onSelectView('summary')} />
-                    <DashboardButton icon={Shield} title="AI Risk Assessment" disabled={!isReady} onClick={() => onSelectView('risk')} />
-                    <DashboardButton icon={Award} title="AI Credit Meter" disabled={true} tooltipContent="Under Construction" />
-                    <DashboardButton icon={Landmark} title="Financials" disabled={true} tooltipContent="Under Construction" />
+                    <DashboardButton icon={BarChart} title="Credit Summary" disabled={!isReady} onClick={() => onSelectView('summary')} tooltipContent="Complete analysis first." />
+                    <DashboardButton icon={Shield} title="AI Risk Assessment" disabled={!isReady} onClick={() => onSelectView('risk')} tooltipContent="Complete analysis first." />
+                    <DashboardButton icon={Award} title="AI Credit Meter" disabled={!isReady} onClick={() => onSelectView('rating')} tooltipContent="Complete analysis first." />
+                    <DashboardButton icon={Landmark} title="Financials" disabled={!isReady} onClick={() => onSelectView('financials')} tooltipContent="Complete analysis first." />
                 </div>
             </CardContent>
         </Card>
