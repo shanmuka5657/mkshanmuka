@@ -48,8 +48,8 @@ export function DesktopModePrompt() {
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="sm:justify-center">
-          <AlertDialogCancel onClick={handleDismiss}>No, Stay on Mobile</AlertDialogCancel>
-          <AlertDialogAction onClick={handleDismiss}>Yes, I'll Switch Later</AlertDialogAction>
+          <AlertDialogCancel onClick={handleDismiss}>Stay on Mobile</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDismiss}>I'll Switch Later</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
