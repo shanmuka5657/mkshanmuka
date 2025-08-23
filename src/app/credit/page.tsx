@@ -31,7 +31,7 @@ import { CreditAnalysisLanding } from '@/components/CreditAnalysisLanding';
 
 
 if (typeof window !== 'undefined') {
-  GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.js`;
+  GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.mjs`;
 }
 
 export const getApprovalChanceFromRisk = (riskScore: number): { chance: string; color: string; value: number } => {
