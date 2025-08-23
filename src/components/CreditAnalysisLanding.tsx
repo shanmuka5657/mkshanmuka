@@ -6,7 +6,6 @@ import { AnalysisDashboard } from '@/components/AnalysisDashboard';
 import { AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
 import { User, BarChart, Shield, DollarSign } from 'lucide-react';
 import { Badge } from './ui/badge';
-import { getApprovalChanceFromRisk } from '@/app/credit/page';
 import { cn } from '@/lib/utils';
 import { RiskAssessmentOutput } from '@/ai/flows/risk-assessment';
 import { Skeleton } from './ui/skeleton';
@@ -27,7 +26,7 @@ export function CreditAnalysisLanding({
 }: CreditAnalysisLandingProps) {
 
     const { customerDetails, cibilScore } = analysisResult;
-    const approvalChance = riskAssessmentResult ? getApprovalChanceFromRisk(riskAssessmentResult.assessmentWithoutGuarantor.riskScore) : null;
+    const approvalChance = riskAssessmentResult ? calculateApprovalChance(riskAssessmentResult.assessmentWithoutGuarantor.riskScore) : null;
     const showSkeletons = isLoading;
 
     return (
@@ -79,4 +78,21 @@ export function CreditAnalysisLanding({
             />
         </div>
     )
+}
+
+function calculateApprovalChance(riskScore: number) {
+    if (riskScore >= 80) {
+        return { chance: 'High', color: 'text-green-600' };
+    } else if (riskScore >= 60) {
+        return { chance: 'Good', color: 'text-yellow-600' };
+    } else if (riskScore >= 40) {
+        return { chance: 'Moderate', color: 'text-orange-600' };
+    } else if (riskScore >= 20) {
+        return { chance: 'Low', color: 'text-red-600' };
+    } else if (riskScore >= 0){
+        return { chance: 'Very Low', color: 'text-red-800' };
+    }
+     else {
+        return null;
+    }
 }
