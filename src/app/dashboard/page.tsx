@@ -13,7 +13,10 @@ import Link from 'next/link';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '@/lib/firebase-client';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
@@ -25,25 +28,14 @@ const navItems = [
   { href: '/trainer', label: 'Trainer', icon: BrainCircuit },
 ];
 
-const currentYear = new Date().getFullYear();
-const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
-const months = [
-    { value: '0', label: 'January' }, { value: '1', label: 'February' },
-    { value: '2', label: 'March' }, { value: '3', label: 'April' },
-    { value: '4', label: 'May' }, { value: '5', label: 'June' },
-    { value: '6', label: 'July' }, { value: '7', label: 'August' },
-    { value: '8', label: 'September' }, { value: '9', label: 'October' },
-    { value: '10', label: 'November' }, { value: '11', label: 'December' }
-];
-
 export default function DashboardPage() {
     const [reports, setReports] = useState<CreditReportSummary[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
     const [user, userLoading] = useAuthState(auth);
-    const [selectedMonth, setSelectedMonth] = useState<string | undefined>(undefined);
-    const [selectedYear, setSelectedYear] = useState<string | undefined>(undefined);
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
     const [searchQuery, setSearchQuery] = useState('');
+    const [isSearchVisible, setIsSearchVisible] = useState(false);
 
     useEffect(() => {
         if (userLoading) {
@@ -78,17 +70,10 @@ export default function DashboardPage() {
     const filteredReports = useMemo(() => {
         let filtered = reports;
 
-        if (selectedYear) {
+        if (selectedDate) {
             filtered = filtered.filter(report => {
                 if (!report.createdAt) return false;
-                return report.createdAt.toDate().getFullYear().toString() === selectedYear;
-            });
-        }
-        
-        if (selectedMonth) {
-             filtered = filtered.filter(report => {
-                if (!report.createdAt) return false;
-                return report.createdAt.toDate().getMonth().toString() === selectedMonth;
+                return report.createdAt.toDate().toDateString() === selectedDate.toDateString();
             });
         }
         
@@ -102,12 +87,12 @@ export default function DashboardPage() {
         }
 
         return filtered;
-    }, [reports, selectedMonth, selectedYear, searchQuery]);
+    }, [reports, selectedDate, searchQuery]);
     
     const clearFilters = () => {
-        setSelectedMonth(undefined);
-        setSelectedYear(undefined);
+        setSelectedDate(undefined);
         setSearchQuery('');
+        setIsSearchVisible(false);
     }
 
   return (
@@ -124,51 +109,50 @@ export default function DashboardPage() {
        <Card>
         <CardHeader className="flex-col md:flex-row md:items-center md:justify-between">
           <div>
-            <CardTitle className="flex items-center gap-2"><FileText /> Saved Credit Report Summaries</CardTitle>
+            <CardTitle className="flex items-center gap-2"><FileText /> Credit Reports</CardTitle>
             <CardDescription>
-              Here is a list of all the customer credit reports you have analyzed and saved.
+              A list of all customer credit reports you have analyzed and saved.
             </CardDescription>
           </div>
-           <div className="flex flex-col md:flex-row items-center gap-2">
-            <div className="relative w-full md:w-auto">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
+           <div className="flex items-center gap-2 mt-4 md:mt-0">
+            {isSearchVisible && (
+                 <Input
                     type="search"
                     placeholder="Search name, PAN..."
-                    className="pl-8 sm:w-auto"
+                    className="h-9 w-full md:w-48"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    autoFocus
                 />
-            </div>
-             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger className="w-full md:w-[150px]">
-                    <SelectValue placeholder="Filter by Month" />
-                </SelectTrigger>
-                <SelectContent>
-                    {months.map(month => (
-                        <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-             <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger className="w-full md:w-[120px]">
-                    <SelectValue placeholder="Filter by Year" />
-                </SelectTrigger>
-                <SelectContent>
-                     {years.map(year => (
-                        <SelectItem key={year} value={String(year)}>{year}</SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-            {(selectedMonth || selectedYear || searchQuery) && (
-                <Button variant="ghost" size="icon" onClick={clearFilters}>
+            )}
+            <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setIsSearchVisible(!isSearchVisible)}>
+                <Search className="h-4 w-4" />
+            </Button>
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="outline" size="icon" className="h-9 w-9">
+                        <CalendarIcon className="h-4 w-4" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                    <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
+                        initialFocus
+                    />
+                </PopoverContent>
+            </Popover>
+
+            {(selectedDate || searchQuery) && (
+                <Button variant="ghost" size="icon" className="h-9 w-9" onClick={clearFilters}>
                     <X className="h-4 w-4" />
                 </Button>
             )}
-            <Button asChild className="w-full md:w-auto">
+            <Button asChild size="sm">
                 <Link href="/credit">
-                    <PlusCircle />
-                    Analyze New Report
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Analyze
                 </Link>
             </Button>
           </div>
