@@ -12,12 +12,8 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '@/lib/firebase-client';
-import { cn } from '@/lib/utils';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
 import { Input } from '@/components/ui/input';
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
@@ -29,22 +25,32 @@ const navItems = [
   { href: '/trainer', label: 'Trainer', icon: BrainCircuit },
 ];
 
+const currentYear = new Date().getFullYear();
+const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
+const months = [
+    { value: '0', label: 'January' }, { value: '1', label: 'February' },
+    { value: '2', label: 'March' }, { value: '3', label: 'April' },
+    { value: '4', label: 'May' }, { value: '5', label: 'June' },
+    { value: '6', label: 'July' }, { value: '7', label: 'August' },
+    { value: '8', label: 'September' }, { value: '9', label: 'October' },
+    { value: '10', label: 'November' }, { value: '11', label: 'December' }
+];
+
 export default function DashboardPage() {
     const [reports, setReports] = useState<CreditReportSummary[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
     const [user, userLoading] = useAuthState(auth);
-    const [selectedMonth, setSelectedMonth] = useState<Date | undefined>(undefined);
+    const [selectedMonth, setSelectedMonth] = useState<string | undefined>(undefined);
+    const [selectedYear, setSelectedYear] = useState<string | undefined>(undefined);
     const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         if (userLoading) {
-            // Still checking for user, do nothing yet
             return;
         }
 
         if (!user) {
-            // If no user, stop loading and we'll show the login prompt
             setIsLoading(false);
             return;
         }
@@ -72,11 +78,17 @@ export default function DashboardPage() {
     const filteredReports = useMemo(() => {
         let filtered = reports;
 
-        if (selectedMonth) {
+        if (selectedYear) {
             filtered = filtered.filter(report => {
                 if (!report.createdAt) return false;
-                const reportDate = report.createdAt.toDate();
-                return reportDate.getFullYear() === selectedMonth.getFullYear() && reportDate.getMonth() === selectedMonth.getMonth();
+                return report.createdAt.toDate().getFullYear().toString() === selectedYear;
+            });
+        }
+        
+        if (selectedMonth) {
+             filtered = filtered.filter(report => {
+                if (!report.createdAt) return false;
+                return report.createdAt.toDate().getMonth().toString() === selectedMonth;
             });
         }
         
@@ -90,7 +102,13 @@ export default function DashboardPage() {
         }
 
         return filtered;
-    }, [reports, selectedMonth, searchQuery]);
+    }, [reports, selectedMonth, selectedYear, searchQuery]);
+    
+    const clearFilters = () => {
+        setSelectedMonth(undefined);
+        setSelectedYear(undefined);
+        setSearchQuery('');
+    }
 
   return (
     <main className="container mx-auto p-4 md:p-8 space-y-8">
@@ -111,53 +129,48 @@ export default function DashboardPage() {
               Here is a list of all the customer credit reports you have analyzed and saved.
             </CardDescription>
           </div>
-          <div className="flex flex-col md:flex-row items-center gap-2">
+           <div className="flex flex-col md:flex-row items-center gap-2">
             <div className="relative w-full md:w-auto">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                     type="search"
                     placeholder="Search name, PAN..."
-                    className="pl-8 sm:w-[200px] md:w-[200px] lg:w-[300px]"
+                    className="pl-8 sm:w-auto"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
             </div>
-             <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full md:w-auto justify-start text-left font-normal",
-                      !selectedMonth && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedMonth ? format(selectedMonth, 'MMMM yyyy') : <span>Filter by month</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar
-                    mode="single"
-                    selected={selectedMonth}
-                    onSelect={setSelectedMonth}
-                    initialFocus
-                    captionLayout="dropdown-buttons"
-                    fromYear={2020}
-                    toYear={new Date().getFullYear()}
-                  />
-                </PopoverContent>
-              </Popover>
-              {selectedMonth && (
-                  <Button variant="ghost" size="icon" onClick={() => setSelectedMonth(undefined)}>
-                      <X className="h-4 w-4" />
-                  </Button>
-              )}
-              <Button asChild className="w-full md:w-auto">
-                  <Link href="/credit">
-                      <PlusCircle />
-                      Analyze New Report
-                  </Link>
-              </Button>
+             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger className="w-full md:w-[150px]">
+                    <SelectValue placeholder="Filter by Month" />
+                </SelectTrigger>
+                <SelectContent>
+                    {months.map(month => (
+                        <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+             <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <SelectTrigger className="w-full md:w-[120px]">
+                    <SelectValue placeholder="Filter by Year" />
+                </SelectTrigger>
+                <SelectContent>
+                     {years.map(year => (
+                        <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+            {(selectedMonth || selectedYear || searchQuery) && (
+                <Button variant="ghost" size="icon" onClick={clearFilters}>
+                    <X className="h-4 w-4" />
+                </Button>
+            )}
+            <Button asChild className="w-full md:w-auto">
+                <Link href="/credit">
+                    <PlusCircle />
+                    Analyze New Report
+                </Link>
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -183,7 +196,7 @@ export default function DashboardPage() {
                         {navItems.map((item) => (
                         <div
                             key={item.href}
-                            className={cn('inline-flex flex-col items-center justify-center px-5 text-muted-foreground')}
+                            className={'inline-flex flex-col items-center justify-center px-5 text-muted-foreground'}
                         >
                             <item.icon className="w-6 h-6 mb-1" />
                             <span className="text-sm">{item.label}</span>
