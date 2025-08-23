@@ -74,6 +74,7 @@ export default function DashboardPage() {
 
         if (selectedMonth) {
             filtered = filtered.filter(report => {
+                if (!report.createdAt) return false;
                 const reportDate = report.createdAt.toDate();
                 return reportDate.getFullYear() === selectedMonth.getFullYear() && reportDate.getMonth() === selectedMonth.getMonth();
             });
@@ -139,6 +140,7 @@ export default function DashboardPage() {
                     mode="single"
                     selected={selectedMonth}
                     onSelect={setSelectedMonth}
+                    initialFocus
                     captionLayout="dropdown-buttons"
                     fromYear={2020}
                     toYear={new Date().getFullYear()}
