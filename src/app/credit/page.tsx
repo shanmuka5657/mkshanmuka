@@ -232,7 +232,7 @@ export default function CreditPage() {
         if (!creditAnalysisOutput) throw new Error("AI returned an empty response for credit analysis.");
         setAnalysisResult(creditAnalysisOutput);
 
-        setAnalysisStatus("Performing risk assessment...");
+        setAnalysisStatus("Performing initial risk assessment...");
         const riskAssessmentOutput = await getRiskAssessment({ analysisResult: creditAnalysisOutput });
         if (!riskAssessmentOutput) throw new Error("AI returned an empty response for risk assessment.");
         setRiskAssessmentResult(riskAssessmentOutput);
@@ -292,8 +292,8 @@ export default function CreditPage() {
           return <main className="container mx-auto p-4 md:p-8 space-y-6"><CreditSummaryView analysisResult={analysisResult} onBack={handleBack} onAssessRisk={handleAssessRisk} reportId={''} /></main>;
         case 'risk':
           // The risk view should ideally be on the [reportId] page after saving. 
-          // This provides a read-only view for now.
-          return <main className="container mx-auto p-4 md:p-8 space-y-6"><RiskAssessmentView analysisResult={analysisResult} onBack={handleBack} /></main>;
+          // This provides a read-only view for now, using the initial analysis.
+          return <main className="container mx-auto p-4 md:p-8 space-y-6"><RiskAssessmentView originalAnalysisResult={analysisResult} customizedAnalysisResult={analysisResult} onBack={handleBack} /></main>;
         case 'rating':
           return <main className="container mx-auto p-4 md:p-8 space-y-6"><AiRatingView analysisResult={analysisResult} onBack={handleBack} /></main>;
         case 'financials':

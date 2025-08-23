@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Loader2, ShieldAlert, Zap, GitCommit, ShieldCheck, ShieldClose, HelpCircle, TrendingUp, TrendingDown, Download } from "lucide-react";
+import { ArrowLeft, Loader2, ShieldAlert, Zap, GitCommit, ShieldCheck, ShieldClose, HelpCircle, TrendingUp, TrendingDown, Download, Replace } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "./ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -16,9 +16,9 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { PrintHeader } from './PrintHeader';
 
-
 interface RiskAssessmentViewProps {
-  analysisResult: AnalyzeCreditReportOutput;
+  originalAnalysisResult: AnalyzeCreditReportOutput;
+  customizedAnalysisResult: AnalyzeCreditReportOutput;
   onBack: () => void;
 }
 
@@ -38,7 +38,35 @@ const getSeverityBadge = (severity: 'Low' | 'Medium' | 'High') => {
     return <Badge variant="outline">{severity}</Badge>;
 }
 
-const AssessmentColumn = ({ assessment, title }: { assessment: RiskAssessmentOutput['assessmentWithGuarantor'], title: string }) => {
+const AssessmentColumn = ({ assessment, title, isLoading }: { assessment: RiskAssessmentOutput | null, title: string, isLoading: boolean }) => {
+    if (isLoading) {
+        return (
+             <div>
+                <CardHeader className="p-0 mb-4">
+                    <CardTitle>{title}</CardTitle>
+                </CardHeader>
+                <div className="flex flex-col items-center justify-center min-h-[300px] bg-muted/50 rounded-lg">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-sm text-muted-foreground mt-2">Calculating...</p>
+                </div>
+            </div>
+        )
+    }
+
+    if (!assessment) {
+        return (
+             <div>
+                <CardHeader className="p-0 mb-4">
+                    <CardTitle>{title}</CardTitle>
+                </CardHeader>
+                <div className="flex flex-col items-center justify-center min-h-[300px] bg-destructive/10 rounded-lg border border-destructive">
+                    <ShieldClose className="h-8 w-8 text-destructive" />
+                    <p className="text-sm text-destructive mt-2">Analysis Failed</p>
+                </div>
+            </div>
+        )
+    }
+
     const riskStyles = getRiskLevelStyles(assessment.riskLevel);
     return (
         <div>
@@ -96,33 +124,42 @@ const AssessmentColumn = ({ assessment, title }: { assessment: RiskAssessmentOut
     )
 }
 
-export function RiskAssessmentView({ analysisResult, onBack }: RiskAssessmentViewProps) {
-  const [isLoading, setIsLoading] = useState(true);
-  const [assessment, setAssessment] = useState<RiskAssessmentOutput | null>(null);
+export function RiskAssessmentView({ originalAnalysisResult, customizedAnalysisResult, onBack }: RiskAssessmentViewProps) {
+  const [isLoading, setIsLoading] = useState({ actual: true, customized: true });
+  const [actualAssessment, setActualAssessment] = useState<RiskAssessmentOutput | null>(null);
+  const [customizedAssessment, setCustomizedAssessment] = useState<RiskAssessmentOutput | null>(null);
   const { toast } = useToast();
   const reportRef = useRef<HTMLDivElement>(null);
 
-
   useEffect(() => {
-    const runAnalysis = async () => {
-      setIsLoading(true);
-      try {
-        const output = await getRiskAssessment({ analysisResult });
-        setAssessment(output);
-      } catch (error: any) {
-        
-        toast({
-          variant: "destructive",
-          title: "Failed to get AI Risk Assessment",
-          description: error.message || "An unknown error occurred.",
-        });
-      } finally {
-        setIsLoading(false);
+    const runAnalyses = async () => {
+      setIsLoading({ actual: true, customized: true });
+
+      // Run both analyses in parallel
+      const actualPromise = getRiskAssessment({ analysisResult: originalAnalysisResult }).catch(e => e);
+      const customizedPromise = getRiskAssessment({ analysisResult: customizedAnalysisResult }).catch(e => e);
+
+      const [actualResult, customizedResult] = await Promise.all([actualPromise, customizedPromise]);
+
+      if (actualResult instanceof Error) {
+        toast({ variant: "destructive", title: "Failed to get Actual AI Risk", description: actualResult.message });
+        setActualAssessment(null);
+      } else {
+        setActualAssessment(actualResult);
       }
+      setIsLoading(prev => ({ ...prev, actual: false }));
+      
+      if (customizedResult instanceof Error) {
+        toast({ variant: "destructive", title: "Failed to get Customized AI Risk", description: customizedResult.message });
+        setCustomizedAssessment(null);
+      } else {
+        setCustomizedAssessment(customizedResult);
+      }
+      setIsLoading(prev => ({ ...prev, customized: false }));
     };
 
-    runAnalysis();
-  }, [analysisResult, toast]);
+    runAnalyses();
+  }, [originalAnalysisResult, customizedAnalysisResult, toast]);
 
    const handleDownload = async () => {
         const elementToCapture = reportRef.current;
@@ -171,36 +208,16 @@ export function RiskAssessmentView({ analysisResult, onBack }: RiskAssessmentVie
             heightLeft -= (pdfHeight - 40);
         }
         
-        pdf.save(`RiskAssessment_${analysisResult.customerDetails.name.replace(/ /g, '_')}.pdf`);
+        pdf.save(`RiskAssessment_${customizedAnalysisResult.customerDetails.name.replace(/ /g, '_')}.pdf`);
         
         toast({ title: "Download Ready!", description: "Your PDF has been downloaded." });
     };
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px]">
-        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Performing dual risk-assessment...</p>
-      </div>
-    );
-  }
-
-  if (!assessment) {
-    return (
-      <div className="text-center">
-        <p className="mb-4">Could not load the risk assessment.</p>
-        <Button onClick={onBack} variant="outline">
-          <ArrowLeft className="mr-2" /> Back
-        </Button>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center no-print">
         <Button variant="outline" onClick={onBack}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Main View
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Summary View
         </Button>
         <Button onClick={handleDownload}>
           <Download className="mr-2 h-4 w-4" /> Download Report
@@ -209,25 +226,25 @@ export function RiskAssessmentView({ analysisResult, onBack }: RiskAssessmentVie
       
       <div ref={reportRef} className="printable-area">
          <div className="print-header">
-            <PrintHeader analysisResult={analysisResult} />
+            <PrintHeader analysisResult={customizedAnalysisResult} />
         </div>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><ShieldAlert /> AI Risk Assessment</CardTitle>
             <CardDescription>
-              A technical analysis of your credit profile, showing a side-by-side comparison of your risk with and without guarantor loans included.
+              A side-by-side comparison of the AI's risk assessment based on the original CIBIL report versus your customized version.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-              <AssessmentColumn assessment={assessment.assessmentWithGuarantor} title="With Guarantor Loans" />
-              <AssessmentColumn assessment={assessment.assessmentWithoutGuarantor} title="Without Guarantor Loans" />
+              <AssessmentColumn assessment={actualAssessment} title="Actual AI Risk" isLoading={isLoading.actual} />
+              <AssessmentColumn assessment={customizedAssessment} title="Customized AI Risk" isLoading={isLoading.customized} />
           </CardContent>
            <CardFooter>
               <Alert>
-                  <HelpCircle className="h-4 w-4" />
+                  <Replace className="h-4 w-4" />
                   <AlertTitle>Why two assessments?</AlertTitle>
                   <AlertDescription>
-                      By separating your personal loans from loans where you are a guarantor, you can clearly see the financial risk and responsibility you've taken on for others. This helps lenders understand your direct liabilities versus your contingent liabilities.
+                     This view allows you to perform powerful "what-if" analysis. By comparing the 'Actual Risk' from the original report to the 'Customized Risk' based on your edits, you can instantly see how changes like excluding loans or correcting EMIs impact the overall risk profile.
                   </AlertDescription>
               </Alert>
           </CardFooter>

@@ -22,7 +22,8 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
   const { toast } = useToast();
   const [activeView, setActiveView] = useState<string | null>(null);
 
-  // This is now the single source of truth for the analysis data
+  // This is the single source of truth for the analysis data
+  const [originalAnalysisResult, setOriginalAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(null);
   const [editableAnalysisResult, setEditableAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(null);
 
   useEffect(() => {
@@ -44,7 +45,8 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
         const fetchedReport = await getReportById(params.reportId);
         if (fetchedReport && fetchedReport.fullAnalysis) {
           setReport(fetchedReport);
-          // Initialize the editable state with the fetched data
+          // Initialize both original and editable state with the fetched data
+          setOriginalAnalysisResult(fetchedReport.fullAnalysis as AnalyzeCreditReportOutput);
           setEditableAnalysisResult(fetchedReport.fullAnalysis as AnalyzeCreditReportOutput);
         } else {
           // This will trigger the not-found UI
@@ -93,7 +95,7 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
     );
   }
 
-  if (!report || !editableAnalysisResult) {
+  if (!report || !editableAnalysisResult || !originalAnalysisResult) {
     return (
         <main className="flex flex-col justify-center items-center h-[calc(100vh-10rem)] text-center">
             <h2 className="text-2xl font-semibold mb-2">Report Not Found</h2>
@@ -119,7 +121,8 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
       return (
         <main className="container mx-auto p-4 md:p-8 space-y-6">
           <RiskAssessmentView 
-            analysisResult={editableAnalysisResult} 
+            originalAnalysisResult={originalAnalysisResult}
+            customizedAnalysisResult={editableAnalysisResult} 
             onBack={handleBack} />
         </main>
       );
