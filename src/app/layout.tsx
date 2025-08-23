@@ -6,6 +6,7 @@ import { BottomNavbar } from '@/components/BottomNavbar';
 import { Logo } from '@/components/ui/logo';
 import Script from 'next/script';
 import { UserNav } from '@/components/UserNav';
+import { DesktopModePrompt } from '@/components/DesktopModePrompt';
 
 export const metadata: Metadata = {
   title: 'CreditWise AI - AI Credit Analysis',
@@ -44,6 +45,7 @@ export default function RootLayout({
           <BottomNavbar />
         </div>
         <Toaster />
+        <DesktopModePrompt />
       </body>
     </html>
   );
