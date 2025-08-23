@@ -105,6 +105,39 @@ export default function DashboardPage() {
           Your personal dashboard to manage key financial data and access powerful analysis tools.
         </p>
       </div>
+      
+      {user && (
+        <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                        Total Reports Analyzed
+                    </CardTitle>
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    {isLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{reports.length}</div>}
+                    <p className="text-xs text-muted-foreground">
+                        CIBIL reports processed
+                    </p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                        AI Risk Assessments
+                    </CardTitle>
+                    <BrainCircuit className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    {isLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{reports.length}</div>}
+                    <p className="text-xs text-muted-foreground">
+                        Risk profiles generated
+                    </p>
+                </CardContent>
+            </Card>
+        </div>
+      )}
 
        <Card>
         <CardHeader className="flex-col md:flex-row md:items-center md:justify-between">
