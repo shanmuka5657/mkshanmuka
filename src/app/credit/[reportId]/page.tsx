@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -73,6 +72,8 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
   };
 
   const handleAssessRisk = useCallback((updatedAnalysis: AnalyzeCreditReportOutput) => {
+    // This function is now responsible for setting the updated state that will be passed to the risk view.
+    // The actual database update happens inside CreditSummaryView.
     setEditableAnalysisResult(updatedAnalysis);
     setActiveView('risk');
     router.replace(`/credit/${params.reportId}?view=risk`, undefined);
@@ -106,6 +107,7 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
         <main className="container mx-auto p-4 md:p-8 space-y-6">
           <CreditSummaryView
             analysisResult={editableAnalysisResult}
+            reportId={params.reportId} // Pass the reportId for saving
             onBack={handleBack}
             onAssessRisk={handleAssessRisk}
           />

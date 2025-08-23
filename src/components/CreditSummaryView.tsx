@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo, useTransition, useEffect, useCallback, useRef } from 'react';
@@ -7,7 +6,7 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
-import { ArrowLeft, Download, InfoIcon, Shield } from 'lucide-react';
+import { ArrowLeft, Download, InfoIcon, Shield, Loader2 } from 'lucide-react';
 import {
   ChartContainer,
   ChartTooltip,
@@ -31,6 +30,7 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { Textarea } from './ui/textarea';
 import { PrintHeader } from './PrintHeader';
+import { updateReportAction } from '@/app/actions';
 
 interface EnhancedAccountDetail extends AccountDetail {
   isConsidered: boolean;
@@ -49,6 +49,7 @@ type ChangeLog = {
 
 interface CreditSummaryViewProps {
   analysisResult: AnalyzeCreditReportOutput;
+  reportId: string; // Add reportId to props
   onBack: () => void;
   onAssessRisk: (updatedAnalysisResult: AnalyzeCreditReportOutput) => void;
 }
@@ -121,7 +122,7 @@ const getEmiValue = (acc: BaseAccount | EnhancedAccountDetail): number => {
 
 type OwnershipType = 'Individual' | 'Guarantor' | 'Joint';
 
-export function CreditSummaryView({ analysisResult, onBack, onAssessRisk }: CreditSummaryViewProps) {
+export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRisk }: CreditSummaryViewProps) {
     const { toast } = useToast();
     const [detailedAccounts, setDetailedAccounts] = useState<EnhancedAccountDetail[]>(
         analysisResult.allAccounts.map(acc => ({...acc, isConsidered: true }))
@@ -130,6 +131,7 @@ export function CreditSummaryView({ analysisResult, onBack, onAssessRisk }: Cred
     const [isAiSummaryLoading, startAiSummaryTransition] = useTransition();
     const summaryRef = useRef<HTMLDivElement>(null);
     const [hasChanges, setHasChanges] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
 
     const [behaviorAnalyses, setBehaviorAnalyses] = useState<Record<string, BehaviorAnalysisData | null>>({
@@ -431,7 +433,8 @@ export function CreditSummaryView({ analysisResult, onBack, onAssessRisk }: Cred
         toast({ title: "Download Ready!", description: "Your PDF has been downloaded." });
     };
 
-    const handleAssessRiskClick = () => {
+    const handleAssessRiskClick = async () => {
+        setIsSaving(true);
         // Create a new analysisResult object with the updated accounts
         const updatedAnalysisResult = {
             ...analysisResult,
@@ -442,7 +445,25 @@ export function CreditSummaryView({ analysisResult, onBack, onAssessRisk }: Cred
                 totalEmi: parseFloat(summaryData.totalEmi.replace(/[^0-9.]/g, ''))
             }
         };
-        onAssessRisk(updatedAnalysisResult);
+
+        try {
+            await updateReportAction(reportId, updatedAnalysisResult);
+            toast({
+                title: "Changes Saved",
+                description: "Your edits have been saved to the database.",
+            });
+            setHasChanges(false); // Reset changes flag
+            setUserChanges([]); // Clear log
+            onAssessRisk(updatedAnalysisResult);
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Failed to Save Changes",
+                description: error.message || "Could not save the updated report.",
+            });
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const getDialogDescription = () => {
@@ -728,10 +749,10 @@ export function CreditSummaryView({ analysisResult, onBack, onAssessRisk }: Cred
             <Button 
                 size="lg" 
                 onClick={handleAssessRiskClick}
-                disabled={!hasChanges}
+                disabled={!hasChanges || isSaving}
             >
-                <Shield className="mr-2" />
-                Save & Assess AI Risk
+                {isSaving ? <Loader2 className="mr-2 animate-spin" /> : <Shield className="mr-2" />}
+                {isSaving ? 'Saving...' : 'Save & Assess AI Risk'}
             </Button>
         </div>
     </div>

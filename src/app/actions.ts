@@ -1,4 +1,3 @@
-
 'use server';
 
 import { adminDb } from '@/lib/firebase-admin';
@@ -50,5 +49,38 @@ export async function saveReportSummaryAction(
   } catch (error) {
     console.error('SERVER ACTION Firestore save error:', error); // Enhanced logging
     throw new Error('Failed to save report to the database.');
+  }
+}
+
+
+/**
+ * Updates an existing credit report in Firestore with new analysis data.
+ * @param reportId The ID of the document to update.
+ * @param updatedAnalysis The new, full analysis object to save.
+ * @returns An object indicating success.
+ */
+export async function updateReportAction(
+  reportId: string,
+  updatedAnalysis: AnalyzeCreditReportOutput
+): Promise<{ success: boolean }> {
+  console.log("SERVER ACTION: Updating report ID:", reportId);
+  if (!reportId || !updatedAnalysis) {
+    console.error("SERVER ACTION ERROR: Invalid report ID or analysis data provided.");
+    throw new Error('Invalid report ID or analysis data provided.');
+  }
+
+  const reportRef = adminDb.collection('creditReports').doc(reportId);
+
+  try {
+    // Update the fullAnalysis field and a timestamp for when it was last updated
+    await reportRef.update({
+      fullAnalysis: updatedAnalysis,
+      lastUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    console.log("SERVER ACTION: Report updated successfully.");
+    return { success: true };
+  } catch (error) {
+    console.error('SERVER ACTION Firestore update error:', error);
+    throw new Error('Failed to update report in the database.');
   }
 }
