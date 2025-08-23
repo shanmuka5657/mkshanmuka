@@ -124,9 +124,10 @@ type OwnershipType = 'Individual' | 'Guarantor' | 'Joint';
 
 export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRisk }: CreditSummaryViewProps) {
     const { toast } = useToast();
-    const [detailedAccounts, setDetailedAccounts] = useState<EnhancedAccountDetail[]>(
-        analysisResult.allAccounts.map(acc => ({...acc, isConsidered: true }))
-    );
+    
+    // This is our single source of truth for the account list being edited
+    const [editedAccounts, setEditedAccounts] = useState<EnhancedAccountDetail[]>([]);
+
     const [dpdFilter, setDpdFilter] = useState('12');
     const [isAiSummaryLoading, startAiSummaryTransition] = useTransition();
     const summaryRef = useRef<HTMLDivElement>(null);
@@ -145,23 +146,24 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
     const [activeChange, setActiveChange] = useState<{index: number, updates: Partial<EnhancedAccountDetail>, oldAccount: EnhancedAccountDetail} | null>(null);
     const [comment, setComment] = useState("");
     
-    // Effect to re-initialize state if the base analysisResult prop changes
+    // Effect to initialize state when the component mounts or the base analysisResult prop changes
     useEffect(() => {
-        setDetailedAccounts(analysisResult.allAccounts.map(acc => ({
+        const initialAccounts = analysisResult.allAccounts.map(acc => ({
             ...acc,
             isConsidered: true,
-            // Carry over manual EMI if it existed, otherwise initialize from acc.emi
-            manualEmi: acc.manualEmi !== undefined ? acc.manualEmi : parseEmiString(acc.emi)
-        } as EnhancedAccountDetail)));
+            // Initialize manualEmi with the parsed value from the original report
+            manualEmi: parseEmiString(acc.emi)
+        }));
+        setEditedAccounts(initialAccounts);
         setHasChanges(false);
         setUserChanges([]);
     }, [analysisResult]);
 
 
-    const activeAccounts = useMemo(() => detailedAccounts.filter(acc => acc.status.toLowerCase() === 'active' || acc.status.toLowerCase() === 'open'), [detailedAccounts]);
+    const activeAccounts = useMemo(() => editedAccounts.filter(acc => acc.status.toLowerCase() === 'active' || acc.status.toLowerCase() === 'open'), [editedAccounts]);
 
     const summaryData = useMemo(() => {
-        const consideredAccounts = detailedAccounts.filter(acc => acc.isConsidered);
+        const consideredAccounts = editedAccounts.filter(acc => acc.isConsidered);
         
         const totalEmiNum = consideredAccounts.reduce((sum, acc) => {
             const status = acc.status.toLowerCase();
@@ -175,13 +177,13 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
             ...analysisResult.reportSummary.accountSummary,
             totalEmi: `₹${totalEmiNum.toLocaleString('en-IN')}`
         };
-    }, [detailedAccounts, analysisResult.reportSummary]);
+    }, [editedAccounts, analysisResult.reportSummary]);
     
     const dpdAnalysis = useMemo(() => {
         const months = dpdFilter === 'overall' ? Infinity : parseInt(dpdFilter);
         const analysis = { '1-30': 0, '31-60': 0, '61-90': 0, '90+': 0, 'ontime': 0, 'total': 0 };
         
-        detailedAccounts.forEach(acc => {
+        editedAccounts.forEach(acc => {
             const history = months === Infinity ? acc.monthlyPaymentHistory : (acc.monthlyPaymentHistory || []).slice(0, months);
             (history || []).forEach(pmt => {
                 const dpdStr = pmt.status;
@@ -209,7 +211,7 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
             });
         });
         return analysis;
-    }, [detailedAccounts, dpdFilter]);
+    }, [editedAccounts, dpdFilter]);
 
     const calculateBehaviorAnalysis = useCallback((ownershipType: string): BehaviorAnalysisData | null => {
         const months = dpdFilter === 'overall' ? Infinity : parseInt(dpdFilter);
@@ -312,7 +314,7 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
     } as const;
 
     const initiateChange = (index: number, updates: Partial<EnhancedAccountDetail>) => {
-        const oldAccount = detailedAccounts[index];
+        const oldAccount = editedAccounts[index];
         
         if (updates.status || updates.isConsidered !== undefined || updates.manualEmi !== undefined) {
             setActiveChange({ index, updates, oldAccount });
@@ -322,10 +324,10 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
     
     const applyChange = (index: number, updates: Partial<EnhancedAccountDetail>, oldAccount: EnhancedAccountDetail, commentText: string | null) => {
         setHasChanges(true);
-        const newAccounts = [...detailedAccounts];
+        const newAccounts = [...editedAccounts];
         const currentEmi = getEmiValue(oldAccount);
         newAccounts[index] = { ...oldAccount, ...updates };
-        setDetailedAccounts(newAccounts);
+        setEditedAccounts(newAccounts);
     
         const changeLogs: string[] = [];
         const accountName = `'${oldAccount.type}'`;
@@ -428,7 +430,7 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
         // Create a new analysisResult object with the updated accounts
         const updatedAnalysisResult = {
             ...analysisResult,
-            allAccounts: detailedAccounts,
+            allAccounts: editedAccounts,
             // You may also need to update emiDetails if it's derived
             emiDetails: {
                 ...analysisResult.emiDetails,
@@ -638,7 +640,7 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(detailedAccounts || []).map((acc, index) => {
+                {(editedAccounts || []).map((acc, index) => {
                     const isStatusEditable = (acc.status.toLowerCase() === 'active' || acc.status.toLowerCase() === 'open') && Number(String(acc.outstanding).replace(/[^0-9.-]+/g,"")) === 0;
                     const isEmiEditable = (acc.status.toLowerCase() === 'active' || acc.status.toLowerCase() === 'open') && Number(String(acc.outstanding).replace(/[^0-9.-]+/g,"")) > 0 && (Number(String(acc.emi).replace(/[^0-9.-]+/g,"")) || 0) === 0;
                     const accId = `account-${index}`;
