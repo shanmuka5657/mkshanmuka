@@ -9,7 +9,7 @@ import { Loader2, UserPlus, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase-client';
 import { Card, CardContent, CardHeader, CardFooter, CardTitle, CardDescription } from '@/components/ui/card';
 
@@ -38,15 +38,15 @@ export default function SignupPage() {
     }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await sendEmailVerification(userCredential.user);
+      await createUserWithEmailAndPassword(auth, email, password);
       
       toast({
-        title: 'Verification Email Sent',
-        description: 'Please check your inbox to activate your account.',
+        title: 'Signup Successful',
+        description: 'Your account has been created. You can now log in.',
       });
 
       setIsSuccess(true);
+      router.push('/login'); // Redirect to login page after successful signup
     } catch (error: any) {
       let errorMessage = 'An unknown error occurred.';
       switch (error.code) {
@@ -81,16 +81,14 @@ export default function SignupPage() {
                     <div className="mx-auto bg-green-100 p-3 rounded-full mb-4">
                         <CheckCircle className="h-8 w-8 text-green-600" />
                     </div>
-                    <CardTitle>Verification Required!</CardTitle>
+                    <CardTitle>Signup Successful!</CardTitle>
                     <CardDescription>
-                        A verification link has been sent to <strong>{email}</strong>. Please check your inbox to activate your account.
+                        Your account has been created. Redirecting you to the login page...
                     </CardDescription>
                 </CardHeader>
-                <CardFooter>
-                    <Button asChild className="w-full">
-                        <Link href="/login">Proceed to Login</Link>
-                    </Button>
-                </CardFooter>
+                <CardContent>
+                    <Loader2 className="mx-auto h-8 w-8 animate-spin" />
+                </CardContent>
             </Card>
         </main>
     );

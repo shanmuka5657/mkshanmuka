@@ -25,15 +25,6 @@ export default function LoginForm({ redirectPath }: LoginFormProps) {
     const [password, setPassword] = useState('');
 
     const handleSuccessfulLogin = (loggedInUser: User) => {
-        if (loggedInUser.providerData.some(p => p.providerId === 'password') && !loggedInUser.emailVerified) {
-            toast({
-                variant: 'destructive',
-                title: 'Verification Required',
-                description: 'Please verify your email address. Check your inbox for the verification link.',
-            });
-            auth.signOut();
-            return;
-        }
         toast({
             title: 'Login Successful!',
             description: "Welcome back.",
