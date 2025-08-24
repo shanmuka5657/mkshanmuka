@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from "react";
-import { ArrowLeft, Loader2, Landmark, Calculator, Sparkles } from "lucide-react";
+import { ArrowLeft, Loader2, Landmark, Calculator, Sparkles, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
 
 interface FinancialsViewProps {
   analysisResult: AnalyzeCreditReportOutput;
@@ -217,34 +218,64 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
             {isLoadingEligibility && (
                  <CardContent className="pt-6 text-center">
                     <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
-                    <p className="text-muted-foreground">AI is calculating loan eligibility...</p>
+                    <p className="text-muted-foreground">AI is calculating loan eligibility scenarios...</p>
                 </CardContent>
             )}
             {loanEligibility && (
                 <CardContent>
-                    <Alert className="mb-4">
-                        <Calculator className="h-4 w-4"/>
-                        <AlertTitle>Eligibility Summary</AlertTitle>
-                        <AlertDescription>{loanEligibility.summary}</AlertDescription>
-                    </Alert>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Step</TableHead>
-                                <TableHead>Calculation</TableHead>
-                                <TableHead className="text-right">Value</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {loanEligibility.calculationBreakdown.map((row) => (
-                                <TableRow key={row.step}>
-                                    <TableCell className="font-medium">{row.step}</TableCell>
-                                    <TableCell className="text-muted-foreground text-xs">{row.calculation}</TableCell>
-                                    <TableCell className="text-right font-semibold">{row.value}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* As Per User Needs Column */}
+                        <Card className="p-4 border-primary">
+                            <CardHeader className="p-2">
+                                <CardTitle>As Per User Needs</CardTitle>
+                                <CardDescription>Based on your desired DTI of {desiredDti}%.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-2">
+                                <p className="text-3xl font-bold text-primary">₹{loanEligibility.asPerUserNeeds.eligibleLoanAmount.toLocaleString('en-IN')}</p>
+                                <p className="text-sm mt-2">{loanEligibility.asPerUserNeeds.summary}</p>
+                            </CardContent>
+                        </Card>
+                         {/* As Per Eligibility Column */}
+                        <Card className="p-4 border-green-500">
+                             <CardHeader className="p-2">
+                                <CardTitle>As Per Eligibility</CardTitle>
+                                <CardDescription>Based on a maximum 55% FOIR.</CardDescription>
+                            </CardHeader>
+                             <CardContent className="p-2">
+                                <p className="text-3xl font-bold text-green-500">₹{loanEligibility.asPerEligibility.eligibleLoanAmount.toLocaleString('en-IN')}</p>
+                                <p className="text-sm mt-2">{loanEligibility.asPerEligibility.summary}</p>
+                            </CardContent>
+                        </Card>
+                    </div>
+                    <Accordion type="single" collapsible className="w-full mt-4">
+                        <AccordionItem value="item-1">
+                            <AccordionTrigger>
+                                <div className="flex items-center gap-2 font-semibold">
+                                    Show Calculation Details
+                                </div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Step</TableHead>
+                                            <TableHead>Calculation</TableHead>
+                                            <TableHead className="text-right">Value</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {loanEligibility.calculationBreakdown.map((row) => (
+                                            <TableRow key={row.step}>
+                                                <TableCell className="font-medium">{row.step}</TableCell>
+                                                <TableCell className="text-muted-foreground text-xs">{row.calculation}</TableCell>
+                                                <TableCell className="text-right font-semibold">{row.value}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </AccordionContent>
+                        </AccordionItem>
+                    </Accordion>
                 </CardContent>
             )}
         </Card>

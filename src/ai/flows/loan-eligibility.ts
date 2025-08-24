@@ -1,7 +1,8 @@
 'use server';
 
 /**
- * @fileOverview An AI agent that calculates loan eligibility based on user-defined financial parameters, now including FOIR calculation.
+ * @fileOverview An AI agent that calculates loan eligibility based on user-defined financial parameters.
+ * It now performs a dual calculation: one based on the user's desired DTI and another based on a standard maximum FOIR of 55%.
  *
  * - getLoanEligibility - A function that returns a detailed loan eligibility calculation.
  * - LoanEligibilityInput - The input type for the getLoanEligibility function.
@@ -27,23 +28,17 @@ const LoanEligibilityCalculationStepSchema = z.object({
     value: z.string().describe("The resulting value of the calculation, formatted as a currency or percentage where appropriate."),
 });
 
+const EligibilityResultSchema = z.object({
+  eligibleLoanAmount: z.number().describe('The final, calculated loan amount in INR.'),
+  repaymentCapacity: z.number().describe('The monthly amount the applicant can afford for a new EMI.'),
+  postLoanFoir: z.number().describe('The calculated FOIR after taking on the new loan.'),
+  summary: z.string().describe('A comprehensive, user-friendly summary explaining the result and its implications.'),
+});
+
 const LoanEligibilityOutputSchema = z.object({
-  eligibleLoanAmount: z
-    .number()
-    .describe('The final, calculated personal loan amount the user could be eligible for in INR, based on the provided inputs.'),
-  repaymentCapacity: z
-    .number()
-    .describe(
-      'The remaining monthly amount the applicant can afford for a new EMI based on their desired DTI.'
-    ),
-  calculationBreakdown: z
-    .array(LoanEligibilityCalculationStepSchema)
-    .describe(
-      'A step-by-step breakdown of how the loan eligibility was calculated.'
-    ),
-  summary: z
-    .string()
-    .describe('A comprehensive, user-friendly summary explaining the overall result. It must analyze the repayment capacity and the post-loan FOIR, explaining their real-world implications on financial health and future borrowing capacity.')
+  asPerUserNeeds: EligibilityResultSchema.describe("The loan eligibility calculation based strictly on the user's desired DTI ratio."),
+  asPerEligibility: EligibilityResultSchema.describe("The loan eligibility calculation based on a maximum allowable FOIR of 55%."),
+  calculationBreakdown: z.array(LoanEligibilityCalculationStepSchema).describe('A step-by-step breakdown of how the "As Per User Needs" loan eligibility was calculated.'),
 });
 export type LoanEligibilityOutput = z.infer<typeof LoanEligibilityOutputSchema>;
 
@@ -59,7 +54,7 @@ const prompt = ai.definePrompt({
   model: 'googleai/gemini-1.5-flash',
   input: { schema: LoanEligibilityInputSchema },
   output: { schema: LoanEligibilityOutputSchema },
-  prompt: `You are a precise financial calculator. Your task is to calculate a user's personal loan eligibility and post-loan FOIR based on the exact parameters they provide. You must perform the calculations step-by-step and present them in a structured table format.
+  prompt: `You are a precise financial calculator. Your task is to perform two separate personal loan eligibility calculations based on the user's financial parameters.
 
 **User's Financial Parameters:**
 - **Monthly Income:** ₹{{monthlyIncome}}
@@ -69,45 +64,40 @@ const prompt = ai.definePrompt({
 - **Annual Interest Rate:** {{interestRate}}%
 - **Loan Tenure:** {{tenureMonths}} months
 
-**Your Calculation Task (Follow these steps PRECISELY):**
+**Your Task (Perform these steps PRECISELY):**
 
-1.  **Calculate Maximum Allowable EMI:**
-    *   **Formula:** (Monthly Income * Desired DTI Ratio) / 100
-    *   This is the total EMI the user can have across all loans.
+**Part 1: Calculation "As Per User Needs"**
 
+1.  **Calculate Maximum Allowable EMI (based on DTI):**
+    *   Formula: (Monthly Income * Desired DTI Ratio) / 100
 2.  **Calculate Repayment Capacity (Available for New EMI):**
-    *   **Formula:** Maximum Allowable EMI - Total Existing Monthly EMI
-    *   This is the amount available for the new loan's EMI. If this is negative, set it to 0. Store this value in the 'repaymentCapacity' output field.
-
+    *   Formula: Maximum Allowable EMI - Total Existing Monthly EMI
+    *   If this is negative, set it to 0.
 3.  **Calculate Eligible Loan Amount:**
-    *   Use the standard loan principal formula based on the calculated 'Repayment Capacity' as the EMI.
-    *   **Formula:** P = EMI * [ (1 - (1 + r)^-n) / r ]
-        *   P = Principal Loan Amount (the value you need to find)
-        *   EMI = Repayment Capacity
-        *   r = Monthly Interest Rate (Annual Interest Rate / 12 / 100)
-        *   n = Loan Tenure in months
-    *   If Repayment Capacity is 0, the eligible loan amount is also 0. Store this final amount in the 'eligibleLoanAmount' field.
-
+    *   Use the standard loan principal formula with the 'Repayment Capacity' as the EMI.
+    *   Formula: P = EMI * [ (1 - (1 + r)^-n) / r ] (where r is monthly interest rate, n is tenure)
 4.  **Calculate Post-Loan FOIR:**
-    *   **Formula:** ((Total Existing EMI + Repayment Capacity + Monthly Fixed Obligations) / Monthly Income) * 100
-    *   This shows the user's financial obligation ratio *after* taking the new loan.
+    *   Formula: ((Total Existing EMI + Repayment Capacity + Monthly Fixed Obligations) / Monthly Income) * 100
+5.  **Write Summary:** Provide a summary explaining the result based on the user's desired DTI.
+6.  **Store Results:** Populate all fields for the 'asPerUserNeeds' output object.
+7.  **Create Calculation Breakdown Table:** Populate the 'calculationBreakdown' array with a step for each calculation in this section, showing the formula and result.
 
-5.  **Create Calculation Breakdown Table:**
-    *   Populate the 'calculationBreakdown' array with an object for each of the following steps:
-        *   "Monthly Income"
-        *   "Existing Obligations (EMI)"
-        *   "Max EMI at {{desiredDtiRatio}}% DTI"
-        *   "Available for New EMI (Repayment Capacity)"
-        *   "Desired Interest Rate & Tenure"
-        *   "Calculated Eligible Loan Amount"
-        *   "Post-Loan FOIR"
-    *   For each step, provide the formula/logic in the 'calculation' field and the formatted result in the 'value' field.
+**Part 2: Calculation "As Per Eligibility" (Based on Max 55% FOIR)**
 
-6.  **Write a Comprehensive Summary:**
-    *   In the 'summary' field, provide a detailed, user-friendly explanation of the result. For example: "Based on your desired DTI of {{desiredDtiRatio}}%, you have a remaining repayment capacity of [Repayment Capacity amount], making you eligible for a loan of approximately [Eligible Loan Amount]. After accounting for this new EMI, your Fixed Obligation to Income Ratio (FOIR) would be [Post-Loan FOIR]%. A FOIR above 55% can make it challenging to manage expenses and secure future loans, so please consider this before proceeding."
-    *   The summary MUST be comprehensive and explain the implications of the final FOIR.
+1.  **Calculate Maximum Allowable Obligation (based on FOIR):**
+    *   This is the total amount for all obligations (existing EMI + new EMI + fixed obligations) and it CANNOT exceed 55% of the monthly income.
+    *   Formula: (Monthly Income * 55) / 100
+2.  **Calculate Repayment Capacity (Available for New EMI):**
+    *   Formula: Maximum Allowable Obligation - Total Existing Monthly EMI - Monthly Fixed Obligations
+    *   If this is negative, set it to 0.
+3.  **Calculate Eligible Loan Amount:**
+    *   Use the standard loan principal formula with this new FOIR-based 'Repayment Capacity' as the EMI.
+4.  **Calculate Post-Loan FOIR:**
+    *   This should be 55% or lower if a loan is possible.
+5.  **Write Summary:** Provide a summary explaining the result based on the 55% FOIR constraint. Mention this is a more realistic amount that lenders might approve.
+6.  **Store Results:** Populate all fields for the 'asPerEligibility' output object.
 
-Generate the final, structured output based on these precise calculations.
+Generate the final, structured output containing both calculations.
 `,
 });
 
