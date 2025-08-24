@@ -2,9 +2,9 @@
 'use client';
 
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Loader2, ShieldAlert, Download, AlertCircle } from "lucide-react";
+import { ArrowLeft, Loader2, Download, AlertCircle } from "lucide-react";
 import { Button } from "./ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "./ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { getRiskAssessment, RiskAssessmentOutput } from "@/ai/flows/risk-assessment";
 import type { AnalyzeCreditReportOutput } from "@/ai/flows/credit-report-analysis";
@@ -167,16 +167,28 @@ export function RiskAssessmentView({ customizedAnalysisResult, onBack }: RiskAss
                                 <AccordionTrigger className="text-sm font-semibold">Financial Metrics</AccordionTrigger>
                                 <AccordionContent className="text-xs space-y-2 pt-2">
                                     <div className="flex justify-between p-2 rounded bg-muted/50"><span>Probability of Default (PD)</span> <strong>{assessment.probabilityOfDefault}%</strong></div>
-                                    <Alert className="mt-2">
+                                    <div className="flex justify-between p-2 rounded bg-muted/50"><span>Loss Given Default (LGD)</span> <strong>{assessment.lossGivenDefault}%</strong></div>
+                                    <div className="flex justify-between p-2 rounded bg-muted/50"><span>Exposure at Default (EAD)</span> <strong>₹{assessment.exposureAtDefault.toLocaleString('en-IN')}</strong></div>
+                                    <div className="flex justify-between p-2 rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300"><span>Expected Loss (EL)</span> <strong>₹{assessment.expectedLoss.toLocaleString('en-IN')}</strong></div>
+                                </AccordionContent>
+                            </AccordionItem>
+                             <AccordionItem value="item-2">
+                                <AccordionTrigger className="text-sm font-semibold">AI Reasoning</AccordionTrigger>
+                                <AccordionContent className="space-y-4 pt-2">
+                                    <Alert>
                                         <AlertCircle className="h-4 w-4" />
-                                        <AlertTitle className="text-xs">PD Explanation</AlertTitle>
+                                        <AlertTitle className="text-xs">Risk Score Explanation</AlertTitle>
+                                        <AlertDescription className="text-xs">
+                                            {assessment.riskScoreExplanation}
+                                        </AlertDescription>
+                                    </Alert>
+                                    <Alert>
+                                        <AlertCircle className="h-4 w-4" />
+                                        <AlertTitle className="text-xs">Probability of Default Explanation</AlertTitle>
                                         <AlertDescription className="text-xs">
                                             {assessment.defaultProbabilityExplanation}
                                         </AlertDescription>
                                     </Alert>
-                                    <div className="flex justify-between p-2 rounded bg-muted/50"><span>Loss Given Default (LGD)</span> <strong>{assessment.lossGivenDefault}%</strong></div>
-                                    <div className="flex justify-between p-2 rounded bg-muted/50"><span>Exposure at Default (EAD)</span> <strong>₹{assessment.exposureAtDefault.toLocaleString('en-IN')}</strong></div>
-                                    <div className="flex justify-between p-2 rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300"><span>Expected Loss (EL)</span> <strong>₹{assessment.expectedLoss.toLocaleString('en-IN')}</strong></div>
                                 </AccordionContent>
                             </AccordionItem>
                         </Accordion>
