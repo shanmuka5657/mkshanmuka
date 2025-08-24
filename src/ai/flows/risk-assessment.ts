@@ -45,7 +45,8 @@ const RiskAssessmentOutputSchema = z.object({
     }))
     .describe('A list of suggested actions to mitigate the identified risks. Each action must correspond to a listed risk factor.'),
   probabilityOfDefault: z.number().describe('The estimated probability of the user defaulting on a new loan in the next 24 months, as a percentage (0-100).'),
-  defaultProbabilityExplanation: z.string().describe('A detailed, multi-sentence explanation of the factors that contributed to the probability of default calculation.'),
+  defaultProbabilityExplanation: z.string().describe('A detailed, multi-sentence explanation of the factors that contributed to the probability of default calculation, citing specific data points like DPD history or high utilization.'),
+  riskScoreExplanation: z.string().describe("A detailed, multi-sentence explanation of how the final risk score was determined, referencing the key factors and the weight given to each (e.g., 'The high risk score of 75 is primarily driven by the recent 90-day delinquency on the personal loan, which is the most heavily weighted factor...')."),
   exposureAtDefault: z.number().describe('The estimated total outstanding balance across all accounts if the user were to default, in INR.'),
   lossGivenDefault: z.number().describe('The estimated percentage of the Exposure at Default that would be lost if the user defaults (0-100).'),
   expectedLoss: z.number().describe('The final calculated Expected Loss (PD * LGD * EAD) in INR.'),
@@ -89,9 +90,10 @@ const prompt = ai.definePrompt({
 4.  **Suggested Mitigations:** For each identified risk factor, provide a corresponding and actionable mitigation suggestion.
 5.  **Probability of Default (PD):** Estimate the 'probabilityOfDefault' (0-100%) for a new loan in the next 24 months based on the filtered data.
 6.  **Default Probability Explanation:** Clearly explain your reasoning for the PD score, referencing specific elements from the *filtered* report (e.g., "The PD is elevated due to recent late payments on the included Personal Loan...").
-7.  **Exposure at Default (EAD):** Calculate EAD by summing the 'outstanding' amounts of all *active and considered* loans/cards.
-8.  **Loss Given Default (LGD):** Estimate a blended 'lossGivenDefault' percentage (0-100) based on the mix of secured vs. unsecured debt in the *filtered data*. Unsecured debt should lead to a higher LGD.
-9.  **Expected Loss (EL):** You will provide PD, LGD, and EAD values. The final EL will be calculated in the calling code.
+7.  **Risk Score Explanation:** Provide a detailed explanation for how you arrived at the final 'riskScore'. Explain which factors carried the most weight in your decision (e.g., "The high risk score of 75 is primarily driven by the recent 90-day delinquency on the personal loan, which is the most heavily weighted factor, followed by the high credit utilization of 92% on the credit card.").
+8.  **Exposure at Default (EAD):** Calculate EAD by summing the 'outstanding' amounts of all *active and considered* loans/cards.
+9.  **Loss Given Default (LGD):** Estimate a blended 'lossGivenDefault' percentage (0-100) based on the mix of secured vs. unsecured debt in the *filtered data*. Unsecured debt should lead to a higher LGD.
+10. **Expected Loss (EL):** The final EL will be calculated in the calling code based on your PD, LGD, and EAD values. You do not need to calculate it here.
 
 Generate the final, structured output for a single, unified assessment based *only* on the user's customizations.
 `,
