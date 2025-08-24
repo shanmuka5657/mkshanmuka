@@ -24,7 +24,6 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
   const [activeView, setActiveView] = useState<string | null>(null);
 
   // This is the single source of truth for the analysis data
-  const [originalAnalysisResult, setOriginalAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(null);
   const [editableAnalysisResult, setEditableAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(null);
 
   useEffect(() => {
@@ -46,8 +45,7 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
         const fetchedReport = await getReportById(params.reportId);
         if (fetchedReport && fetchedReport.fullAnalysis) {
           setReport(fetchedReport);
-          // Initialize both original and editable state with the fetched data
-          setOriginalAnalysisResult(fetchedReport.fullAnalysis as AnalyzeCreditReportOutput);
+          // Initialize editable state with the fetched data
           setEditableAnalysisResult(fetchedReport.fullAnalysis as AnalyzeCreditReportOutput);
         } else {
           // This will trigger the not-found UI
@@ -113,7 +111,7 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
     );
   }
 
-  if (!report || !editableAnalysisResult || !originalAnalysisResult) {
+  if (!report || !editableAnalysisResult) {
     return (
         <main className="flex flex-col justify-center items-center h-[calc(100vh-10rem)] text-center">
             <h2 className="text-2xl font-semibold mb-2">Report Not Found</h2>
@@ -139,7 +137,6 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
       return (
         <main className="container mx-auto p-4 md:p-8 space-y-6">
           <RiskAssessmentView 
-            originalAnalysisResult={originalAnalysisResult}
             customizedAnalysisResult={editableAnalysisResult} 
             onBack={handleBack} />
         </main>
