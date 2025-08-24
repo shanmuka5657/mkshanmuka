@@ -1,18 +1,19 @@
-
 'use client';
 
-import { useState, useEffect } from "react";
-import { ArrowLeft, Loader2, Landmark, ShieldCheck, FileWarning, HelpCircle } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, Loader2, Landmark, Calculator, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import type { AnalyzeCreditReportOutput } from "@/ai/flows/credit-report-analysis";
 import { getFinancialRiskAssessment, FinancialRiskOutput } from "@/ai/flows/financial-risk-assessment";
+import { getLoanEligibility, LoanEligibilityOutput } from "@/ai/flows/loan-eligibility";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 
 interface FinancialsViewProps {
   analysisResult: AnalyzeCreditReportOutput;
@@ -22,8 +23,15 @@ interface FinancialsViewProps {
 export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) {
   const [estimatedIncome, setEstimatedIncome] = useState('');
   const [fixedObligations, setFixedObligations] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [desiredDti, setDesiredDti] = useState('50');
+  const [interestRate, setInterestRate] = useState('12.5');
+  const [tenure, setTenure] = useState('48');
+
+  const [isLoadingRisk, setIsLoadingRisk] = useState(false);
+  const [isLoadingEligibility, setIsLoadingEligibility] = useState(false);
+  
   const [financialRisk, setFinancialRisk] = useState<FinancialRiskOutput | null>(null);
+  const [loanEligibility, setLoanEligibility] = useState<LoanEligibilityOutput | null>(null);
 
   const { toast } = useToast();
 
@@ -40,8 +48,9 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
       return;
     }
 
-    setIsLoading(true);
+    setIsLoadingRisk(true);
     setFinancialRisk(null);
+    setLoanEligibility(null); // Reset eligibility when re-running risk
     
     try {
         const financialRiskOutput = await getFinancialRiskAssessment({ 
@@ -61,11 +70,42 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
         description: error.message || "An unknown error occurred.",
       });
     } finally {
-        setIsLoading(false);
+        setIsLoadingRisk(false);
     }
   };
 
-  const isButtonDisabled = isLoading || !estimatedIncome;
+  const handleRunLoanEligibility = async () => {
+    const income = Number(estimatedIncome);
+    if (!income || income <= 0) {
+      toast({ variant: 'destructive', title: 'Invalid Income', description: 'Please enter a monthly income first.' });
+      return;
+    }
+    
+    setIsLoadingEligibility(true);
+    setLoanEligibility(null);
+
+    try {
+        const result = await getLoanEligibility({
+            monthlyIncome: income,
+            totalMonthlyEMI: analysisResult.emiDetails.totalEmi,
+            desiredDtiRatio: Number(desiredDti),
+            interestRate: Number(interestRate),
+            tenureMonths: Number(tenure),
+        });
+        setLoanEligibility(result);
+        toast({ title: 'Loan Eligibility Calculated', description: 'Results are displayed below.' });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Eligibility Calculation Failed",
+        description: error.message || "An unknown error occurred.",
+      });
+    } finally {
+        setIsLoadingEligibility(false);
+    }
+  }
+
+  const isRunRiskDisabled = isLoadingRisk || !estimatedIncome;
 
   return (
     <div className="space-y-6">
@@ -76,7 +116,7 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Landmark />Financial Risk Assessment</CardTitle>
-          <CardDescription>Enter income and fixed obligations to generate a detailed financial risk profile.</CardDescription>
+          <CardDescription>Enter income and fixed obligations to generate a detailed financial risk profile based on your customized report.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
@@ -88,15 +128,15 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
                     <Label htmlFor="obligations">Monthly Fixed Obligations (e.g., Rent)</Label>
                     <Input id="obligations" type="number" placeholder="e.g., 20000" value={fixedObligations} onChange={e => setFixedObligations(e.target.value)} />
                 </div>
-                <Button onClick={handleRunFinancialAnalysis} disabled={isButtonDisabled}>
-                    {isLoading ? <Loader2 className="mr-2 animate-spin" /> : null}
-                    {isLoading ? 'Analyzing...' : 'Run Financial Analysis'}
+                <Button onClick={handleRunFinancialAnalysis} disabled={isRunRiskDisabled}>
+                    {isLoadingRisk ? <Loader2 className="mr-2 animate-spin" /> : <Sparkles className="mr-2" />}
+                    {isLoadingRisk ? 'Analyzing...' : 'Run Financial Analysis'}
                 </Button>
             </div>
         </CardContent>
       </Card>
 
-      {isLoading && (
+      {isLoadingRisk && (
         <Card>
             <CardContent className="pt-6 text-center">
                 <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
@@ -112,24 +152,23 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
             </CardHeader>
             <CardContent className="space-y-4">
                 <Alert className={cn(financialRisk.financialRiskRating === 'Low' && 'border-green-500', financialRisk.financialRiskRating === 'Medium' && 'border-yellow-500', financialRisk.financialRiskRating === 'High' && 'border-orange-500', financialRisk.financialRiskRating === 'Very High' && 'border-red-500')}>
-                    <FileWarning className="h-4 w-4" />
-                    <AlertTitle>Overall Financial Risk: {financialRisk.financialRiskRating}</AlertTitle>
+                    <CardTitle>Overall Financial Risk: {financialRisk.financialRiskRating}</CardTitle>
                     <AlertDescription>{financialRisk.overallOutlook}</AlertDescription>
                 </Alert>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Card className="p-4">
                         <CardDescription>DTI Ratio</CardDescription>
-                        <p className="text-2xl font-bold">{financialRisk.dtiAnalysis.dtiPercentage}%</p>
+                        <p className="text-2xl font-bold">{financialRisk.dtiAnalysis.dtiPercentage.toFixed(2)}%</p>
                         <p className="text-xs text-muted-foreground mt-1">{financialRisk.dtiAnalysis.explanation}</p>
                     </Card>
                     <Card className="p-4">
                         <CardDescription>FOIR</CardDescription>
-                        <p className="text-2xl font-bold">{financialRisk.foirAnalysis.foirPercentage}%</p>
+                        <p className="text-2xl font-bold">{financialRisk.foirAnalysis.foirPercentage.toFixed(2)}%</p>
                         <p className="text-xs text-muted-foreground mt-1">{financialRisk.foirAnalysis.explanation}</p>
                     </Card>
                     <Card className="p-4">
-                        <CardDescription>Unsecured Debt</CardDescription>
-                        <p className="text-2xl font-bold">{financialRisk.debtComposition.unsecuredDebtPercentage}%</p>
+                        <CardDescription>Unsecured Debt Percentage</CardDescription>
+                        <p className="text-2xl font-bold">{financialRisk.debtComposition.unsecuredDebtPercentage.toFixed(2)}%</p>
                         <p className="text-xs text-muted-foreground mt-1">{financialRisk.debtComposition.explanation}</p>
                     </Card>
                     <Card className="p-4">
@@ -139,6 +178,68 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
                     </Card>
                 </div>
             </CardContent>
+        </Card>
+      )}
+
+      {financialRisk && (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Calculator />Loan Eligibility Calculator</CardTitle>
+                <CardDescription>Adjust the parameters below to calculate potential loan eligibility.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                    <div className="space-y-2">
+                        <Label htmlFor="dti">Desired DTI Ratio (%)</Label>
+                        <Input id="dti" type="number" placeholder="50" value={desiredDti} onChange={e => setDesiredDti(e.target.value)} />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="interest">Interest Rate (%)</Label>
+                        <Input id="interest" type="number" placeholder="12.5" value={interestRate} onChange={e => setInterestRate(e.target.value)} />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="tenure">Tenure (Months)</Label>
+                        <Input id="tenure" type="number" placeholder="48" value={tenure} onChange={e => setTenure(e.target.value)} />
+                    </div>
+                    <Button onClick={handleRunLoanEligibility} disabled={isLoadingEligibility}>
+                        {isLoadingEligibility ? <Loader2 className="mr-2 animate-spin" /> : <Calculator className="mr-2" />}
+                        Calculate Eligibility
+                    </Button>
+                </div>
+            </CardContent>
+            {isLoadingEligibility && (
+                 <CardContent className="pt-6 text-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
+                    <p className="text-muted-foreground">AI is calculating loan eligibility...</p>
+                </CardContent>
+            )}
+            {loanEligibility && (
+                <CardContent>
+                    <Alert className="mb-4">
+                        <Calculator className="h-4 w-4"/>
+                        <AlertTitle>Eligibility Summary</AlertTitle>
+                        <AlertDescription>{loanEligibility.summary}</AlertDescription>
+                    </Alert>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Step</TableHead>
+                                <TableHead>Calculation</TableHead>
+                                <TableHead className="text-right">Value</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {loanEligibility.calculationBreakdown.map((row) => (
+                                <TableRow key={row.step}>
+                                    <TableCell className="font-medium">{row.step}</TableCell>
+                                    <TableCell className="text-muted-foreground text-xs">{row.calculation}</TableCell>
+                                    <TableCell className="text-right font-semibold">{row.value}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            )}
         </Card>
       )}
     </div>

@@ -1,61 +1,51 @@
-
 'use server';
 
 /**
- * @fileOverview An AI agent that estimates loan eligibility based on a comprehensive analysis of a credit report and financial details.
+ * @fileOverview An AI agent that calculates loan eligibility based on user-defined financial parameters.
  *
- * - getLoanEligibility - A function that returns an estimated loan amount and terms.
+ * - getLoanEligibility - A function that returns a detailed loan eligibility calculation.
  * - LoanEligibilityInput - The input type for the getLoanEligibility function.
  * - LoanEligibilityOutput - The return type for the getLoanEligibility function.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import type { AnalyzeCreditReportOutput } from './credit-report-analysis';
 
 const LoanEligibilityInputSchema = z.object({
-  aiScore: z
-    .number()
-    .describe('The AI-generated credit risk score, ranging from 0 to 100 (100 is highest risk).'),
-  rating: z.string().describe('The overall credit rating (e.g., Excellent, Good, Fair, Poor).'),
-  monthlyIncome: z.number().describe('The estimated monthly income of the user in INR.'),
-  totalMonthlyEMI: z.number().describe('The user\'s total existing monthly EMI payments in INR.'),
-  analysisResult: z.any().describe('The full, structured analysis from the initial credit report parsing flow.'),
+  monthlyIncome: z.number().describe('The user\'s estimated monthly income in INR.'),
+  totalMonthlyEMI: z.number().describe('The user\'s total existing monthly EMI payments in INR from all sources.'),
+  desiredDtiRatio: z.number().describe('The user-specified desired Debt-to-Income (DTI) ratio as a percentage (e.g., 50 for 50%).'),
+  interestRate: z.number().describe('The desired annual interest rate for the new loan as a percentage (e.g., 12.5 for 12.5%).'),
+  tenureMonths: z.number().describe('The desired loan tenure in months (e.g., 48).'),
 });
-export type LoanEligibilityInput = {
-    aiScore: number;
-    rating: string;
-    monthlyIncome: number;
-    totalMonthlyEMI: number;
-    analysisResult?: AnalyzeCreditReportOutput;
-};
+export type LoanEligibilityInput = z.infer<typeof LoanEligibilityInputSchema>;
+
+const LoanEligibilityCalculationStepSchema = z.object({
+    step: z.string().describe("The name of the calculation step."),
+    calculation: z.string().describe("The formula or logic used for the step."),
+    value: z.string().describe("The resulting value of the calculation, formatted as a currency or percentage where appropriate."),
+});
 
 const LoanEligibilityOutputSchema = z.object({
   eligibleLoanAmount: z
     .number()
-    .describe(
-      'The exact personal loan amount the user could be eligible for in INR, based on a holistic analysis.'
-    ),
-  estimatedInterestRate: z
-    .string()
-    .describe(
-      'The estimated annual interest rate for the personal loan (e.g., "11.5%-13%").'
-    ),
+    .describe('The final, calculated personal loan amount the user could be eligible for in INR, based on the provided inputs.'),
   repaymentCapacity: z
     .number()
     .describe(
-      'The exact remaining monthly amount the applicant can comfortably afford for a new EMI.'
+      'The remaining monthly amount the applicant can afford for a new EMI based on their desired DTI.'
     ),
-  eligibilitySummary: z
-    .string()
+  calculationBreakdown: z
+    .array(LoanEligibilityCalculationStepSchema)
     .describe(
-      'A detailed, multi-sentence summary explaining exactly how the eligible loan amount was calculated. It must reference specific factors from the structured data (payment history, credit utilization, existing loans) and explain how they influenced the final amount.'
+      'A step-by-step breakdown of how the loan eligibility was calculated.'
     ),
-  suggestionsToIncreaseEligibility: z
-    .array(z.string())
-    .describe('A list of specific, actionable suggestions for how the user can increase their loan eligibility.'),
+  summary: z
+    .string()
+    .describe('A brief, user-friendly summary explaining the overall result of the calculation and its implications.')
 });
 export type LoanEligibilityOutput = z.infer<typeof LoanEligibilityOutputSchema>;
+
 
 export async function getLoanEligibility(
   input: LoanEligibilityInput
@@ -68,49 +58,48 @@ const prompt = ai.definePrompt({
   model: 'googleai/gemini-1.5-flash',
   input: { schema: LoanEligibilityInputSchema },
   output: { schema: LoanEligibilityOutputSchema },
-  prompt: `You are an expert loan officer at a digital bank in India. Your task is to perform a holistic and realistic estimation of a user's eligibility for a personal loan and provide actionable, non-generic advice. Use the provided structured data, not raw text.
+  prompt: `You are a precise financial calculator. Your task is to calculate a user's personal loan eligibility based on the exact parameters they provide. You must perform the calculations step-by-step and present them in a structured table format.
 
-**User's Financial Profile:**
-- **AI Credit Risk Score:** {{aiScore}}/100 (Higher is riskier)
-- **Credit Rating:** {{rating}}
-- **Estimated Monthly Income:** ₹{{monthlyIncome}}
+**User's Financial Parameters:**
+- **Monthly Income:** ₹{{monthlyIncome}}
 - **Total Existing Monthly EMI:** ₹{{totalMonthlyEMI}}
+- **Desired DTI Ratio:** {{desiredDtiRatio}}%
+- **Annual Interest Rate:** {{interestRate}}%
+- **Loan Tenure:** {{tenureMonths}} months
 
-**Full Structured Credit Data for Analysis:**
-\`\`\`json
-{{{json analysisResult}}}
-\`\`\`
+**Your Calculation Task (Follow these steps PRECISELY):**
 
-**Your Task (Follow these steps precisely):**
+1.  **Calculate Maximum Allowable EMI:**
+    *   **Formula:** (Monthly Income * Desired DTI Ratio) / 100
+    *   This is the total EMI the user can have across all loans.
 
-1.  **Determine a Safe DTI Ratio:** Based on the user's AI score and risk factors evident in the structured data, determine a safe Debt-to-Income (DTI) ratio.
-    - **Excellent (Risk Score 0-15):** 55%
-    - **Good (Risk Score 16-30):** 50%
-    - **Fair (Risk Score 31-45):** 45%
-    - **Poor (Risk Score >45):** 35%
-    - **ADJUSTMENT:** If the data shows significant negative marks (e.g., a written-off account, more than two 30+ DPD in the last year), reduce the determined DTI by 5%.
+2.  **Calculate Repayment Capacity (Available for New EMI):**
+    *   **Formula:** Maximum Allowable EMI - Total Existing Monthly EMI
+    *   This is the amount available for the new loan's EMI. If this is negative, set it to 0. Store this value in the 'repaymentCapacity' output field.
 
-2.  **Calculate Repayment Capacity:** Use a strict formula.
-    *   **Repayment Capacity** = (Monthly Income * Your Determined Safe DTI %) - Total Existing Monthly EMI.
-    *   If the result is negative, set Repayment Capacity to 0. Store this exact amount.
+3.  **Calculate Eligible Loan Amount:**
+    *   Use the standard loan principal formula based on the calculated 'Repayment Capacity' as the EMI.
+    *   **Formula:** P = EMI * [ (1 - (1 + r)^-n) / r ]
+        *   P = Principal Loan Amount (the value you need to find)
+        *   EMI = Repayment Capacity
+        *   r = Monthly Interest Rate (Annual Interest Rate / 12 / 100)
+        *   n = Loan Tenure in months
+    *   If Repayment Capacity is 0, the eligible loan amount is also 0. Store this final amount in the 'eligibleLoanAmount' field.
 
-3.  **Calculate Eligible Loan Amount:** Based on the calculated 'repaymentCapacity', determine a realistic personal loan amount. Assume a standard personal loan tenure of 48 months. Use the 'repaymentCapacity' as the EMI to calculate the principal amount. If Repayment Capacity is 0, the loan amount must also be 0.
+4.  **Create Calculation Breakdown Table:**
+    *   Populate the 'calculationBreakdown' array with an object for each of the following steps:
+        *   "Monthly Income"
+        *   "Existing Obligations (EMI)"
+        *   "Max EMI at {{desiredDtiRatio}}% DTI"
+        *   "Available for New EMI (Repayment Capacity)"
+        *   "Desired Interest Rate & Tenure"
+        *   "Calculated Eligible Loan Amount"
+    *   For each step, provide the formula/logic in the 'calculation' field and the formatted result in the 'value' field.
 
-4.  **Estimate Interest Rate:** Provide a realistic interest rate range based on their AI score and overall risk profile.
-    - Excellent (Risk Score 0-15): 10.5% - 12.5%
-    - Good (Risk Score 16-30): 12.5% - 15.0%
-    - Fair (Risk Score 31-45): 15.0% - 20.0%
-    - Poor (Risk Score >45): Likely ineligible, but if eligible, >20.0%.
+5.  **Write a Concise Summary:**
+    *   In the 'summary' field, provide a brief, user-friendly explanation of the result. For example: "Based on your desired DTI of {{desiredDtiRatio}}%, you have a remaining repayment capacity of [Repayment Capacity amount]. With your specified interest rate and tenure, this makes you eligible for a loan of approximately [Eligible Loan Amount]."
 
-5.  **Write a Detailed, Justified Summary:** Your summary must clearly explain *why* you arrived at your calculated 'eligibleLoanAmount'. For example: "Based on your consistent on-time payments and a determined safe DTI of 55%, we calculated you can manage an additional EMI of ₹{{repaymentCapacity}}. This makes you eligible for a loan of approximately ₹{{eligibleLoanAmount}}." OR "Although your income is high, your data shows a high credit utilization of 90% and a recent late payment. This reduced your safe DTI to 40% and limits your repayment capacity to ₹{{repaymentCapacity}}, resulting in a lower eligible amount of ₹{{eligibleLoanAmount}}."
-
-6.  **Generate Actionable, Non-Generic Suggestions:** Based on your deep analysis of the structured data, provide specific suggestions.
-    *   **Guarantor Loans:** If you find loans where ownership is 'Guarantor' and the loan is in good standing, suggest: "You are a guarantor for a loan. If the primary borrower is making payments, you can provide their bank statements to the lender to potentially exclude this EMI from your debt calculations, increasing your eligibility."
-    *   **Loans Nearing Closure:** Scan the \`allAccounts\` for any loans that will be fully paid off in the next 3-6 months. Suggest waiting until that account is closed to increase repayment capacity.
-    *   **High Utilization Credit Cards:** If any credit card has utilization over 50%, suggest paying it down.
-    *   **IMPORTANT RULE:** If, after a thorough analysis, you find NO clear, actionable opportunities in the data, the \`suggestionsToIncreaseEligibility\` array should contain ONLY ONE string: "Based on your current profile, the best approach is to continue maintaining a good payment history." Do NOT provide generic advice.
-
-Generate the final, structured output based on this deep analysis.
+Generate the final, structured output based on these precise calculations.
 `,
 });
 
