@@ -17,6 +17,17 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import type { AnalyzeCreditReportOutput, AccountDetail } from './credit-report-analysis';
 
+// Helper to get the correct EMI value, prioritizing manual edits
+const getEmiValue = (acc: AccountDetail | any): number => {
+    if (acc.manualEmi !== undefined && acc.manualEmi !== null) {
+        return acc.manualEmi;
+    }
+    const emiString = String(acc.emi ?? '0');
+    const parsedEmi = Number(emiString.replace(/[^0-9.]+/g, ""));
+    return isNaN(parsedEmi) ? 0 : parsedEmi;
+};
+
+
 const RiskAssessmentInputSchema = z.object({
   analysisResult: z
     .any()
@@ -95,7 +106,7 @@ const prompt = ai.definePrompt({
       lgdExplanation: RiskAssessmentOutputSchema.shape.lgdExplanation,
       elExplanation: RiskAssessmentOutputSchema.shape.elExplanation,
   })},
-  prompt: `You are an expert credit risk analyst. Your task is to provide a qualitative analysis based on pre-calculated financial metrics and structured credit data. Do NOT perform any calculations yourself. The calculations have been done for you.
+  prompt: `You are an expert credit risk analyst. Your task is to provide a qualitative analysis based on pre-calculated financial metrics and a user-customized, pre-filtered set of credit data. Do NOT perform any calculations yourself. The calculations have been done for you based on the user's explicit choices.
 
 **CRITICAL INSTRUCTIONS:**
 1.  **ANALYZE ONLY:** Your ONLY job is to analyze the provided data and generate the qualitative outputs: risk score, risk factors, mitigations, and explanations.
@@ -104,7 +115,8 @@ const prompt = ai.definePrompt({
     *   **Loss Given Default (LGD):** {{{preCalculatedLgd}}}%
     *   **Exposure at Default (EAD):** ₹{{{preCalculatedEad}}}
 
-**Structured Credit Report Data (Source of Truth):**
+**User-Customized & Pre-Filtered Credit Report Data (Source of Truth):**
+This data represents ONLY the accounts the user has chosen to include in the analysis. Your entire analysis must be based SOLELY on this provided information.
 \`\`\`json
 {{{json analysisResult}}}
 \`\`\`
@@ -133,8 +145,10 @@ const riskAssessmentFlow = ai.defineFlow(
   async (input: RiskAssessmentInput) => {
     
     // =================================================================
-    // STEP 1: Perform deterministic calculations in code.
+    // STEP 1: Perform deterministic calculations based on USER EDITS.
     // =================================================================
+    
+    // CRITICAL: Filter to only include accounts the user has explicitly marked as "isConsidered".
     const consideredAccounts = input.analysisResult.allAccounts.filter(acc => (acc as any).isConsidered);
     
     // --- EAD Calculation ---
@@ -192,8 +206,15 @@ const riskAssessmentFlow = ai.defineFlow(
     // =================================================================
     // STEP 2: Call the AI with pre-calculated data for analysis.
     // =================================================================
+    
+    // Create a lean analysis object containing only the considered accounts for the AI
+    const customizedAnalysisForAI = {
+        ...input.analysisResult,
+        allAccounts: consideredAccounts, // Pass only the filtered accounts
+    };
+
     const {output, usage} = await prompt({
-        analysisResult: input.analysisResult,
+        analysisResult: customizedAnalysisForAI,
         preCalculatedEad: calculatedEad,
         preCalculatedPd: calculatedPd,
         preCalculatedLgd: calculatedLgd,
@@ -224,3 +245,5 @@ const riskAssessmentFlow = ai.defineFlow(
     return finalOutput;
   }
 );
+
+    
