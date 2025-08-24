@@ -6,7 +6,7 @@ import { ArrowLeft, Loader2, ShieldAlert, Zap, GitCommit, ShieldCheck, ShieldClo
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "./ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { getRiskAssessment, RiskAssessmentOutput } from "@/ai/flows/risk-assessment";
+import { getRiskAssessment, RiskAssessmentOutput, SingleRiskAssessment } from "@/ai/flows/risk-assessment";
 import type { AnalyzeCreditReportOutput } from "@/ai/flows/credit-report-analysis";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
@@ -22,7 +22,7 @@ interface RiskAssessmentViewProps {
   onBack: () => void;
 }
 
-const getRiskLevelStyles = (level: string) => {
+const getRiskLevelStyles = (level: string = '') => {
     const l = level.toLowerCase();
     if (l === 'low') return { text: 'text-green-500', bg: 'bg-green-500' };
     if (l === 'medium') return { text: 'text-yellow-500', bg: 'bg-yellow-500' };
@@ -38,7 +38,7 @@ const getSeverityBadge = (severity: 'Low' | 'Medium' | 'High') => {
     return <Badge variant="outline">{severity}</Badge>;
 }
 
-const AssessmentColumn = ({ assessment, title, isLoading }: { assessment: RiskAssessmentOutput | null, title: string, isLoading: boolean }) => {
+const AssessmentColumn = ({ assessment, title, isLoading }: { assessment: SingleRiskAssessment | null, title: string, isLoading: boolean }) => {
     if (isLoading) {
         return (
              <div>
@@ -111,7 +111,14 @@ const AssessmentColumn = ({ assessment, title, isLoading }: { assessment: RiskAs
                     <AccordionItem value="item-1">
                         <AccordionTrigger className="text-sm font-semibold">Financial Metrics</AccordionTrigger>
                         <AccordionContent className="text-xs space-y-2 pt-2">
-                            <div className="flex justify-between p-2 rounded bg-muted/50"><span>Probability of Default (PD)</span> <strong>{assessment.probabilityOfDefault}%</strong></div>
+                             <div className="flex justify-between p-2 rounded bg-muted/50"><span>Probability of Default (PD)</span> <strong>{assessment.probabilityOfDefault}%</strong></div>
+                            <Alert className="mt-2">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertTitle className="text-xs">PD Explanation</AlertTitle>
+                                <AlertDescription className="text-xs">
+                                    {assessment.defaultProbabilityExplanation}
+                                </AlertDescription>
+                            </Alert>
                             <div className="flex justify-between p-2 rounded bg-muted/50"><span>Loss Given Default (LGD)</span> <strong>{assessment.lossGivenDefault}%</strong></div>
                             <div className="flex justify-between p-2 rounded bg-muted/50"><span>Exposure at Default (EAD)</span> <strong>₹{assessment.exposureAtDefault.toLocaleString('en-IN')}</strong></div>
                             <div className="flex justify-between p-2 rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300"><span>Expected Loss (EL)</span> <strong>₹{assessment.expectedLoss.toLocaleString('en-IN')}</strong></div>
@@ -236,15 +243,17 @@ export function RiskAssessmentView({ originalAnalysisResult, customizedAnalysisR
             </CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-              <AssessmentColumn assessment={actualAssessment} title="Actual AI Risk" isLoading={isLoading.actual} />
-              <AssessmentColumn assessment={customizedAssessment} title="Customized AI Risk" isLoading={isLoading.customized} />
+              <AssessmentColumn assessment={actualAssessment ? actualAssessment.assessmentWithGuarantor : null} title="With Guarantor Loans" isLoading={isLoading.actual} />
+              <AssessmentColumn assessment={customizedAssessment ? customizedAssessment.assessmentWithGuarantor : null} title="Customized: With Guarantor" isLoading={isLoading.customized} />
+              <AssessmentColumn assessment={actualAssessment ? actualAssessment.assessmentWithoutGuarantor : null} title="Without Guarantor Loans" isLoading={isLoading.actual} />
+              <AssessmentColumn assessment={customizedAssessment ? customizedAssessment.assessmentWithoutGuarantor : null} title="Customized: Without Guarantor" isLoading={isLoading.customized} />
           </CardContent>
            <CardFooter>
               <Alert>
                   <Replace className="h-4 w-4" />
-                  <AlertTitle>Why two assessments?</AlertTitle>
+                  <AlertTitle>Why four assessments?</AlertTitle>
                   <AlertDescription>
-                     This view allows you to perform powerful "what-if" analysis. By comparing the 'Actual Risk' from the original report to the 'Customized Risk' based on your edits, you can instantly see how changes like excluding loans or correcting EMIs impact the overall risk profile.
+                     This view allows for powerful "what-if" analysis. By comparing the risk with and without guarantor loans, and then comparing the original report data to your customized edits, you can see exactly how different factors and changes impact the overall risk profile.
                   </AlertDescription>
               </Alert>
           </CardFooter>
