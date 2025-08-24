@@ -14,6 +14,7 @@ import { CreditAnalysisLanding } from '@/components/CreditAnalysisLanding';
 import { AiRatingView } from '@/components/AiRatingView';
 import { FinancialsView } from '@/components/FinancialsView';
 import { updateReportAction } from '@/app/actions';
+import { getRiskAssessment, RiskAssessmentOutput } from '@/ai/flows/risk-assessment';
 
 export default function ReportDetailPage({ params }: { params: { reportId: string } }) {
   const [report, setReport] = useState<CreditReportSummary | null>(null);
@@ -27,6 +28,9 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
 
   // This is the single source of truth for the analysis data
   const [editableAnalysisResult, setEditableAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(null);
+  const [riskAssessmentResult, setRiskAssessmentResult] = useState<RiskAssessmentOutput | null>(null);
+  const [isAssessingRisk, setIsAssessingRisk] = useState(true);
+
 
   useEffect(() => {
     const initialView = searchParams.get('view');
@@ -71,6 +75,31 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
     fetchReport();
   }, [params.reportId, router, toast]);
   
+  // This effect will re-run the risk assessment whenever the editable analysis result changes.
+  useEffect(() => {
+    if (editableAnalysisResult) {
+      const runRiskAssessment = async () => {
+        setIsAssessingRisk(true);
+        try {
+          const riskResult = await getRiskAssessment({ analysisResult: editableAnalysisResult });
+          setRiskAssessmentResult(riskResult);
+        } catch (error) {
+          console.error("Failed to re-run risk assessment:", error);
+          toast({
+            variant: "destructive",
+            title: "Risk Assessment Failed",
+            description: "Could not update the AI risk score after your changes.",
+          });
+          setRiskAssessmentResult(null);
+        } finally {
+          setIsAssessingRisk(false);
+        }
+      };
+      runRiskAssessment();
+    }
+  }, [editableAnalysisResult, toast]);
+
+  
   const handleBack = () => {
     setActiveView(null);
     // Remove the view query param from URL
@@ -92,7 +121,7 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
       await updateReportAction(params.reportId, editableAnalysisResult);
       toast({
         title: "Changes Saved",
-        description: "Your edits have been saved to the database.",
+        description: "Your edits have been saved and the risk score has been updated.",
       });
       setHasChanges(false);
     } catch (error: any) {
@@ -173,6 +202,8 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
         <main className="container mx-auto p-4 md:p-8 space-y-6">
             <CreditAnalysisLanding 
                 analysisResult={editableAnalysisResult} 
+                riskAssessmentResult={riskAssessmentResult}
+                isLoading={isAssessingRisk}
                 onSelectView={handleSelectView}
                 headerAction={
                     hasChanges && (
