@@ -78,7 +78,7 @@ const prompt = ai.definePrompt({
     *   Formula: P = EMI * [ (1 - (1 + r)^-n) / r ] (where r is monthly interest rate, n is tenure)
 4.  **Calculate Post-Loan FOIR:**
     *   Formula: ((Total Existing EMI + Repayment Capacity + Monthly Fixed Obligations) / Monthly Income) * 100
-5.  **Write Summary:** Provide a summary explaining the result. CRITICALLY, you must comment on the final 'postLoanFoir' and its implications (e.g., "This would result in a high FOIR of X%, which may be outside lending limits.").
+5.  **Write Summary:** Provide a summary explaining the result. CRITICALLY, you must comment on the final 'postLoanFoir' and its implications (e.g., "Based on your desired {{desiredDtiRatio}}% DTI ratio, you could potentially borrow up to ₹X,XXX,XXX. However, this would result in a very high post-loan FOIR of Y.YY%, significantly exceeding typical lending limits. Lenders are very unlikely to approve a loan at this level.").
 6.  **Store Results:** Populate all fields for the 'asPerUserNeeds' output object.
 7.  **Create Calculation Breakdown Table:** Populate the 'calculationBreakdown' array with a step for each calculation in this section, showing the formula and result.
 
@@ -95,7 +95,7 @@ const prompt = ai.definePrompt({
 4.  **Calculate Post-Loan FOIR:**
     *   Formula: ((Total Existing EMI + Repayment Capacity + Monthly Fixed Obligations) / Monthly Income) * 100
     *   This should be 55% or lower if a loan is possible.
-5.  **Write Summary:** Provide a summary explaining this more conservative result. Mention this is a more realistic amount that lenders might approve and state the final post-loan FOIR.
+5.  **Write Summary:** Provide a summary explaining this more conservative result. Mention this is a more realistic amount that lenders might approve and state the final post-loan FOIR (e.g., "Based on a maximum 55% FOIR, you are eligible for a loan amount of approximately ₹X,XXX,XXX. This would result in a post-loan FOIR of Y.YY%, which is within the acceptable lending limits for most financial institutions. This is a more conservative estimate reflecting what lenders may approve.").
 6.  **Store Results:** Populate all fields for the 'asPerEligibility' output object.
 
 Generate the final, structured output containing both calculations.

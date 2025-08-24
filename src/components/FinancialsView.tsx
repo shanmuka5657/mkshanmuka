@@ -24,9 +24,9 @@ interface FinancialsViewProps {
 export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) {
   const [estimatedIncome, setEstimatedIncome] = useState('');
   const [fixedObligations, setFixedObligations] = useState('');
-  const [desiredDti, setDesiredDti] = useState('50');
-  const [interestRate, setInterestRate] = useState('12.5');
-  const [tenure, setTenure] = useState('48');
+  const [desiredDti, setDesiredDti] = useState('60');
+  const [interestRate, setInterestRate] = useState('23');
+  const [tenure, setTenure] = useState('60');
 
   const [isLoadingRisk, setIsLoadingRisk] = useState(false);
   const [isLoadingEligibility, setIsLoadingEligibility] = useState(false);
@@ -154,150 +154,148 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
       )}
 
       {financialRisk && (
-        <Card>
-            <CardHeader>
-                <CardTitle>Financial Risk Assessment Results</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <Alert className={cn(financialRisk.financialRiskRating === 'Low' && 'border-green-500', financialRisk.financialRiskRating === 'Medium' && 'border-yellow-500', financialRisk.financialRiskRating === 'High' && 'border-orange-500', financialRisk.financialRiskRating === 'Very High' && 'border-red-500')}>
-                    <CardTitle>Overall Financial Risk: {financialRisk.financialRiskRating}</CardTitle>
-                    <AlertDescription>{financialRisk.overallOutlook}</AlertDescription>
-                </Alert>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Card className="p-4">
-                        <CardDescription>DTI Ratio</CardDescription>
-                        <p className="text-2xl font-bold">{financialRisk.dtiAnalysis.dtiPercentage.toFixed(2)}%</p>
-                        <p className="text-xs text-muted-foreground mt-1">{financialRisk.dtiAnalysis.explanation}</p>
-                    </Card>
-                    <Card className="p-4">
-                        <CardDescription>FOIR</CardDescription>
-                        <p className="text-2xl font-bold">{financialRisk.foirAnalysis.foirPercentage.toFixed(2)}%</p>
-                        <p className="text-xs text-muted-foreground mt-1">{financialRisk.foirAnalysis.explanation}</p>
-                    </Card>
-                    <Card className="p-4">
-                        <CardDescription>Unsecured Debt Percentage</CardDescription>
-                        <p className="text-2xl font-bold">{financialRisk.debtComposition.unsecuredDebtPercentage.toFixed(2)}%</p>
-                        <p className="text-xs text-muted-foreground mt-1">{financialRisk.debtComposition.explanation}</p>
-                    </Card>
-                    <Card className="p-4">
-                        <CardDescription>Credit Utilization</CardDescription>
-                        <p className="text-2xl font-bold">{financialRisk.creditUtilizationAnalysis.overallUtilization}%</p>
-                        <p className="text-xs text-muted-foreground mt-1">{financialRisk.creditUtilizationAnalysis.explanation}</p>
-                    </Card>
-                </div>
-            </CardContent>
-        </Card>
-      )}
+        <div className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Financial Risk Assessment Results</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <Alert className={cn(financialRisk.financialRiskRating === 'Low' && 'border-green-500', financialRisk.financialRiskRating === 'Medium' && 'border-yellow-500', financialRisk.financialRiskRating === 'High' && 'border-orange-500', financialRisk.financialRiskRating === 'Very High' && 'border-red-500')}>
+                        <CardTitle>Overall Financial Risk: {financialRisk.financialRiskRating}</CardTitle>
+                        <AlertDescription className="mt-2">{financialRisk.overallOutlook}</AlertDescription>
+                    </Alert>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Card className="p-4 bg-muted/50">
+                            <CardDescription>DTI Ratio</CardDescription>
+                            <p className="text-2xl font-bold">{financialRisk.dtiAnalysis.dtiPercentage.toFixed(2)}%</p>
+                            <p className="text-xs text-muted-foreground mt-1">{financialRisk.dtiAnalysis.explanation}</p>
+                        </Card>
+                        <Card className="p-4 bg-muted/50">
+                            <CardDescription>FOIR</CardDescription>
+                            <p className="text-2xl font-bold">{financialRisk.foirAnalysis.foirPercentage.toFixed(2)}%</p>
+                            <p className="text-xs text-muted-foreground mt-1">{financialRisk.foirAnalysis.explanation}</p>
+                        </Card>
+                        <Card className="p-4 bg-muted/50">
+                            <CardDescription>Unsecured Debt Percentage</CardDescription>
+                            <p className="text-2xl font-bold">{financialRisk.debtComposition.unsecuredDebtPercentage.toFixed(2)}%</p>
+                            <p className="text-xs text-muted-foreground mt-1">{financialRisk.debtComposition.explanation}</p>
+                        </Card>
+                        <Card className="p-4 bg-muted/50">
+                            <CardDescription>Credit Utilization</CardDescription>
+                            <p className="text-2xl font-bold">{financialRisk.creditUtilizationAnalysis.overallUtilization}%</p>
+                            <p className="text-xs text-muted-foreground mt-1">{financialRisk.creditUtilizationAnalysis.explanation}</p>
+                        </Card>
+                    </div>
+                </CardContent>
+            </Card>
 
-      {financialRisk && (
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Calculator />Loan Eligibility Calculator</CardTitle>
-                <CardDescription>Adjust the parameters below to calculate potential loan eligibility.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                    <div className="space-y-2">
-                        <Label htmlFor="dti">Desired DTI Ratio (%)</Label>
-                        <Input id="dti" type="number" placeholder="50" value={desiredDti} onChange={e => setDesiredDti(e.target.value)} />
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Calculator />Loan Eligibility Calculator</CardTitle>
+                    <CardDescription>Adjust the parameters below to calculate potential loan eligibility.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                        <div className="space-y-2">
+                            <Label htmlFor="dti">Desired DTI Ratio (%)</Label>
+                            <Input id="dti" type="number" placeholder="50" value={desiredDti} onChange={e => setDesiredDti(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="interest">Interest Rate (%)</Label>
+                            <Input id="interest" type="number" placeholder="12.5" value={interestRate} onChange={e => setInterestRate(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="tenure">Tenure (Months)</Label>
+                            <Input id="tenure" type="number" placeholder="48" value={tenure} onChange={e => setTenure(e.target.value)} />
+                        </div>
+                        <Button onClick={handleRunLoanEligibility} disabled={isLoadingEligibility}>
+                            {isLoadingEligibility ? <Loader2 className="mr-2 animate-spin" /> : <Calculator className="mr-2" />}
+                            Calculate Eligibility
+                        </Button>
                     </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="interest">Interest Rate (%)</Label>
-                        <Input id="interest" type="number" placeholder="12.5" value={interestRate} onChange={e => setInterestRate(e.target.value)} />
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="tenure">Tenure (Months)</Label>
-                        <Input id="tenure" type="number" placeholder="48" value={tenure} onChange={e => setTenure(e.target.value)} />
-                    </div>
-                    <Button onClick={handleRunLoanEligibility} disabled={isLoadingEligibility}>
-                        {isLoadingEligibility ? <Loader2 className="mr-2 animate-spin" /> : <Calculator className="mr-2" />}
-                        Calculate Eligibility
-                    </Button>
-                </div>
-            </CardContent>
-            {isLoadingEligibility && (
-                 <CardContent className="pt-6 text-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
-                    <p className="text-muted-foreground">AI is calculating loan eligibility scenarios...</p>
                 </CardContent>
-            )}
-            {loanEligibility && (
-                <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* As Per User Needs Column */}
-                        <Card className="p-4 border-primary">
-                            <CardHeader className="p-2">
-                                <CardTitle>As Per User Needs</CardTitle>
-                                <CardDescription>Based on your desired DTI of {desiredDti}%.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="p-2 space-y-2">
-                                <p className="text-3xl font-bold text-primary">₹{loanEligibility.asPerUserNeeds.eligibleLoanAmount.toLocaleString('en-IN')}</p>
-                                <Alert>
-                                    <Calculator className="h-4 w-4" />
-                                    <AlertTitle>Summary</AlertTitle>
-                                    <AlertDescription>
-                                        {loanEligibility.asPerUserNeeds.summary}
-                                    </AlertDescription>
-                                </Alert>
-                            </CardContent>
-                        </Card>
-                         {/* As Per Eligibility Column */}
-                        <Card className="p-4 border-green-500">
-                             <CardHeader className="p-2">
-                                <CardTitle>As Per Eligibility</CardTitle>
-                                <CardDescription>Based on a maximum 55% FOIR.</CardDescription>
-                            </CardHeader>
-                             <CardContent className="p-2 space-y-2">
-                                <p className="text-3xl font-bold text-green-500">₹{loanEligibility.asPerEligibility.eligibleLoanAmount.toLocaleString('en-IN')}</p>
-                                <div className="flex items-center gap-2 text-sm p-2 bg-green-50 dark:bg-green-900/10 rounded-md">
-                                    <ShieldCheck className="h-5 w-5 text-green-600"/>
-                                    <div>
-                                        <span className="font-semibold text-green-800 dark:text-green-300">Post-Loan FOIR:</span>
-                                        <span className="ml-1 font-bold text-green-600">{loanEligibility.asPerEligibility.postLoanFoir.toFixed(2)}%</span>
+                {isLoadingEligibility && (
+                    <CardContent className="pt-6 text-center">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
+                        <p className="text-muted-foreground">AI is calculating loan eligibility scenarios...</p>
+                    </CardContent>
+                )}
+                {loanEligibility && (
+                    <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* As Per User Needs Column */}
+                            <Card className="p-4 border-primary/50">
+                                <CardHeader className="p-2">
+                                    <CardTitle>As Per User Needs</CardTitle>
+                                    <CardDescription>Based on your desired DTI of {desiredDti}%.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="p-2 space-y-2">
+                                    <p className="text-3xl font-bold text-primary">₹{loanEligibility.asPerUserNeeds.eligibleLoanAmount.toLocaleString('en-IN')}</p>
+                                    <Alert>
+                                        <CardTitle className="text-sm">Summary</CardTitle>
+                                        <AlertDescription className="text-xs">
+                                            {loanEligibility.asPerUserNeeds.summary}
+                                        </AlertDescription>
+                                    </Alert>
+                                </CardContent>
+                            </Card>
+                            {/* As Per Eligibility Column */}
+                            <Card className="p-4 border-2 border-green-500">
+                                <CardHeader className="p-2">
+                                    <CardTitle>As Per Eligibility</CardTitle>
+                                    <CardDescription>Based on a maximum 55% FOIR.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="p-2 space-y-2">
+                                    <p className="text-3xl font-bold text-green-500">₹{loanEligibility.asPerEligibility.eligibleLoanAmount.toLocaleString('en-IN')}</p>
+                                    <div className="flex items-center gap-2 text-sm p-2 bg-green-50 dark:bg-green-900/10 rounded-md">
+                                        <ShieldCheck className="h-5 w-5 text-green-600"/>
+                                        <div>
+                                            <span className="font-semibold text-green-800 dark:text-green-300">Post-Loan FOIR:</span>
+                                            <span className="ml-1 font-bold text-green-600">{loanEligibility.asPerEligibility.postLoanFoir.toFixed(2)}%</span>
+                                        </div>
                                     </div>
-                                </div>
-                                <Alert>
-                                    <Calculator className="h-4 w-4" />
-                                    <AlertTitle>Summary</AlertTitle>
-                                    <AlertDescription>
-                                        {loanEligibility.asPerEligibility.summary}
-                                    </AlertDescription>
-                                </Alert>
-                             </CardContent>
-                        </Card>
-                    </div>
-                    <Accordion type="single" collapsible className="w-full mt-4">
-                        <AccordionItem value="item-1">
-                            <AccordionTrigger>
-                                <div className="flex items-center gap-2 font-semibold">
-                                    Show Calculation Details
-                                </div>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Step</TableHead>
-                                            <TableHead>Calculation</TableHead>
-                                            <TableHead className="text-right">Value</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {loanEligibility.calculationBreakdown.map((row) => (
-                                            <TableRow key={row.step}>
-                                                <TableCell className="font-medium">{row.step}</TableCell>
-                                                <TableCell className="text-muted-foreground text-xs">{row.calculation}</TableCell>
-                                                <TableCell className="text-right font-semibold">{row.value}</TableCell>
+                                    <Alert>
+                                        <CardTitle className="text-sm">Summary</CardTitle>
+                                        <AlertDescription className="text-xs">
+                                            {loanEligibility.asPerEligibility.summary}
+                                        </AlertDescription>
+                                    </Alert>
+                                </CardContent>
+                            </Card>
+                        </div>
+                        <Accordion type="single" collapsible className="w-full mt-4">
+                            <AccordionItem value="item-1">
+                                <AccordionTrigger>
+                                    <div className="flex items-center gap-2 font-semibold">
+                                        Show Calculation Details
+                                    </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Step</TableHead>
+                                                <TableHead>Calculation</TableHead>
+                                                <TableHead className="text-right">Value</TableHead>
                                             </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </AccordionContent>
-                        </AccordionItem>
-                    </Accordion>
-                </CardContent>
-            )}
-        </Card>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {loanEligibility.calculationBreakdown.map((row) => (
+                                                <TableRow key={row.step}>
+                                                    <TableCell className="font-medium">{row.step}</TableCell>
+                                                    <TableCell className="text-muted-foreground text-xs">{row.calculation}</TableCell>
+                                                    <TableCell className="text-right font-semibold">{row.value}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </AccordionContent>
+                            </AccordionItem>
+                        </Accordion>
+                    </CardContent>
+                )}
+            </Card>
+        </div>
       )}
     </div>
   );
