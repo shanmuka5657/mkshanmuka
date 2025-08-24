@@ -76,8 +76,14 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
 
   const handleRunLoanEligibility = async () => {
     const income = Number(estimatedIncome);
+    const obligations = Number(fixedObligations);
+
     if (!income || income <= 0) {
       toast({ variant: 'destructive', title: 'Invalid Income', description: 'Please enter a monthly income first.' });
+      return;
+    }
+     if (isNaN(obligations) || obligations < 0) {
+      toast({ variant: 'destructive', title: 'Invalid Obligations', description: 'Please enter valid fixed obligations.' });
       return;
     }
     
@@ -88,6 +94,7 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
         const result = await getLoanEligibility({
             monthlyIncome: income,
             totalMonthlyEMI: analysisResult.emiDetails.totalEmi,
+            monthlyFixedObligations: obligations,
             desiredDtiRatio: Number(desiredDti),
             interestRate: Number(interestRate),
             tenureMonths: Number(tenure),
