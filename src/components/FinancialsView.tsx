@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useState } from "react";
-import { ArrowLeft, Loader2, Landmark, Calculator, Sparkles, ChevronDown } from "lucide-react";
+import { ArrowLeft, Loader2, Landmark, Calculator, Sparkles, ChevronDown, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -231,9 +230,9 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
                                 <CardTitle>As Per User Needs</CardTitle>
                                 <CardDescription>Based on your desired DTI of {desiredDti}%.</CardDescription>
                             </CardHeader>
-                            <CardContent className="p-2">
+                            <CardContent className="p-2 space-y-2">
                                 <p className="text-3xl font-bold text-primary">₹{loanEligibility.asPerUserNeeds.eligibleLoanAmount.toLocaleString('en-IN')}</p>
-                                <Alert className="mt-2">
+                                <Alert>
                                     <Calculator className="h-4 w-4" />
                                     <AlertTitle>Summary</AlertTitle>
                                     <AlertDescription>
@@ -248,9 +247,16 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
                                 <CardTitle>As Per Eligibility</CardTitle>
                                 <CardDescription>Based on a maximum 55% FOIR.</CardDescription>
                             </CardHeader>
-                             <CardContent className="p-2">
+                             <CardContent className="p-2 space-y-2">
                                 <p className="text-3xl font-bold text-green-500">₹{loanEligibility.asPerEligibility.eligibleLoanAmount.toLocaleString('en-IN')}</p>
-                                <Alert className="mt-2">
+                                <div className="flex items-center gap-2 text-sm p-2 bg-green-50 dark:bg-green-900/10 rounded-md">
+                                    <ShieldCheck className="h-5 w-5 text-green-600"/>
+                                    <div>
+                                        <span className="font-semibold text-green-800 dark:text-green-300">Post-Loan FOIR:</span>
+                                        <span className="ml-1 font-bold text-green-600">{loanEligibility.asPerEligibility.postLoanFoir.toFixed(2)}%</span>
+                                    </div>
+                                </div>
+                                <Alert>
                                     <Calculator className="h-4 w-4" />
                                     <AlertTitle>Summary</AlertTitle>
                                     <AlertDescription>

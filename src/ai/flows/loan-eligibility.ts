@@ -32,7 +32,7 @@ const EligibilityResultSchema = z.object({
   eligibleLoanAmount: z.number().describe('The final, calculated loan amount in INR.'),
   repaymentCapacity: z.number().describe('The monthly amount the applicant can afford for a new EMI.'),
   postLoanFoir: z.number().describe('The calculated FOIR after taking on the new loan.'),
-  summary: z.string().describe('A comprehensive, user-friendly summary explaining the result and its implications.'),
+  summary: z.string().describe('A comprehensive, user-friendly summary explaining the result and its implications, including a comment on the final post-loan FOIR.'),
 });
 
 const LoanEligibilityOutputSchema = z.object({
@@ -78,7 +78,7 @@ const prompt = ai.definePrompt({
     *   Formula: P = EMI * [ (1 - (1 + r)^-n) / r ] (where r is monthly interest rate, n is tenure)
 4.  **Calculate Post-Loan FOIR:**
     *   Formula: ((Total Existing EMI + Repayment Capacity + Monthly Fixed Obligations) / Monthly Income) * 100
-5.  **Write Summary:** Provide a summary explaining the result based on the user's desired DTI.
+5.  **Write Summary:** Provide a summary explaining the result. CRITICALLY, you must comment on the final 'postLoanFoir' and its implications (e.g., "This would result in a high FOIR of X%, which may be outside lending limits.").
 6.  **Store Results:** Populate all fields for the 'asPerUserNeeds' output object.
 7.  **Create Calculation Breakdown Table:** Populate the 'calculationBreakdown' array with a step for each calculation in this section, showing the formula and result.
 
@@ -93,8 +93,9 @@ const prompt = ai.definePrompt({
 3.  **Calculate Eligible Loan Amount:**
     *   Use the standard loan principal formula with this new FOIR-based 'Repayment Capacity' as the EMI.
 4.  **Calculate Post-Loan FOIR:**
+    *   Formula: ((Total Existing EMI + Repayment Capacity + Monthly Fixed Obligations) / Monthly Income) * 100
     *   This should be 55% or lower if a loan is possible.
-5.  **Write Summary:** Provide a summary explaining the result based on the 55% FOIR constraint. Mention this is a more realistic amount that lenders might approve.
+5.  **Write Summary:** Provide a summary explaining this more conservative result. Mention this is a more realistic amount that lenders might approve and state the final post-loan FOIR.
 6.  **Store Results:** Populate all fields for the 'asPerEligibility' output object.
 
 Generate the final, structured output containing both calculations.
