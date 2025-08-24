@@ -48,8 +48,11 @@ const RiskAssessmentOutputSchema = z.object({
   defaultProbabilityExplanation: z.string().describe('A detailed, multi-sentence explanation of the factors that contributed to the probability of default calculation, citing specific data points like DPD history or high utilization.'),
   riskScoreExplanation: z.string().describe("A detailed, multi-sentence explanation of how the final risk score was determined, referencing the key factors and the weight given to each (e.g., 'The high risk score of 75 is primarily driven by the recent 90-day delinquency on the personal loan, which is the most heavily weighted factor...')."),
   exposureAtDefault: z.number().describe('The estimated total outstanding balance across all accounts if the user were to default, in INR.'),
+  eadExplanation: z.string().describe("A one-sentence explanation stating that EAD is the sum of outstanding balances for all active, considered accounts."),
   lossGivenDefault: z.number().describe('The estimated percentage of the Exposure at Default that would be lost if the user defaults (0-100).'),
+  lgdExplanation: z.string().describe("A detailed, multi-sentence explanation for the LGD percentage, referencing the mix of secured vs. unsecured debt in the considered accounts."),
   expectedLoss: z.number().describe('The final calculated Expected Loss (PD * LGD * EAD) in INR.'),
+  elExplanation: z.string().describe("A one-sentence explanation stating that EL is calculated by multiplying PD, EAD, and LGD, and what the final number represents."),
   usage: z.object({
       inputTokens: z.number().optional(),
       outputTokens: z.number().optional(),
@@ -89,11 +92,16 @@ const prompt = ai.definePrompt({
 3.  **Risk Factors:** List the top 3-4 most significant 'riskFactors' based *only* on the filtered data. Cite specific numbers in your details.
 4.  **Suggested Mitigations:** For each identified risk factor, provide a corresponding and actionable mitigation suggestion.
 5.  **Probability of Default (PD):** Estimate the 'probabilityOfDefault' (0-100%) for a new loan in the next 24 months based on the filtered data.
-6.  **Default Probability Explanation:** Clearly explain your reasoning for the PD score, referencing specific elements from the *filtered* report (e.g., "The PD is elevated due to recent late payments on the included Personal Loan...").
-7.  **Risk Score Explanation:** Provide a detailed explanation for how you arrived at the final 'riskScore'. Explain which factors carried the most weight in your decision (e.g., "The high risk score of 75 is primarily driven by the recent 90-day delinquency on the personal loan, which is the most heavily weighted factor, followed by the high credit utilization of 92% on the credit card.").
-8.  **Exposure at Default (EAD):** Calculate EAD by summing the 'outstanding' amounts of all *active and considered* loans/cards.
-9.  **Loss Given Default (LGD):** Estimate a blended 'lossGivenDefault' percentage (0-100) based on the mix of secured vs. unsecured debt in the *filtered data*. Unsecured debt should lead to a higher LGD.
-10. **Expected Loss (EL):** The final EL will be calculated in the calling code based on your PD, LGD, and EAD values. You do not need to calculate it here.
+6.  **Exposure at Default (EAD):** Calculate EAD by summing the 'outstanding' amounts of all *active and considered* loans/cards.
+7.  **Loss Given Default (LGD):** Estimate a blended 'lossGivenDefault' percentage (0-100) based on the mix of secured vs. unsecured debt in the *filtered data*. Unsecured debt should lead to a higher LGD.
+8.  **Expected Loss (EL):** The final EL will be calculated in the calling code based on your PD, LGD, and EAD values. You do not need to calculate it here.
+
+**Explanations (CRITICAL):**
+*   **riskScoreExplanation:** Provide a detailed explanation for how you arrived at the final 'riskScore'. Explain which factors carried the most weight.
+*   **defaultProbabilityExplanation:** Clearly explain your reasoning for the PD score, referencing specific elements from the *filtered* report.
+*   **eadExplanation:** Provide a simple, one-sentence explanation for EAD, stating it's the sum of outstanding balances for active, considered accounts.
+*   **lgdExplanation:** Provide a detailed explanation for the LGD percentage, specifically referencing the mix of secured vs. unsecured debt in the *filtered* accounts and how that impacts potential recovery.
+*   **elExplanation:** Provide a simple, one-sentence explanation for EL, stating that it's calculated from PD, EAD, and LGD, and represents the statistical financial loss a lender might expect.
 
 Generate the final, structured output for a single, unified assessment based *only* on the user's customizations.
 `,

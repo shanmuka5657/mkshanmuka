@@ -177,16 +177,37 @@ export function RiskAssessmentView({ customizedAnalysisResult, onBack }: RiskAss
                                 <AccordionContent className="space-y-4 pt-2">
                                     <Alert>
                                         <AlertCircle className="h-4 w-4" />
-                                        <AlertTitle className="text-xs">Risk Score Explanation</AlertTitle>
+                                        <AlertTitle className="text-xs">Risk Score</AlertTitle>
                                         <AlertDescription className="text-xs">
                                             {assessment.riskScoreExplanation}
                                         </AlertDescription>
                                     </Alert>
                                     <Alert>
                                         <AlertCircle className="h-4 w-4" />
-                                        <AlertTitle className="text-xs">Probability of Default Explanation</AlertTitle>
+                                        <AlertTitle className="text-xs">Probability of Default (PD)</AlertTitle>
                                         <AlertDescription className="text-xs">
                                             {assessment.defaultProbabilityExplanation}
+                                        </AlertDescription>
+                                    </Alert>
+                                     <Alert>
+                                        <AlertCircle className="h-4 w-4" />
+                                        <AlertTitle className="text-xs">Exposure at Default (EAD)</AlertTitle>
+                                        <AlertDescription className="text-xs">
+                                            {assessment.eadExplanation}
+                                        </AlertDescription>
+                                    </Alert>
+                                     <Alert>
+                                        <AlertCircle className="h-4 w-4" />
+                                        <AlertTitle className="text-xs">Loss Given Default (LGD)</AlertTitle>
+                                        <AlertDescription className="text-xs">
+                                            {assessment.lgdExplanation}
+                                        </AlertDescription>
+                                    </Alert>
+                                     <Alert>
+                                        <AlertCircle className="h-4 w-4" />
+                                        <AlertTitle className="text-xs">Expected Loss (EL)</AlertTitle>
+                                        <AlertDescription className="text-xs">
+                                            {assessment.elExplanation}
                                         </AlertDescription>
                                     </Alert>
                                 </AccordionContent>
