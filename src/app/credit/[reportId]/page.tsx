@@ -25,8 +25,6 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
 
   // This is the single source of truth for the analysis data
   const [editableAnalysisResult, setEditableAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(null);
-  // Store the original, unmodified analysis for comparison
-  const [originalAnalysisResult, setOriginalAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(null);
 
   useEffect(() => {
     const initialView = searchParams.get('view');
@@ -50,8 +48,6 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
           setReport(fetchedReport);
           // Initialize editable state with the fetched data
           setEditableAnalysisResult(fullAnalysis);
-          // Keep a clean copy of the original data
-          setOriginalAnalysisResult(JSON.parse(JSON.stringify(fullAnalysis))); // Deep copy
         } else {
           // This will trigger the not-found UI
           notFound();
@@ -81,13 +77,15 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
   
   const handleSaveAndNavigate = useCallback(async (updatedAnalysis: AnalyzeCreditReportOutput, targetView: string) => {
     try {
+        // CRITICAL: Update the state with the new data immediately
+        setEditableAnalysisResult(updatedAnalysis);
+
         await updateReportAction(params.reportId, updatedAnalysis);
         toast({
             title: "Changes Saved",
             description: "Your edits have been saved to the database.",
         });
-        // CRITICAL: Update the state with the successfully saved data before navigating
-        setEditableAnalysisResult(updatedAnalysis);
+
         setActiveView(targetView);
         router.replace(`/credit/${params.reportId}?view=${targetView}`, undefined);
     } catch (error: any) {
@@ -101,7 +99,6 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
 
   const handleAssessRisk = useCallback((updatedAnalysis: AnalyzeCreditReportOutput) => {
     // This function now saves the data and then navigates to the risk view.
-    setEditableAnalysisResult(updatedAnalysis); // Update state immediately for navigation
     handleSaveAndNavigate(updatedAnalysis, 'risk');
   }, [handleSaveAndNavigate]);
 
@@ -117,7 +114,7 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
     );
   }
 
-  if (!report || !editableAnalysisResult || !originalAnalysisResult) {
+  if (!report || !editableAnalysisResult) {
     return (
         <main className="flex flex-col justify-center items-center h-[calc(100vh-10rem)] text-center">
             <h2 className="text-2xl font-semibold mb-2">Report Not Found</h2>
@@ -143,8 +140,7 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
       return (
         <main className="container mx-auto p-4 md:p-8 space-y-6">
           <RiskAssessmentView 
-            originalAnalysisResult={originalAnalysisResult}
-            customizedAnalysisResult={editableAnalysisResult} 
+            analysisResult={editableAnalysisResult} 
             onBack={handleBack} />
         </main>
       );
