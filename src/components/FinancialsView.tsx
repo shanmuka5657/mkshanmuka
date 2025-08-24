@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useState } from "react";
-import { ArrowLeft, Loader2, Landmark, Calculator, Sparkles, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Loader2, Landmark, Calculator, Sparkles, ShieldCheck, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 
 interface FinancialsViewProps {
   analysisResult: AnalyzeCreditReportOutput;
@@ -169,6 +170,29 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
                         </Alert>
                     </CardContent>
                 </Card>
+                 <Accordion type="single" collapsible className="w-full max-w-md mx-auto mt-4">
+                    <AccordionItem value="item-1">
+                        <AccordionTrigger>Show Calculation Details</AccordionTrigger>
+                        <AccordionContent>
+                            <Table>
+                                <TableBody>
+                                    <TableRow>
+                                        <TableCell>Maximum Allowable Obligation (50% of Income)</TableCell>
+                                        <TableCell className="text-right font-medium">₹{loanEligibility.calculationDetails.maxAllowableObligation.toLocaleString('en-IN')}</TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                        <TableCell>Total Existing Obligations (EMI + Rent)</TableCell>
+                                        <TableCell className="text-right font-medium">₹{loanEligibility.calculationDetails.totalExistingObligations.toLocaleString('en-IN')}</TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                        <TableCell className="font-semibold">Repayment Capacity (New EMI)</TableCell>
+                                        <TableCell className="text-right font-bold text-green-500">₹{loanEligibility.calculationDetails.repaymentCapacity.toLocaleString('en-IN')}</TableCell>
+                                    </TableRow>
+                                </TableBody>
+                            </Table>
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
             </CardContent>
         </Card>
       )}
