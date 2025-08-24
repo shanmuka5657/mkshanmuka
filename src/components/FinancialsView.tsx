@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from "react";
@@ -232,7 +233,13 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
                             </CardHeader>
                             <CardContent className="p-2">
                                 <p className="text-3xl font-bold text-primary">₹{loanEligibility.asPerUserNeeds.eligibleLoanAmount.toLocaleString('en-IN')}</p>
-                                <p className="text-sm mt-2">{loanEligibility.asPerUserNeeds.summary}</p>
+                                <Alert className="mt-2">
+                                    <Calculator className="h-4 w-4" />
+                                    <AlertTitle>Summary</AlertTitle>
+                                    <AlertDescription>
+                                        {loanEligibility.asPerUserNeeds.summary}
+                                    </AlertDescription>
+                                </Alert>
                             </CardContent>
                         </Card>
                          {/* As Per Eligibility Column */}
@@ -243,8 +250,14 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
                             </CardHeader>
                              <CardContent className="p-2">
                                 <p className="text-3xl font-bold text-green-500">₹{loanEligibility.asPerEligibility.eligibleLoanAmount.toLocaleString('en-IN')}</p>
-                                <p className="text-sm mt-2">{loanEligibility.asPerEligibility.summary}</p>
-                            </CardContent>
+                                <Alert className="mt-2">
+                                    <Calculator className="h-4 w-4" />
+                                    <AlertTitle>Summary</AlertTitle>
+                                    <AlertDescription>
+                                        {loanEligibility.asPerEligibility.summary}
+                                    </AlertDescription>
+                                </Alert>
+                             </CardContent>
                         </Card>
                     </div>
                     <Accordion type="single" collapsible className="w-full mt-4">
