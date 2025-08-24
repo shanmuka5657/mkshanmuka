@@ -184,5 +184,3 @@ export function BankStatementView({ analysisResult, onBack }: BankStatementViewP
     </div>
   );
 }
-
-    
