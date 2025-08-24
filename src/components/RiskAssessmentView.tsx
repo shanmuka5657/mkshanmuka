@@ -6,7 +6,7 @@ import { ArrowLeft, Loader2, ShieldAlert, Download, AlertCircle } from "lucide-r
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "./ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { getRiskAssessment, RiskAssessmentOutput, SingleRiskAssessment } from "@/ai/flows/risk-assessment";
+import { getRiskAssessment, RiskAssessmentOutput } from "@/ai/flows/risk-assessment";
 import type { AnalyzeCreditReportOutput } from "@/ai/flows/credit-report-analysis";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
@@ -17,7 +17,6 @@ import html2canvas from 'html2canvas';
 import { PrintHeader } from './PrintHeader';
 
 interface RiskAssessmentViewProps {
-  // originalAnalysisResult is no longer needed
   customizedAnalysisResult: AnalyzeCreditReportOutput;
   onBack: () => void;
 }
@@ -36,74 +35,6 @@ const getSeverityBadge = (severity: 'Low' | 'Medium' | 'High') => {
     if (severity === 'Medium') return <Badge variant="secondary">Medium</Badge>;
     if (severity === 'High') return <Badge variant="destructive">High</Badge>;
     return <Badge variant="outline">{severity}</Badge>;
-}
-
-const AssessmentSection = ({ assessment, title }: { assessment: SingleRiskAssessment, title: string }) => {
-    const riskStyles = getRiskLevelStyles(assessment.riskLevel);
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>{title}</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-4">
-                    <Card className="text-center p-4">
-                        <CardDescription>AI Risk Level</CardDescription>
-                        <CardTitle className={cn("text-3xl font-bold my-1", riskStyles.text)}>{assessment.riskLevel}</CardTitle>
-                        <div className="flex items-center justify-center gap-2">
-                            <span className="text-sm text-muted-foreground">Score:</span>
-                            <span className="text-lg font-bold">{assessment.riskScore}/100</span>
-                        </div>
-                    </Card>
-                    <Accordion type="single" collapsible className="w-full">
-                        <AccordionItem value="item-1">
-                            <AccordionTrigger className="text-sm font-semibold">Financial Metrics</AccordionTrigger>
-                            <AccordionContent className="text-xs space-y-2 pt-2">
-                                <div className="flex justify-between p-2 rounded bg-muted/50"><span>Probability of Default (PD)</span> <strong>{assessment.probabilityOfDefault}%</strong></div>
-                                <Alert className="mt-2">
-                                    <AlertCircle className="h-4 w-4" />
-                                    <AlertTitle className="text-xs">PD Explanation</AlertTitle>
-                                    <AlertDescription className="text-xs">
-                                        {assessment.defaultProbabilityExplanation}
-                                    </AlertDescription>
-                                </Alert>
-                                <div className="flex justify-between p-2 rounded bg-muted/50"><span>Loss Given Default (LGD)</span> <strong>{assessment.lossGivenDefault}%</strong></div>
-                                <div className="flex justify-between p-2 rounded bg-muted/50"><span>Exposure at Default (EAD)</span> <strong>₹{assessment.exposureAtDefault.toLocaleString('en-IN')}</strong></div>
-                                <div className="flex justify-between p-2 rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300"><span>Expected Loss (EL)</span> <strong>₹{assessment.expectedLoss.toLocaleString('en-IN')}</strong></div>
-                            </AccordionContent>
-                        </AccordionItem>
-                    </Accordion>
-                </div>
-                 <div className="space-y-4">
-                     <div>
-                        <h4 className="font-semibold text-sm mb-2">Key Risk Factors</h4>
-                        <div className="space-y-2">
-                            {assessment.riskFactors.map((factor, index) => (
-                                <div key={index} className="text-xs p-2 bg-muted/50 rounded-md">
-                                    <div className="flex justify-between items-start">
-                                        <span className="font-semibold">{factor.factor}</span>
-                                        {getSeverityBadge(factor.severity)}
-                                    </div>
-                                    <p className="text-muted-foreground mt-1">{factor.details}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                    <div>
-                        <h4 className="font-semibold text-sm mb-2">Suggested Mitigations</h4>
-                        <div className="space-y-2">
-                            {assessment.suggestedMitigations.map((mitigation, index) => (
-                                <div key={index} className="text-xs p-2 border-l-2 border-green-500 bg-green-50 dark:bg-green-900/10 rounded-r-md">
-                                    <p className="font-semibold">{mitigation.factor}</p>
-                                    <p className="text-muted-foreground mt-1">{mitigation.action}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
-    )
 }
 
 export function RiskAssessmentView({ customizedAnalysisResult, onBack }: RiskAssessmentViewProps) {
@@ -185,6 +116,9 @@ export function RiskAssessmentView({ customizedAnalysisResult, onBack }: RiskAss
         toast({ title: "Download Ready!", description: "Your PDF has been downloaded." });
     };
 
+  const assessment = assessmentResult;
+  const riskStyles = getRiskLevelStyles(assessment?.riskLevel);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center no-print">
@@ -212,17 +146,70 @@ export function RiskAssessmentView({ customizedAnalysisResult, onBack }: RiskAss
              </Card>
         )}
 
-        {assessmentResult && !isLoading && (
-            <div className="space-y-8">
-                <AssessmentSection
-                    assessment={assessmentResult.assessmentWithGuarantor}
-                    title="Assessment With Guarantor Loans"
-                />
-                <AssessmentSection
-                    assessment={assessmentResult.assessmentWithoutGuarantor}
-                    title="Assessment Without Guarantor Loans"
-                />
-            </div>
+        {assessment && !isLoading && (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Final Risk Assessment</CardTitle>
+                    <CardDescription>A unified risk profile based on the accounts you've chosen to include in the analysis.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                        <Card className="text-center p-4">
+                            <CardDescription>AI Risk Level</CardDescription>
+                            <CardTitle className={cn("text-3xl font-bold my-1", riskStyles.text)}>{assessment.riskLevel}</CardTitle>
+                            <div className="flex items-center justify-center gap-2">
+                                <span className="text-sm text-muted-foreground">Score:</span>
+                                <span className="text-lg font-bold">{assessment.riskScore}/100</span>
+                            </div>
+                        </Card>
+                        <Accordion type="single" collapsible className="w-full" defaultValue="item-1">
+                            <AccordionItem value="item-1">
+                                <AccordionTrigger className="text-sm font-semibold">Financial Metrics</AccordionTrigger>
+                                <AccordionContent className="text-xs space-y-2 pt-2">
+                                    <div className="flex justify-between p-2 rounded bg-muted/50"><span>Probability of Default (PD)</span> <strong>{assessment.probabilityOfDefault}%</strong></div>
+                                    <Alert className="mt-2">
+                                        <AlertCircle className="h-4 w-4" />
+                                        <AlertTitle className="text-xs">PD Explanation</AlertTitle>
+                                        <AlertDescription className="text-xs">
+                                            {assessment.defaultProbabilityExplanation}
+                                        </AlertDescription>
+                                    </Alert>
+                                    <div className="flex justify-between p-2 rounded bg-muted/50"><span>Loss Given Default (LGD)</span> <strong>{assessment.lossGivenDefault}%</strong></div>
+                                    <div className="flex justify-between p-2 rounded bg-muted/50"><span>Exposure at Default (EAD)</span> <strong>₹{assessment.exposureAtDefault.toLocaleString('en-IN')}</strong></div>
+                                    <div className="flex justify-between p-2 rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300"><span>Expected Loss (EL)</span> <strong>₹{assessment.expectedLoss.toLocaleString('en-IN')}</strong></div>
+                                </AccordionContent>
+                            </AccordionItem>
+                        </Accordion>
+                    </div>
+                     <div className="space-y-4">
+                         <div>
+                            <h4 className="font-semibold text-sm mb-2">Key Risk Factors</h4>
+                            <div className="space-y-2">
+                                {assessment.riskFactors.map((factor, index) => (
+                                    <div key={index} className="text-xs p-2 bg-muted/50 rounded-md">
+                                        <div className="flex justify-between items-start">
+                                            <span className="font-semibold">{factor.factor}</span>
+                                            {getSeverityBadge(factor.severity)}
+                                        </div>
+                                        <p className="text-muted-foreground mt-1">{factor.details}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div>
+                            <h4 className="font-semibold text-sm mb-2">Suggested Mitigations</h4>
+                            <div className="space-y-2">
+                                {assessment.suggestedMitigations.map((mitigation, index) => (
+                                    <div key={index} className="text-xs p-2 border-l-2 border-green-500 bg-green-50 dark:bg-green-900/10 rounded-r-md">
+                                        <p className="font-semibold">{mitigation.factor}</p>
+                                        <p className="text-muted-foreground mt-1">{mitigation.action}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
         )}
       </div>
     </div>

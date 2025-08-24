@@ -3,7 +3,7 @@
 
 /**
  * @fileOverview An AI agent that provides a technical risk assessment based on a credit report.
- * It now performs two separate analyses: one considering all accounts, and one excluding guarantor accounts.
+ * It performs a single, comprehensive analysis on the provided customized data.
  *
  * - getRiskAssessment - A function that returns a detailed risk assessment.
  * - RiskAssessmentInput - The input type for the getRiskAssessment function.
@@ -17,14 +17,14 @@ import type { AnalyzeCreditReportOutput } from './credit-report-analysis';
 const RiskAssessmentInputSchema = z.object({
   analysisResult: z
     .any()
-    .describe('The full, structured analysis from the initial credit report parsing flow.'),
+    .describe('The full, structured analysis from the initial credit report parsing flow, potentially with user edits.'),
 });
 export type RiskAssessmentInput = {
     analysisResult: AnalyzeCreditReportOutput;
 };
 
-// Defines the structure for a single, complete risk assessment
-const SingleRiskAssessmentSchema = z.object({
+// The main output schema now contains a single, unified assessment
+const RiskAssessmentOutputSchema = z.object({
   riskScore: z.number().min(0).max(100).describe('A technical risk score from 0 to 100, where 100 is the HIGHEST risk.'),
   riskLevel: z
     .enum(['Low', 'Medium', 'High', 'Very High'])
@@ -49,13 +49,6 @@ const SingleRiskAssessmentSchema = z.object({
   exposureAtDefault: z.number().describe('The estimated total outstanding balance across all accounts if the user were to default, in INR.'),
   lossGivenDefault: z.number().describe('The estimated percentage of the Exposure at Default that would be lost if the user defaults (0-100).'),
   expectedLoss: z.number().describe('The final calculated Expected Loss (PD * LGD * EAD) in INR.'),
-});
-export type SingleRiskAssessment = z.infer<typeof SingleRiskAssessmentSchema>;
-
-// The main output schema now contains two separate assessments
-const RiskAssessmentOutputSchema = z.object({
-  assessmentWithGuarantor: SingleRiskAssessmentSchema.describe("The risk assessment when considering ALL accounts, including those where the user is a guarantor."),
-  assessmentWithoutGuarantor: SingleRiskAssessmentSchema.describe("The risk assessment when EXCLUDING accounts where the user is only a guarantor."),
   usage: z.object({
       inputTokens: z.number().optional(),
       outputTokens: z.number().optional(),
@@ -76,39 +69,26 @@ const prompt = ai.definePrompt({
   model: 'googleai/gemini-1.5-flash',
   input: {schema: RiskAssessmentInputSchema},
   output: {schema: RiskAssessmentOutputSchema},
-  prompt: `You are an expert credit risk analyst. Your task is to conduct two separate, detailed, technical risk assessments based on the provided structured credit data.
+  prompt: `You are an expert credit risk analyst. Your task is to conduct a single, detailed, technical risk assessment based on the provided structured credit data. This data may have been manually edited by a user, so you must treat it as the absolute source of truth.
 
-**Structured Credit Report Data:**
+**Structured Credit Report Data (Source of Truth):**
 \`\`\`json
 {{{json analysisResult}}}
 \`\`\`
 
-**CRITICAL INSTRUCTIONS:**
+**Your Task:**
 
-You MUST perform two complete and independent analyses and return both in the final JSON output:
+1.  **Analyze the Data Holistically:** Analyze all accounts present in the \`analysisResult.allAccounts\` array. Do not perform any filtering unless specified by user edits within the data itself (e.g., an account marked as not considered).
+2.  **Risk Score & Level:** Generate a 'riskScore' (0-100, 100 is HIGHEST risk) and 'riskLevel' ('Low', 'Medium', 'High', 'Very High'). High delinquencies, written-off accounts, or high utilization must result in a significantly higher score.
+3.  **Risk Factors:** List the top 3-4 most significant 'riskFactors' based on the provided data. Cite specific numbers in your details.
+4.  **Suggested Mitigations:** For each identified risk factor, provide a corresponding and actionable mitigation suggestion.
+5.  **Probability of Default (PD):** Estimate the 'probabilityOfDefault' (0-100%) for a new loan in the next 24 months.
+6.  **Default Probability Explanation:** Clearly explain your reasoning for the PD score, referencing specific elements from the report (e.g., "The PD is elevated due to recent late payments...").
+7.  **Exposure at Default (EAD):** Calculate EAD by summing the 'outstanding' amounts of all active loans/cards.
+8.  **Loss Given Default (LGD):** Estimate a blended 'lossGivenDefault' percentage (0-100) based on the mix of secured vs. unsecured debt. Unsecured debt should lead to a higher LGD.
+9.  **Expected Loss (EL):** You will provide PD, LGD, and EAD values. The final EL will be calculated in the calling code.
 
-1.  **Assessment With Guarantor Loans:**
-    *   Analyze the user's credit data considering **ALL** accounts, including those where their ownership is listed as 'Guarantor'.
-    *   This analysis should reflect the total risk exposure, including contingent liabilities from guaranteed loans.
-    *   Populate every field in the 'assessmentWithGuarantor' object based on this holistic view.
-
-2.  **Assessment Without Guarantor Loans:**
-    *   Analyze the user's credit data again, but this time **EXCLUDE** all accounts where the ownership is 'Guarantor'.
-    *   This analysis should reflect the user's personal credit risk, independent of their guarantor obligations.
-    *   Populate every field in the 'assessmentWithoutGuarantor' object based on this filtered view.
-
-**For EACH of the two assessments, you must perform the following steps:**
-
-1.  **Risk Score & Level:** Generate a 'riskScore' (0-100, 100 is HIGHEST risk) and 'riskLevel' ('Low', 'Medium', 'High', 'Very High'). High delinquencies, written-off accounts, or high utilization must result in a significantly higher score.
-2.  **Risk Factors:** List the top 3-4 most significant 'riskFactors' based on the data for that specific scenario. Cite specific numbers in your details.
-3.  **Suggested Mitigations:** For each identified risk factor, provide a corresponding and actionable mitigation suggestion.
-4.  **Probability of Default (PD):** Estimate the 'probabilityOfDefault' (0-100%) for a new loan in the next 24 months based on the data for that scenario.
-5.  **Default Probability Explanation:** Clearly explain your reasoning for the PD score, referencing specific elements from the report (e.g., "The PD is elevated due to recent late payments...").
-6.  **Exposure at Default (EAD):** Calculate EAD by summing the 'outstanding' amounts of all active loans/cards included in that specific scenario.
-7.  **Loss Given Default (LGD):** Estimate a blended 'lossGivenDefault' percentage (0-100) based on the mix of secured vs. unsecured debt in the data for that specific scenario. Unsecured debt should lead to a higher LGD.
-8.  **Expected Loss (EL):** You will provide PD, LGD, and EAD values. The final EL will be calculated in the calling code.
-
-Generate the final, structured output containing both completed assessments.
+Generate the final, structured output for a single, unified assessment.
 `,
 });
 
@@ -124,16 +104,11 @@ const riskAssessmentFlow = ai.defineFlow(
       throw new Error("AI failed to provide a risk assessment.");
     }
     
-    // Calculate Expected Loss for both assessments
-    const calculateEL = (assessment: SingleRiskAssessment) => {
-        const pd = assessment.probabilityOfDefault / 100;
-        const lgd = assessment.lossGivenDefault / 100;
-        const ead = assessment.exposureAtDefault;
-        assessment.expectedLoss = Math.round(pd * lgd * ead);
-    };
-
-    calculateEL(output.assessmentWithGuarantor);
-    calculateEL(output.assessmentWithoutGuarantor);
+    // Calculate Expected Loss
+    const pd = output.probabilityOfDefault / 100;
+    const lgd = output.lossGivenDefault / 100;
+    const ead = output.exposureAtDefault;
+    output.expectedLoss = Math.round(pd * lgd * ead);
 
     output.usage = usage;
     
