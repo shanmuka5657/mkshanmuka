@@ -69,7 +69,12 @@ const prompt = ai.definePrompt({
   model: 'googleai/gemini-1.5-flash',
   input: {schema: RiskAssessmentInputSchema},
   output: {schema: RiskAssessmentOutputSchema},
-  prompt: `You are an expert credit risk analyst. Your task is to conduct a single, detailed, technical risk assessment based on the provided structured credit data. This data may have been manually edited by a user, so you must treat it as the absolute source of truth.
+  prompt: `You are an expert credit risk analyst. Your task is to conduct a single, detailed, technical risk assessment based on the provided structured credit data. This data has been manually edited by a user, and you MUST treat it as the absolute source of truth.
+
+**CRITICAL INSTRUCTIONS:**
+1.  **FILTER ACCOUNTS:** From the \`analysisResult.allAccounts\` array, you MUST first filter and use ONLY the accounts where the \`isConsidered\` flag is set to \`true\`. Completely IGNORE any account where \`isConsidered\` is \`false\`.
+2.  **USE MANUAL EMI:** When calculating total debt or obligations, if an account has a \`manualEmi\` value, you MUST use that value. Otherwise, use the standard \`emi\` value.
+3.  **BASE ALL ANALYSIS ON FILTERED DATA:** Your entire analysis, including risk score, risk factors, PD, EAD, LGD, and all explanations, MUST be based *only* on the filtered set of accounts. Do NOT reference any data from the excluded accounts in your explanations.
 
 **Structured Credit Report Data (Source of Truth):**
 \`\`\`json
@@ -78,17 +83,17 @@ const prompt = ai.definePrompt({
 
 **Your Task:**
 
-1.  **Analyze the Data Holistically:** Analyze all accounts present in the \`analysisResult.allAccounts\` array. Do not perform any filtering unless specified by user edits within the data itself (e.g., an account marked as not considered).
-2.  **Risk Score & Level:** Generate a 'riskScore' (0-100, 100 is HIGHEST risk) and 'riskLevel' ('Low', 'Medium', 'High', 'Very High'). High delinquencies, written-off accounts, or high utilization must result in a significantly higher score.
-3.  **Risk Factors:** List the top 3-4 most significant 'riskFactors' based on the provided data. Cite specific numbers in your details.
+1.  **Analyze the Filtered Data Holistically:** Apply the critical instructions above to analyze the user-customized dataset.
+2.  **Risk Score & Level:** Generate a 'riskScore' (0-100, 100 is HIGHEST risk) and 'riskLevel' ('Low', 'Medium', 'High', 'Very High'). High delinquencies, written-off accounts, or high utilization in the *filtered data* must result in a significantly higher score.
+3.  **Risk Factors:** List the top 3-4 most significant 'riskFactors' based *only* on the filtered data. Cite specific numbers in your details.
 4.  **Suggested Mitigations:** For each identified risk factor, provide a corresponding and actionable mitigation suggestion.
-5.  **Probability of Default (PD):** Estimate the 'probabilityOfDefault' (0-100%) for a new loan in the next 24 months.
-6.  **Default Probability Explanation:** Clearly explain your reasoning for the PD score, referencing specific elements from the report (e.g., "The PD is elevated due to recent late payments...").
-7.  **Exposure at Default (EAD):** Calculate EAD by summing the 'outstanding' amounts of all active loans/cards.
-8.  **Loss Given Default (LGD):** Estimate a blended 'lossGivenDefault' percentage (0-100) based on the mix of secured vs. unsecured debt. Unsecured debt should lead to a higher LGD.
+5.  **Probability of Default (PD):** Estimate the 'probabilityOfDefault' (0-100%) for a new loan in the next 24 months based on the filtered data.
+6.  **Default Probability Explanation:** Clearly explain your reasoning for the PD score, referencing specific elements from the *filtered* report (e.g., "The PD is elevated due to recent late payments on the included Personal Loan...").
+7.  **Exposure at Default (EAD):** Calculate EAD by summing the 'outstanding' amounts of all *active and considered* loans/cards.
+8.  **Loss Given Default (LGD):** Estimate a blended 'lossGivenDefault' percentage (0-100) based on the mix of secured vs. unsecured debt in the *filtered data*. Unsecured debt should lead to a higher LGD.
 9.  **Expected Loss (EL):** You will provide PD, LGD, and EAD values. The final EL will be calculated in the calling code.
 
-Generate the final, structured output for a single, unified assessment.
+Generate the final, structured output for a single, unified assessment based *only* on the user's customizations.
 `,
 });
 
