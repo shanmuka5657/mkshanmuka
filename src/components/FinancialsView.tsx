@@ -70,6 +70,7 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
       // Step 2: Run Post-Loan Financial Risk Assessment
       toast({ title: 'Step 2: Assessing Post-Loan Financial Risk...' });
       
+      // *** BUG FIX: Use the repayment capacity from the 'asPerEligibility' result for the post-loan analysis ***
       const newEmi = eligibilityResult.asPerEligibility.repaymentCapacity;
       const postLoanTotalEmi = analysisResult.emiDetails.totalEmi + newEmi;
 
@@ -165,6 +166,13 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
                         </CardHeader>
                         <CardContent className="p-2 space-y-2">
                             <p className="text-3xl font-bold text-primary">₹{loanEligibility.asPerUserNeeds.eligibleLoanAmount.toLocaleString('en-IN')}</p>
+                             <div className="flex items-center gap-2 text-sm p-2 bg-primary/10 rounded-md">
+                                <ShieldCheck className="h-5 w-5 text-primary"/>
+                                <div>
+                                    <span className="font-semibold text-primary/80">Post-Loan FOIR:</span>
+                                    <span className="ml-1 font-bold text-primary">{loanEligibility.asPerUserNeeds.postLoanFoir.toFixed(2)}%</span>
+                                </div>
+                            </div>
                             <Alert>
                                 <CardTitle className="text-sm">Summary</CardTitle>
                                 <AlertDescription className="text-xs">
@@ -269,3 +277,5 @@ export function FinancialsView({ analysisResult, onBack }: FinancialsViewProps) 
     </div>
   );
 }
+
+    
