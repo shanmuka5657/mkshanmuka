@@ -7,15 +7,7 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
-import { ArrowLeft, Download, InfoIcon, Shield, Loader2, MessageSquare, PlusCircle } from 'lucide-react';
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from "@/components/ui/chart";
-import { PieChart, Pie, Cell } from 'recharts';
+import { ArrowLeft, Download, InfoIcon, Shield, Loader2, MessageSquare, PlusCircle, Search } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -298,41 +290,6 @@ export function CreditSummaryView({ analysisResult, onBack, onAnalysisChange }: 
     }, [dpdFilter, activeAccounts, calculateBehaviorAnalysis, toast]);
 
 
-    const pieChartData = useMemo(() => {
-        const counts = {
-            Active: 0,
-            Closed: 0,
-            WrittenOff: 0,
-            Settled: 0,
-            Doubtful: 0
-        };
-
-        editedAccounts.forEach(acc => {
-            if (acc.status.toLowerCase().includes('active') || acc.status.toLowerCase().includes('open')) counts.Active++;
-            else if (acc.status.toLowerCase().includes('closed')) counts.Closed++;
-            else if (acc.status.toLowerCase().includes('written-off')) counts.WrittenOff++;
-            else if (acc.status.toLowerCase().includes('settled')) counts.Settled++;
-            else if (acc.status.toLowerCase().includes('doubtful')) counts.Doubtful++;
-        });
-
-        return [
-            { name: 'Active', value: counts.Active, fill: 'hsl(var(--chart-1))' },
-            { name: 'Closed', value: counts.Closed, fill: 'hsl(var(--chart-2))' },
-            { name: 'Written Off', value: counts.WrittenOff, fill: 'hsl(var(--chart-3))' },
-            { name: 'Settled', value: counts.Settled, fill: 'hsl(var(--chart-4))' },
-            { name: 'Doubtful', value: counts.Doubtful, fill: 'hsl(var(--chart-5))' },
-        ].filter(d => d.value > 0);
-    }, [editedAccounts]);
-
-    const chartConfig = {
-        value: { label: "Accounts" },
-        Active: { label: "Active", color: "hsl(var(--chart-1))" },
-        Closed: { label: "Closed", color: "hsl(var(--chart-2))" },
-        "Written Off": { label: "Written Off", color: "hsl(var(--chart-3))" },
-        Settled: { label: "Settled", color: "hsl(var(--chart-4))" },
-        Doubtful: { label: "Doubtful", color: "hsl(var(--chart-5))" },
-    } as const;
-
     const initiateChange = (index: number, updates: Partial<EnhancedAccountDetail>) => {
         const oldAccount = editedAccounts[index];
         
@@ -532,21 +489,20 @@ export function CreditSummaryView({ analysisResult, onBack, onAnalysisChange }: 
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Account Status Breakdown</CardTitle>
-                    <CardDescription>Distribution of your credit accounts by status.</CardDescription>
+                    <CardTitle className="flex items-center gap-2"><Search size={20} /> Enquiry Details</CardTitle>
+                    <CardDescription>Credit enquiries made by lenders.</CardDescription>
                 </CardHeader>
-                <CardContent className="flex justify-center items-center">
-                    <ChartContainer config={chartConfig} className="mx-auto aspect-square h-[200px]">
-                        <PieChart>
-                            <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
-                            <Pie data={pieChartData} dataKey="value" nameKey="name" innerRadius={50} paddingAngle={5}>
-                                 {pieChartData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                                ))}
-                            </Pie>
-                            <ChartLegend content={<ChartLegendContent nameKey="name" />} />
-                        </PieChart>
-                    </ChartContainer>
+                <CardContent className="space-y-3">
+                    <div className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
+                        <span className="font-semibold">Total Enquiries</span>
+                        <span className="text-2xl font-bold">{analysisResult.reportSummary.enquirySummary.total}</span>
+                    </div>
+                     <div className="text-sm space-y-2">
+                        <div className="flex justify-between"><span>Past 30 Days:</span> <strong>{analysisResult.reportSummary.enquirySummary.past30Days}</strong></div>
+                        <div className="flex justify-between"><span>Past 12 Months:</span> <strong>{analysisResult.reportSummary.enquirySummary.past12Months}</strong></div>
+                        <div className="flex justify-between"><span>Past 24 Months:</span> <strong>{analysisResult.reportSummary.enquirySummary.past24Months}</strong></div>
+                         <div className="flex justify-between pt-2 border-t"><span>Most Recent:</span> <strong>{analysisResult.reportSummary.enquirySummary.recentDate}</strong></div>
+                    </div>
                 </CardContent>
             </Card>
         </div>
