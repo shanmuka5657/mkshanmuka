@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Loader2, ShieldAlert, Zap, GitCommit, ShieldCheck, ShieldClose, HelpCircle, TrendingUp, TrendingDown, Download, Replace } from "lucide-react";
+import { ArrowLeft, Loader2, ShieldAlert, Zap, GitCommit, ShieldCheck, ShieldClose, HelpCircle, TrendingUp, TrendingDown, Download, Replace, AlertCircle } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "./ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -23,7 +23,7 @@ interface RiskAssessmentViewProps {
 }
 
 const getRiskLevelStyles = (level: string = '') => {
-    const l = level.toLowerCase();
+    const l = level ? level.toLowerCase() : '';
     if (l === 'low') return { text: 'text-green-500', bg: 'bg-green-500' };
     if (l === 'medium') return { text: 'text-yellow-500', bg: 'bg-yellow-500' };
     if (l === 'high') return { text: 'text-orange-500', bg: 'bg-orange-500' };
