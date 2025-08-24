@@ -14,3 +14,4 @@ import '@/ai/flows/verify-pdf.ts';
 import '@/ai/flows/ai-agent-chat.ts';
 import '@/ai/flows/text-to-speech.ts';
 import '@/ai/flows/summarize-payment-behavior.ts';
+import '@/ai/flows/post-loan-analysis.ts';
