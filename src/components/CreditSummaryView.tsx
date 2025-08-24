@@ -298,13 +298,31 @@ export function CreditSummaryView({ analysisResult, onBack, onAnalysisChange }: 
     }, [dpdFilter, activeAccounts, calculateBehaviorAnalysis, toast]);
 
 
-    const pieChartData = useMemo(() => [
-        { name: 'Active', value: Number(summaryData.active), fill: 'hsl(var(--chart-1))' },
-        { name: 'Closed', value: Number(summaryData.closed), fill: 'hsl(var(--chart-2))' },
-        { name: 'Written Off', value: Number(summaryData.writtenOff), fill: 'hsl(var(--chart-3))' },
-        { name: 'Settled', value: Number(summaryData.settled), fill: 'hsl(var(--chart-4))' },
-        { name: 'Doubtful', value: Number(summaryData.doubtful), fill: 'hsl(var(--chart-5))' },
-    ].filter(d => d.value > 0), [summaryData]);
+    const pieChartData = useMemo(() => {
+        const counts = {
+            Active: 0,
+            Closed: 0,
+            WrittenOff: 0,
+            Settled: 0,
+            Doubtful: 0
+        };
+
+        editedAccounts.forEach(acc => {
+            if (acc.status.toLowerCase().includes('active') || acc.status.toLowerCase().includes('open')) counts.Active++;
+            else if (acc.status.toLowerCase().includes('closed')) counts.Closed++;
+            else if (acc.status.toLowerCase().includes('written-off')) counts.WrittenOff++;
+            else if (acc.status.toLowerCase().includes('settled')) counts.Settled++;
+            else if (acc.status.toLowerCase().includes('doubtful')) counts.Doubtful++;
+        });
+
+        return [
+            { name: 'Active', value: counts.Active, fill: 'hsl(var(--chart-1))' },
+            { name: 'Closed', value: counts.Closed, fill: 'hsl(var(--chart-2))' },
+            { name: 'Written Off', value: counts.WrittenOff, fill: 'hsl(var(--chart-3))' },
+            { name: 'Settled', value: counts.Settled, fill: 'hsl(var(--chart-4))' },
+            { name: 'Doubtful', value: counts.Doubtful, fill: 'hsl(var(--chart-5))' },
+        ].filter(d => d.value > 0);
+    }, [editedAccounts]);
 
     const chartConfig = {
         value: { label: "Accounts" },
@@ -585,7 +603,7 @@ export function CreditSummaryView({ analysisResult, onBack, onAnalysisChange }: 
 
                     return (
                         <React.Fragment key={acc.type + index}>
-                            <TableRow className={!acc.isConsidered ? 'bg-muted/50' : ''}>
+                            <TableRow className={cn(!acc.isConsidered ? 'bg-gray-100 dark:bg-muted/50' : 'odd:bg-white even:bg-gray-50 dark:odd:bg-background dark:even:bg-muted/20')}>
                                 <TableCell className="text-center">{index + 1}</TableCell>
                                 <TableCell className="font-medium">
                                     <div className="font-semibold">{acc.type}</div>
@@ -647,7 +665,7 @@ export function CreditSummaryView({ analysisResult, onBack, onAnalysisChange }: 
                                     ) }
                                 </TableCell>
                             </TableRow>
-                            <TableRow className={!acc.isConsidered ? 'bg-muted/50' : ''}>
+                            <TableRow className={cn(!acc.isConsidered ? 'bg-gray-100 dark:bg-muted/50' : 'odd:bg-white even:bg-gray-50 dark:odd:bg-background dark:even:bg-muted/20')}>
                                 <TableCell colSpan={7} className="py-2 px-4">
                                    <div className="flex flex-col gap-2 p-2 bg-background/50 rounded-md">
                                         <div className="flex gap-1 flex-wrap">
@@ -707,3 +725,5 @@ export function CreditSummaryView({ analysisResult, onBack, onAnalysisChange }: 
     </>
   );
 }
+
+    
