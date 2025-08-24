@@ -4,6 +4,9 @@
 /**
  * @fileOverview An AI agent that provides a technical risk assessment based on a credit report.
  * It performs a single, comprehensive analysis on the provided customized data.
+ * All critical financial metrics (PD, LGD, EAD, EL) are calculated deterministically in code
+ * to ensure consistency and reliability. The AI's role is to provide qualitative analysis
+ * and explanations based on these pre-calculated metrics.
  *
  * - getRiskAssessment - A function that returns a detailed risk assessment.
  * - RiskAssessmentInput - The input type for the getRiskAssessment function.
@@ -12,14 +15,16 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type { AnalyzeCreditReportOutput } from './credit-report-analysis';
+import type { AnalyzeCreditReportOutput, AccountDetail } from './credit-report-analysis';
 
 const RiskAssessmentInputSchema = z.object({
   analysisResult: z
     .any()
     .describe('The full, structured analysis from the initial credit report parsing flow, potentially with user edits.'),
-  // We now pass the pre-calculated EAD to the prompt
-  preCalculatedEad: z.number().optional().describe('The pre-calculated Exposure at Default in INR.'),
+  // We now pass all pre-calculated metrics to the prompt for analysis
+  preCalculatedPd: z.number().describe('The pre-calculated Probability of Default as a percentage.'),
+  preCalculatedLgd: z.number().describe('The pre-calculated Loss Given Default as a percentage.'),
+  preCalculatedEad: z.number().describe('The pre-calculated Exposure at Default in INR.'),
 });
 export type RiskAssessmentInput = {
     analysisResult: AnalyzeCreditReportOutput;
@@ -73,30 +78,31 @@ export async function getRiskAssessment(
 const prompt = ai.definePrompt({
   name: 'riskAssessmentPrompt',
   model: 'googleai/gemini-1.5-flash',
-  input: {schema: RiskAssessmentInputSchema},
+  input: {schema: z.object({
+      analysisResult: z.any(),
+      preCalculatedPd: z.number(),
+      preCalculatedLgd: z.number(),
+      preCalculatedEad: z.number(),
+  })},
   output: {schema: z.object({
-      // The AI is no longer responsible for EAD or EL calculation.
       riskScore: RiskAssessmentOutputSchema.shape.riskScore,
       riskLevel: RiskAssessmentOutputSchema.shape.riskLevel,
       riskFactors: RiskAssessmentOutputSchema.shape.riskFactors,
       suggestedMitigations: RiskAssessmentOutputSchema.shape.suggestedMitigations,
-      probabilityOfDefault: RiskAssessmentOutputSchema.shape.probabilityOfDefault,
-      lossGivenDefault: RiskAssessmentOutputSchema.shape.lossGivenDefault,
-      // Explanations are still required.
       riskScoreExplanation: RiskAssessmentOutputSchema.shape.riskScoreExplanation,
       defaultProbabilityExplanation: RiskAssessmentOutputSchema.shape.defaultProbabilityExplanation,
       eadExplanation: RiskAssessmentOutputSchema.shape.eadExplanation,
       lgdExplanation: RiskAssessmentOutputSchema.shape.lgdExplanation,
       elExplanation: RiskAssessmentOutputSchema.shape.elExplanation,
   })},
-  prompt: `You are an expert credit risk analyst. Your task is to conduct a detailed, technical risk assessment based on the provided structured credit data. This data has been manually edited by a user, and you MUST treat it as the absolute source of truth.
+  prompt: `You are an expert credit risk analyst. Your task is to provide a qualitative analysis based on pre-calculated financial metrics and structured credit data. Do NOT perform any calculations yourself. The calculations have been done for you.
 
 **CRITICAL INSTRUCTIONS:**
-1.  **FILTER ACCOUNTS:** From the \`analysisResult.allAccounts\` array, you MUST first filter and use ONLY the accounts where the \`isConsidered\` flag is set to \`true\`. Completely IGNORE any account where \`isConsidered\` is \`false\`.
-2.  **USE MANUAL EMI:** When calculating total debt or obligations, if an account has a \`manualEmi\` value, you MUST use that value. Otherwise, use the standard \`emi\` value.
-3.  **BASE ALL ANALYSIS ON FILTERED DATA:** Your entire analysis, including risk score, risk factors, PD, LGD, and all explanations, MUST be based *only* on the filtered set of accounts. Do NOT reference any data from the excluded accounts in your explanations.
-4.  **DO NOT CALCULATE EAD:** The Exposure at Default (EAD) has been pre-calculated and is provided for your context. You must only provide an explanation for it.
-    *   **Pre-Calculated EAD:** ₹{{{preCalculatedEad}}}
+1.  **ANALYZE ONLY:** Your ONLY job is to analyze the provided data and generate the qualitative outputs: risk score, risk factors, mitigations, and explanations.
+2.  **USE PRE-CALCULATED DATA:** You MUST use the provided metrics as the absolute source of truth for your explanations.
+    *   **Probability of Default (PD):** {{{preCalculatedPd}}}%
+    *   **Loss Given Default (LGD):** {{{preCalculatedLgd}}}%
+    *   **Exposure at Default (EAD):** ₹{{{preCalculatedEad}}}
 
 **Structured Credit Report Data (Source of Truth):**
 \`\`\`json
@@ -105,21 +111,16 @@ const prompt = ai.definePrompt({
 
 **Your Task:**
 
-1.  **Analyze the Filtered Data Holistically:** Apply the critical instructions above to analyze the user-customized dataset.
-2.  **Risk Score & Level:** Generate a 'riskScore' (0-100, 100 is HIGHEST risk) and 'riskLevel' ('Low', 'Medium', 'High', 'Very High'). High delinquencies, written-off accounts, or high utilization in the *filtered data* must result in a significantly higher score.
-3.  **Risk Factors:** List the top 3-4 most significant 'riskFactors' based *only* on the filtered data. Cite specific numbers in your details.
-4.  **Suggested Mitigations:** For each identified risk factor, provide a corresponding and actionable mitigation suggestion.
-5.  **Probability of Default (PD):** Estimate the 'probabilityOfDefault' (0-100%) for a new loan in the next 24 months based on the filtered data.
-6.  **Loss Given Default (LGD):** Estimate a blended 'lossGivenDefault' percentage (0-100) based on the mix of secured vs. unsecured debt in the *filtered data*. Unsecured debt should lead to a higher LGD.
+1.  **Risk Score & Level:** Based on the provided data (especially the PD) and the severity of items in the credit report (delinquencies, write-offs), generate a 'riskScore' (0-100, 100 is HIGHEST risk) and a corresponding 'riskLevel'. A high PD should result in a high risk score.
+2.  **Risk Factors & Mitigations:** Identify the top 3-4 'riskFactors' from the JSON data that justify the high PD and risk score. For each factor, provide an actionable 'suggestedMitigations'.
+3.  **Generate Explanations (CRITICAL):**
+    *   **riskScoreExplanation:** Explain *why* you assigned the risk score, linking it directly to the risk factors and the pre-calculated PD.
+    *   **defaultProbabilityExplanation:** Explain *why* the pre-calculated PD of {{{preCalculatedPd}}}% is appropriate, citing specific evidence from the credit data (e.g., "The PD is high due to a 90-day delinquency...").
+    *   **eadExplanation:** Provide a simple, one-sentence explanation for EAD.
+    *   **lgdExplanation:** Explain *why* the LGD of {{{preCalculatedLgd}}}% is appropriate by analyzing the mix of secured vs. unsecured debt in the provided data.
+    *   **elExplanation:** Provide a simple, one-sentence explanation for what Expected Loss represents.
 
-**Explanations (CRITICAL):**
-*   **riskScoreExplanation:** Provide a detailed explanation for how you arrived at the final 'riskScore'. Explain which factors carried the most weight.
-*   **defaultProbabilityExplanation:** Clearly explain your reasoning for the PD score, referencing specific elements from the *filtered* report.
-*   **eadExplanation:** Provide a simple, one-sentence explanation for EAD, stating it's the sum of outstanding balances for active, considered accounts. Use the pre-calculated value in your explanation if relevant.
-*   **lgdExplanation:** Provide a detailed explanation for the LGD percentage, specifically referencing the mix of secured vs. unsecured debt in the *filtered* accounts and how that impacts potential recovery.
-*   **elExplanation:** Provide a simple, one-sentence explanation for EL, stating that it's calculated from PD, EAD, and LGD, and represents the statistical financial loss a lender might expect.
-
-Generate the final, structured output. Do NOT include fields for 'exposureAtDefault' or 'expectedLoss' in your direct output, as they are calculated in code.
+Generate the final, structured output. Do NOT include fields for financial metrics (PD, LGD, EAD, EL) in your direct output; they will be added in code.
 `,
 });
 
@@ -131,9 +132,12 @@ const riskAssessmentFlow = ai.defineFlow(
   },
   async (input: RiskAssessmentInput) => {
     
+    // =================================================================
     // STEP 1: Perform deterministic calculations in code.
+    // =================================================================
     const consideredAccounts = input.analysisResult.allAccounts.filter(acc => (acc as any).isConsidered);
     
+    // --- EAD Calculation ---
     const calculatedEad = consideredAccounts.reduce((sum, acc) => {
         const status = acc.status.toLowerCase();
         if (status === 'active' || status === 'open') {
@@ -143,25 +147,75 @@ const riskAssessmentFlow = ai.defineFlow(
         return sum;
     }, 0);
 
-    // STEP 2: Call the AI with pre-calculated data for analysis and explanation.
+    // --- PD Calculation (Rules-Based) ---
+    let calculatedPd = 5; // Base PD
+    consideredAccounts.forEach(acc => {
+        if (acc.status.toLowerCase().includes('written-off') || acc.status.toLowerCase().includes('settled')) {
+            calculatedPd += 30;
+        }
+        (acc.monthlyPaymentHistory || []).slice(0, 12).forEach(pmt => {
+            const dpd = parseInt(String(pmt.status).replace('STD', '0'), 10);
+            if (!isNaN(dpd)) {
+                if (dpd >= 90) calculatedPd += 20;
+                else if (dpd >= 60) calculatedPd += 10;
+                else if (dpd >= 30) calculatedPd += 5;
+            }
+        });
+    });
+    const creditUtilization = parseFloat(input.analysisResult.reportSummary.accountSummary.creditUtilization);
+    if (!isNaN(creditUtilization) && creditUtilization > 80) {
+        calculatedPd += 10;
+    }
+    calculatedPd = Math.min(calculatedPd, 95); // Cap PD at 95%
+
+    // --- LGD Calculation (Rules-Based) ---
+    const unsecuredTypes = ['credit card', 'personal loan', 'consumer loan'];
+    const { totalUnsecured, totalSecured } = consideredAccounts.reduce((acc, loan) => {
+        const outstanding = Number(String(loan.outstanding).replace(/[^0-9.-]+/g,""));
+        if (unsecuredTypes.some(type => loan.type.toLowerCase().includes(type))) {
+            acc.totalUnsecured += outstanding;
+        } else {
+            acc.totalSecured += outstanding;
+        }
+        return acc;
+    }, { totalUnsecured: 0, totalSecured: 0 });
+
+    const totalOutstanding = totalSecured + totalUnsecured;
+    let calculatedLgd = 0;
+    if (totalOutstanding > 0) {
+        // Assume 90% LGD for unsecured, 35% for secured
+        const weightedLgd = (totalUnsecured * 0.90) + (totalSecured * 0.35);
+        calculatedLgd = (weightedLgd / totalOutstanding) * 100;
+    }
+    calculatedLgd = Math.round(calculatedLgd);
+    
+    // =================================================================
+    // STEP 2: Call the AI with pre-calculated data for analysis.
+    // =================================================================
     const {output, usage} = await prompt({
         analysisResult: input.analysisResult,
         preCalculatedEad: calculatedEad,
+        preCalculatedPd: calculatedPd,
+        preCalculatedLgd: calculatedLgd,
     });
 
     if (!output) {
       throw new Error("AI failed to provide a risk assessment.");
     }
     
-    // STEP 3: Combine coded calculations and AI analysis into the final result.
-    const pd = output.probabilityOfDefault / 100;
-    const lgd = output.lossGivenDefault / 100;
+    // =================================================================
+    // STEP 3: Combine coded calculations and AI analysis.
+    // =================================================================
+    const pd = calculatedPd / 100;
+    const lgd = calculatedLgd / 100;
     const ead = calculatedEad;
     const calculatedEl = Math.round(pd * lgd * ead);
 
     // Construct the full output object
     const finalOutput: RiskAssessmentOutput = {
         ...output,
+        probabilityOfDefault: calculatedPd,
+        lossGivenDefault: calculatedLgd,
         exposureAtDefault: ead,
         expectedLoss: calculatedEl,
         usage: usage,
@@ -170,5 +224,3 @@ const riskAssessmentFlow = ai.defineFlow(
     return finalOutput;
   }
 );
-
-    
