@@ -10,6 +10,7 @@ import { getApprovalChanceFromRisk } from '@/app/credit/page';
 import { cn } from '@/lib/utils';
 import { RiskAssessmentOutput } from '@/ai/flows/risk-assessment';
 import { Skeleton } from './ui/skeleton';
+import React from 'react';
 
 
 interface CreditAnalysisLandingProps {
@@ -17,13 +18,15 @@ interface CreditAnalysisLandingProps {
     riskAssessmentResult?: RiskAssessmentOutput | null;
     isLoading?: boolean;
     onSelectView: (view: string) => void;
+    headerAction?: React.ReactNode;
 }
 
 export function CreditAnalysisLanding({ 
     analysisResult,
     riskAssessmentResult,
     isLoading,
-    onSelectView 
+    onSelectView,
+    headerAction
 }: CreditAnalysisLandingProps) {
 
     const { customerDetails, cibilScore } = analysisResult;
@@ -32,11 +35,14 @@ export function CreditAnalysisLanding({
 
     return (
         <div className="space-y-6">
-             <div className="text-center">
-                <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">Analysis for {customerDetails.name}</h1>
-                <p className="mt-2 text-md text-muted-foreground max-w-2xl mx-auto">
-                    The AI analysis is complete. Use the dashboard below to explore the detailed insights.
-                </p>
+             <div className="flex flex-col md:flex-row md:justify-between md:items-center text-center md:text-left gap-4">
+                <div>
+                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">Analysis for {customerDetails.name}</h1>
+                    <p className="mt-2 text-md text-muted-foreground">
+                        Use the dashboard below to explore detailed insights or edit the summary.
+                    </p>
+                </div>
+                {headerAction && <div className="flex-shrink-0">{headerAction}</div>}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -37,22 +37,10 @@ interface EnhancedAccountDetail extends AccountDetail {
   manualEmi?: number;
 }
 
-interface BaseAccount {
-  emi?: string | number | null;
-  changeLog?: string[];
-  // Include other common properties from AccountDetail if needed
-}
-
-type ChangeLog = {
-    id: string;
-    text: string;
-}
-
 interface CreditSummaryViewProps {
   analysisResult: AnalyzeCreditReportOutput;
-  reportId: string; // Add reportId to props
   onBack: () => void;
-  onAssessRisk: (updatedAnalysisResult: AnalyzeCreditReportOutput) => void;
+  onAnalysisChange: (updatedAnalysis: AnalyzeCreditReportOutput) => void;
 }
 
 const SummaryCard = ({ title, value, subValue }: { title: string | number; value: string | number; subValue?: string }) => (
@@ -101,19 +89,15 @@ const DpdCircle = ({ value }: { value: string | number }) => {
     )
 }
 
-function isEnhancedAccountDetail(acc: BaseAccount | EnhancedAccountDetail): acc is EnhancedAccountDetail {
-    return (acc as EnhancedAccountDetail).isConsidered !== undefined;
-}
-
 const parseEmiString = (emi: string | number | null | undefined): number => {
     const emiString = String(emi ?? '0');
     const parsedEmi = Number(emiString.replace(/[^0-9.]+/g, ""));
     return isNaN(parsedEmi) ? 0 : parsedEmi;
 };
 
-const getEmiValue = (acc: BaseAccount | EnhancedAccountDetail): number => {
+const getEmiValue = (acc: EnhancedAccountDetail): number => {
     // Prefer manualEmi if it exists and is not undefined/null
-    if (isEnhancedAccountDetail(acc) && acc.manualEmi !== undefined && acc.manualEmi !== null) {
+    if (acc.manualEmi !== undefined && acc.manualEmi !== null) {
         return acc.manualEmi;
     }
     // Otherwise, parse the original emi string
@@ -123,19 +107,15 @@ const getEmiValue = (acc: BaseAccount | EnhancedAccountDetail): number => {
 
 type OwnershipType = 'Individual' | 'Guarantor' | 'Joint';
 
-export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRisk }: CreditSummaryViewProps) {
+export function CreditSummaryView({ analysisResult, onBack, onAnalysisChange }: CreditSummaryViewProps) {
     const { toast } = useToast();
     
-    // This is our single source of truth for the account list being edited
     const [editedAccounts, setEditedAccounts] = useState<EnhancedAccountDetail[]>([]);
 
     const [dpdFilter, setDpdFilter] = useState('12');
     const [isAiSummaryLoading, startAiSummaryTransition] = useTransition();
     const summaryRef = useRef<HTMLDivElement>(null);
-    const [hasChanges, setHasChanges] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
-
-
+    
     const [behaviorAnalyses, setBehaviorAnalyses] = useState<Record<string, BehaviorAnalysisData | null>>({
         'Individual': null,
         'Guarantor': null,
@@ -146,22 +126,40 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
     const [activeChange, setActiveChange] = useState<{index: number, updates: Partial<EnhancedAccountDetail>, oldAccount: EnhancedAccountDetail} | null>(null);
     const [comment, setComment] = useState("");
     
-    // Effect to initialize state when the component mounts or the base analysisResult prop changes
     useEffect(() => {
-        // Check if accounts in analysisResult are already enhanced. If not, enhance them.
         const initialAccounts = analysisResult.allAccounts.map(acc => 
             'isConsidered' in acc 
             ? acc as EnhancedAccountDetail 
             : {
                 ...acc,
-                isConsidered: true,
+                isConsidered: acc.ownership === 'Individual' || acc.ownership === 'Joint',
                 manualEmi: parseEmiString(acc.emi),
                 changeLog: acc.changeLog || [],
             }
         );
         setEditedAccounts(initialAccounts);
-        setHasChanges(false);
     }, [analysisResult]);
+    
+    // Function to propagate changes up to the parent
+    const notifyParentOfChanges = useCallback((updatedAccounts: EnhancedAccountDetail[]) => {
+        const totalEmiNum = updatedAccounts.reduce((sum, acc) => {
+            const status = acc.status.toLowerCase();
+            if ((status === 'active' || status === 'open') && acc.isConsidered) {
+                return sum + getEmiValue(acc);
+            }
+            return sum;
+        }, 0);
+
+        const updatedAnalysisResult = {
+            ...analysisResult,
+            allAccounts: updatedAccounts,
+            emiDetails: {
+                ...analysisResult.emiDetails,
+                totalEmi: totalEmiNum,
+            }
+        };
+        onAnalysisChange(updatedAnalysisResult);
+    }, [analysisResult, onAnalysisChange]);
 
 
     const activeAccounts = useMemo(() => editedAccounts.filter(acc => acc.status.toLowerCase() === 'active' || acc.status.toLowerCase() === 'open'), [editedAccounts]);
@@ -327,13 +325,10 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
     };
     
     const applyChange = (index: number, updates: Partial<EnhancedAccountDetail>, oldAccount: EnhancedAccountDetail, commentText: string | null) => {
-        setHasChanges(true);
         const newAccounts = [...editedAccounts];
         const currentEmi = getEmiValue(oldAccount);
         const newChangeLog = oldAccount.changeLog ? [...oldAccount.changeLog] : [];
 
-        const accountName = `'${oldAccount.type}'`;
-    
         if (updates.isConsidered !== undefined && updates.isConsidered !== oldAccount.isConsidered) {
             let log = `${updates.isConsidered ? 'Included' : 'Excluded'} account from calculations.`;
             if (commentText) log += ` Reason: ${commentText}`;
@@ -352,6 +347,7 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
 
         newAccounts[index] = { ...oldAccount, ...updates, changeLog: newChangeLog };
         setEditedAccounts(newAccounts);
+        notifyParentOfChanges(newAccounts);
     }
 
     const handleCommentDialogSubmit = () => {
@@ -369,22 +365,19 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
 
         toast({ title: "Preparing Download", description: "Generating PDF, please wait..." });
 
-        // Temporarily add a class to the body to scope print styles
         document.body.classList.add('generating-pdf');
 
         const canvas = await html2canvas(elementToCapture, {
-            scale: 2, // Higher scale for better quality
+            scale: 2,
             useCORS: true,
             logging: true,
-            windowWidth: 1200, // Simulate a wider screen for better layout
+            windowWidth: 1200,
         });
 
-        // Remove the class after capture
         document.body.classList.remove('generating-pdf');
 
         const imgData = canvas.toDataURL('image/png');
         
-        // A4 page is 595 x 842 points
         const pdf = new jsPDF({
             orientation: 'portrait',
             unit: 'pt',
@@ -397,17 +390,17 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
         const canvasHeight = canvas.height;
         const ratio = canvasWidth / canvasHeight;
         
-        const imgWidth = pdfWidth - 40; // with some margin
+        const imgWidth = pdfWidth - 40;
         const imgHeight = imgWidth / ratio;
         
         let heightLeft = imgHeight;
-        let position = 20; // top margin
+        let position = 20;
 
         pdf.addImage(imgData, 'PNG', 20, position, imgWidth, imgHeight);
         heightLeft -= (pdfHeight - 40);
 
         while (heightLeft > 0) {
-            position = heightLeft - imgHeight + 20; // move to next page content
+            position = heightLeft - imgHeight + 20;
             pdf.addPage();
             pdf.addImage(imgData, 'PNG', 20, position, imgWidth, imgHeight);
             heightLeft -= (pdfHeight - 40);
@@ -416,40 +409,6 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
         pdf.save(`CreditSummary_${analysisResult.customerDetails.name.replace(/ /g, '_')}.pdf`);
         
         toast({ title: "Download Ready!", description: "Your PDF has been downloaded." });
-    };
-
-    const handleAssessRiskClick = async () => {
-        setIsSaving(true);
-        // Create a new analysisResult object with the updated accounts
-        const updatedAnalysisResult = {
-            ...analysisResult,
-            allAccounts: editedAccounts,
-            // You may also need to update emiDetails if it's derived
-            emiDetails: {
-                ...analysisResult.emiDetails,
-                totalEmi: parseFloat(summaryData.totalEmi.replace(/[^0-9.]/g, ''))
-            },
-             reportSummary: {
-                ...analysisResult.reportSummary,
-                accountSummary: {
-                    ...summaryData,
-                }
-            }
-        };
-
-        try {
-            // The parent component will handle saving and navigation
-            onAssessRisk(updatedAnalysisResult);
-            setHasChanges(false);
-        } catch (error: any) {
-             toast({
-                variant: "destructive",
-                title: "Failed to Proceed",
-                description: "Could not save changes before assessing risk.",
-            });
-        } finally {
-            setIsSaving(false);
-        }
     };
 
     const getDialogDescription = () => {
@@ -631,7 +590,6 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
                                 <TableCell className="font-medium">
                                     <div className="font-semibold">{acc.type}</div>
                                     <div className="text-xs text-muted-foreground mb-2">({acc.ownership})</div>
-                                    {acc.ownership !== 'Individual' && (
                                     <div className="flex items-center space-x-2 no-print">
                                         <Switch
                                             id={accId}
@@ -641,7 +599,6 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
                                         />
                                         <Label htmlFor={accId} className="text-xs text-muted-foreground">Consider</Label>
                                     </div>
-                                    )}
                                 </TableCell>
                                 <TableCell>
                                     <div className="flex flex-col gap-1">
@@ -727,17 +684,6 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
           </div>
         </CardContent>
       </Card>
-       
-        <div className="flex justify-end pt-6 no-print">
-            <Button 
-                size="lg" 
-                onClick={handleAssessRiskClick}
-                disabled={isSaving}
-            >
-                {isSaving ? <Loader2 className="mr-2 animate-spin" /> : <Shield className="mr-2" />}
-                {isSaving ? 'Saving...' : 'Save & Assess AI Risk'}
-            </Button>
-        </div>
     </div>
      <AlertDialog open={commentDialogOpen} onOpenChange={setCommentDialogOpen}>
         <AlertDialogContent>

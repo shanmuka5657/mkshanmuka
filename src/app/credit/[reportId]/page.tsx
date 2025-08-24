@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { notFound, useRouter, useSearchParams } from 'next/navigation';
 import { getReportById, CreditReportSummary } from '@/lib/firestore-service';
 import { CreditSummaryView } from '@/components/CreditSummaryView';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { AnalyzeCreditReportOutput } from '@/ai/flows/credit-report-analysis';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,8 @@ import { updateReportAction } from '@/app/actions';
 export default function ReportDetailPage({ params }: { params: { reportId: string } }) {
   const [report, setReport] = useState<CreditReportSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -75,32 +77,34 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
     router.replace(`/credit/${params.reportId}`, undefined);
   };
   
-  const handleSaveAndNavigate = useCallback(async (updatedAnalysis: AnalyzeCreditReportOutput, targetView: string) => {
-    try {
-        // CRITICAL: Update the state with the new data immediately
-        setEditableAnalysisResult(updatedAnalysis);
-
-        await updateReportAction(params.reportId, updatedAnalysis);
-        toast({
-            title: "Changes Saved",
-            description: "Your edits have been saved to the database.",
-        });
-
-        setActiveView(targetView);
-        router.replace(`/credit/${params.reportId}?view=${targetView}`, undefined);
-    } catch (error: any) {
-        toast({
-            variant: "destructive",
-            title: "Failed to Save Changes",
-            description: error.message || "Could not save the updated report.",
-        });
+  const handleAnalysisChange = useCallback((updatedAnalysis: AnalyzeCreditReportOutput) => {
+    setEditableAnalysisResult(updatedAnalysis);
+    setHasChanges(true);
+  }, []);
+  
+  const handleSaveChanges = async () => {
+    if (!editableAnalysisResult) {
+      toast({ variant: "destructive", title: "Error", description: "No analysis data to save." });
+      return;
     }
-  }, [params.reportId, router, toast]);
-
-  const handleAssessRisk = useCallback((updatedAnalysis: AnalyzeCreditReportOutput) => {
-    // This function now saves the data and then navigates to the risk view.
-    handleSaveAndNavigate(updatedAnalysis, 'risk');
-  }, [handleSaveAndNavigate]);
+    setIsSaving(true);
+    try {
+      await updateReportAction(params.reportId, editableAnalysisResult);
+      toast({
+        title: "Changes Saved",
+        description: "Your edits have been saved to the database.",
+      });
+      setHasChanges(false);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Failed to Save Changes",
+        description: error.message || "Could not save the updated report.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
 
   if (isLoading) {
@@ -123,6 +127,11 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
         </main>
     );
   }
+  
+  const handleSelectView = (view: string) => {
+    setActiveView(view);
+    router.replace(`/credit/${params.reportId}?view=${view}`, undefined);
+  };
 
   switch (activeView) {
     case 'summary':
@@ -130,9 +139,8 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
         <main className="container mx-auto p-4 md:p-8 space-y-6">
           <CreditSummaryView
             analysisResult={editableAnalysisResult}
-            reportId={params.reportId}
             onBack={handleBack}
-            onAssessRisk={handleAssessRisk}
+            onAnalysisChange={handleAnalysisChange}
           />
         </main>
       );
@@ -165,7 +173,15 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
         <main className="container mx-auto p-4 md:p-8 space-y-6">
             <CreditAnalysisLanding 
                 analysisResult={editableAnalysisResult} 
-                onSelectView={setActiveView}
+                onSelectView={handleSelectView}
+                headerAction={
+                    hasChanges && (
+                        <Button onClick={handleSaveChanges} disabled={isSaving}>
+                            {isSaving ? <Loader2 className="animate-spin" /> : <Save />}
+                            {isSaving ? 'Saving...' : 'Save Changes'}
+                        </Button>
+                    )
+                }
             />
         </main>
        )
