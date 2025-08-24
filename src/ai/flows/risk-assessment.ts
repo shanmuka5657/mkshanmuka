@@ -32,10 +32,6 @@ const RiskAssessmentInputSchema = z.object({
   analysisResult: z
     .any()
     .describe('The full, structured analysis from the initial credit report parsing flow, potentially with user edits.'),
-  // We now pass all pre-calculated metrics to the prompt for analysis
-  preCalculatedPd: z.number().describe('The pre-calculated Probability of Default as a percentage.'),
-  preCalculatedLgd: z.number().describe('The pre-calculated Loss Given Default as a percentage.'),
-  preCalculatedEad: z.number().describe('The pre-calculated Exposure at Default in INR.'),
 });
 export type RiskAssessmentInput = {
     analysisResult: AnalyzeCreditReportOutput;
@@ -149,7 +145,8 @@ const riskAssessmentFlow = ai.defineFlow(
     // =================================================================
     
     // CRITICAL: Filter to only include accounts the user has explicitly marked as "isConsidered".
-    const consideredAccounts = input.analysisResult.allAccounts.filter(acc => (acc as any).isConsidered);
+    // Fallback to true if isConsidered is not defined (for original report analysis)
+    const consideredAccounts = input.analysisResult.allAccounts.filter(acc => (acc as any).isConsidered !== false);
     
     // --- EAD Calculation ---
     const calculatedEad = consideredAccounts.reduce((sum, acc) => {
@@ -245,5 +242,3 @@ const riskAssessmentFlow = ai.defineFlow(
     return finalOutput;
   }
 );
-
-    

@@ -25,6 +25,8 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
 
   // This is the single source of truth for the analysis data
   const [editableAnalysisResult, setEditableAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(null);
+  // Store the original, unmodified analysis for comparison
+  const [originalAnalysisResult, setOriginalAnalysisResult] = useState<AnalyzeCreditReportOutput | null>(null);
 
   useEffect(() => {
     const initialView = searchParams.get('view');
@@ -44,9 +46,12 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
       try {
         const fetchedReport = await getReportById(params.reportId);
         if (fetchedReport && fetchedReport.fullAnalysis) {
+          const fullAnalysis = fetchedReport.fullAnalysis as AnalyzeCreditReportOutput;
           setReport(fetchedReport);
           // Initialize editable state with the fetched data
-          setEditableAnalysisResult(fetchedReport.fullAnalysis as AnalyzeCreditReportOutput);
+          setEditableAnalysisResult(fullAnalysis);
+          // Keep a clean copy of the original data
+          setOriginalAnalysisResult(JSON.parse(JSON.stringify(fullAnalysis))); // Deep copy
         } else {
           // This will trigger the not-found UI
           notFound();
@@ -96,6 +101,7 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
 
   const handleAssessRisk = useCallback((updatedAnalysis: AnalyzeCreditReportOutput) => {
     // This function now saves the data and then navigates to the risk view.
+    setEditableAnalysisResult(updatedAnalysis); // Update state immediately for navigation
     handleSaveAndNavigate(updatedAnalysis, 'risk');
   }, [handleSaveAndNavigate]);
 
@@ -111,7 +117,7 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
     );
   }
 
-  if (!report || !editableAnalysisResult) {
+  if (!report || !editableAnalysisResult || !originalAnalysisResult) {
     return (
         <main className="flex flex-col justify-center items-center h-[calc(100vh-10rem)] text-center">
             <h2 className="text-2xl font-semibold mb-2">Report Not Found</h2>
@@ -137,6 +143,7 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
       return (
         <main className="container mx-auto p-4 md:p-8 space-y-6">
           <RiskAssessmentView 
+            originalAnalysisResult={originalAnalysisResult}
             customizedAnalysisResult={editableAnalysisResult} 
             onBack={handleBack} />
         </main>
