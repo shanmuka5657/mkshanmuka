@@ -21,7 +21,6 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
-import { Textarea } from './ui/textarea';
 import { PrintHeader } from './PrintHeader';
 
 interface EnhancedAccountDetail extends AccountDetail {
@@ -101,6 +100,7 @@ type OwnershipType = 'Individual' | 'Guarantor' | 'Joint';
 
 export function CreditSummaryView({ analysisResult, onBack, onAnalysisChange }: CreditSummaryViewProps) {
     const { toast } = useToast();
+    const [isClient, setIsClient] = useState(false);
     
     const [editedAccounts, setEditedAccounts] = useState<EnhancedAccountDetail[]>([]);
 
@@ -119,6 +119,7 @@ export function CreditSummaryView({ analysisResult, onBack, onAnalysisChange }: 
     const [comment, setComment] = useState("");
     
     useEffect(() => {
+        setIsClient(true);
         const initialAccounts = analysisResult.allAccounts.map(acc => 
             'isConsidered' in acc 
             ? acc as EnhancedAccountDetail 
@@ -404,6 +405,10 @@ export function CreditSummaryView({ analysisResult, onBack, onAnalysisChange }: 
         return "Please provide a reason for this change.";
     }
 
+    if (!isClient) {
+        return null;
+    }
+
   return (
     <>
     <div className="flex justify-between items-center mb-4 no-print">
@@ -681,5 +686,3 @@ export function CreditSummaryView({ analysisResult, onBack, onAnalysisChange }: 
     </>
   );
 }
-
-    
