@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -12,6 +13,7 @@ import { RiskAssessmentView } from '@/components/RiskAssessmentView';
 import { CreditAnalysisLanding } from '@/components/CreditAnalysisLanding';
 import { AiRatingView } from '@/components/AiRatingView';
 import { FinancialsView } from '@/components/FinancialsView';
+import { updateReportAction } from '@/app/actions';
 
 export default function ReportDetailPage({ params }: { params: { reportId: string } }) {
   const [report, setReport] = useState<CreditReportSummary | null>(null);
@@ -73,14 +75,31 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
     // Remove the view query param from URL
     router.replace(`/credit/${params.reportId}`, undefined);
   };
+  
+  const handleSaveAndNavigate = useCallback(async (updatedAnalysis: AnalyzeCreditReportOutput, targetView: string) => {
+    try {
+        await updateReportAction(params.reportId, updatedAnalysis);
+        toast({
+            title: "Changes Saved",
+            description: "Your edits have been saved to the database.",
+        });
+        // CRITICAL: Update the state with the successfully saved data before navigating
+        setEditableAnalysisResult(updatedAnalysis);
+        setActiveView(targetView);
+        router.replace(`/credit/${params.reportId}?view=${targetView}`, undefined);
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Failed to Save Changes",
+            description: error.message || "Could not save the updated report.",
+        });
+    }
+  }, [params.reportId, router, toast]);
 
   const handleAssessRisk = useCallback((updatedAnalysis: AnalyzeCreditReportOutput) => {
-    // This function is now responsible for setting the updated state that will be passed to the risk view.
-    // The actual database update happens inside CreditSummaryView.
-    setEditableAnalysisResult(updatedAnalysis);
-    setActiveView('risk');
-    router.replace(`/credit/${params.reportId}?view=risk`, undefined);
-  }, [router, params.reportId]);
+    // This function now saves the data and then navigates to the risk view.
+    handleSaveAndNavigate(updatedAnalysis, 'risk');
+  }, [handleSaveAndNavigate]);
 
 
   if (isLoading) {
@@ -110,7 +129,7 @@ export default function ReportDetailPage({ params }: { params: { reportId: strin
         <main className="container mx-auto p-4 md:p-8 space-y-6">
           <CreditSummaryView
             analysisResult={editableAnalysisResult}
-            reportId={params.reportId} // Pass the reportId for saving
+            reportId={params.reportId}
             onBack={handleBack}
             onAssessRisk={handleAssessRisk}
           />

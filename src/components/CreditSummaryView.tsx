@@ -31,7 +31,6 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { Textarea } from './ui/textarea';
 import { PrintHeader } from './PrintHeader';
-import { updateReportAction } from '@/app/actions';
 
 interface EnhancedAccountDetail extends AccountDetail {
   isConsidered: boolean;
@@ -439,27 +438,14 @@ export function CreditSummaryView({ analysisResult, reportId, onBack, onAssessRi
         };
 
         try {
-            // Only save if it's an existing report
-            if (reportId) {
-                await updateReportAction(reportId, updatedAnalysisResult);
-                toast({
-                    title: "Changes Saved",
-                    description: "Your edits have been saved to the database.",
-                });
-                setHasChanges(false); // Reset changes flag
-                
-                // CRITICAL: Call the onAssessRisk callback to update parent state
-                onAssessRisk(updatedAnalysisResult);
-            } else {
-                 // This is a new report, so just pass the data up without saving to DB
-                onAssessRisk(updatedAnalysisResult);
-            }
-            
+            // The parent component will handle saving and navigation
+            onAssessRisk(updatedAnalysisResult);
+            setHasChanges(false);
         } catch (error: any) {
-            toast({
+             toast({
                 variant: "destructive",
-                title: "Failed to Save Changes",
-                description: error.message || "Could not save the updated report.",
+                title: "Failed to Proceed",
+                description: "Could not save changes before assessing risk.",
             });
         } finally {
             setIsSaving(false);
