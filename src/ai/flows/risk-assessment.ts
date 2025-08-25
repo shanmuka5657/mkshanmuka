@@ -146,7 +146,7 @@ const riskAssessmentFlow = ai.defineFlow(
     
     // CRITICAL: Filter to only include accounts the user has explicitly marked as "isConsidered".
     // Fallback to true if isConsidered is not defined (for original report analysis)
-    const consideredAccounts = input.analysisResult.allAccounts.filter(acc => (acc as any).isConsidered !== false);
+    const consideredAccounts = input.analysisResult.allAccounts.filter((acc: AccountDetail & { isConsidered?: boolean }) => acc.isConsidered !== false);
     
     // --- EAD Calculation ---
     const calculatedEad = consideredAccounts.reduce((sum, acc) => {
