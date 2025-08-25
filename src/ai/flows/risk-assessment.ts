@@ -138,7 +138,7 @@ const riskAssessmentFlow = ai.defineFlow(
     inputSchema: RiskAssessmentInputSchema,
     outputSchema: RiskAssessmentOutputSchema,
   },
-  async (input: RiskAssessmentInput) => {
+  async (input) => {
     
     // =================================================================
     // STEP 1: Perform deterministic calculations based on USER EDITS.
