@@ -526,7 +526,7 @@ export function CreditSummaryView({ analysisResult, onBack, onAnalysisChange, on
 
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><SearchIcon size={20} /> Enquiry Details</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><SearchIcon /> Enquiry Details</CardTitle>
                     <CardDescription>Credit enquiries made by lenders.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
