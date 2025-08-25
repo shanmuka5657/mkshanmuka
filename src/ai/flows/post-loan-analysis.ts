@@ -117,7 +117,7 @@ const postLoanAnalysisFlow = ai.defineFlow(
     inputSchema: PostLoanAnalysisInputSchema,
     outputSchema: PostLoanAnalysisOutputSchema,
   },
-  async (input: PostLoanAnalysisInput) => {
+  async (input) => {
     const {output} = await prompt(input);
     if (!output) {
       throw new Error("AI failed to assess post-loan financial risk.");
