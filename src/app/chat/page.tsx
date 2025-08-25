@@ -23,7 +23,6 @@ export default function ChatPage() {
 
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -49,11 +48,6 @@ export default function ChatPage() {
       if (result.answer) {
         const modelMessage: AiAgentChatHistory = { role: 'model', content: result.answer };
         setMessages((prev) => [...prev, modelMessage]);
-
-        if (result.audioDataUri) {
-          const audio = new Audio(result.audioDataUri);
-          audio.play().catch(e => console.error("Audio playback failed:", e));
-        }
       }
     } catch (error: any) {
       toast({

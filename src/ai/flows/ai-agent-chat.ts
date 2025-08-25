@@ -33,7 +33,6 @@ const AiAgentChatOutputSchema = z.object({
   answer: z
     .string()
     .describe('The AI-generated answer to the user message.'),
-  audioDataUri: z.string().optional().describe("A data URI of the AI's spoken response in WAV format."),
 });
 export type AiAgentChatOutput = z.infer<typeof AiAgentChatOutputSchema>;
 
@@ -92,13 +91,9 @@ The user has uploaded their bank statement. You have access to this document. Us
       }
       throw new Error("The AI returned an empty or invalid response.");
     }
-    
-    // Generate audio from the response text
-    const { audioDataUri } = await textToSpeech(responseText);
 
     return { 
         answer: responseText,
-        audioDataUri,
     };
   }
 );
