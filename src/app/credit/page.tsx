@@ -33,15 +33,6 @@ import { CreditAnalysisLanding } from '@/components/CreditAnalysisLanding';
 if (typeof window !== 'undefined') {
   GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.mjs`;
 }
-
-export const getApprovalChanceFromRisk = (riskScore: number): { chance: string; color: string; value: number } => {
-    if (riskScore <= 15) return { chance: 'Very High', color: 'text-green-500', value: 90 };
-    if (riskScore <= 30) return { chance: 'High', color: 'text-blue-500', value: 75 };
-    if (riskScore <= 45) return { chance: 'Good', color: 'text-yellow-500', value: 60 };
-    if (riskScore <= 60) return { chance: 'Fair', color: 'text-orange-500', value: 40 };
-    return { chance: 'Low', color: 'text-red-500', value: 20 };
-};
-
 export default function CreditPage() {
   const [creditFile, setCreditFile] = useState<File | null>(null);
   const [creditFileName, setCreditFileName] = useState('');
