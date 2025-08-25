@@ -135,7 +135,7 @@ Generate the final, structured output. Do NOT include fields for financial metri
 const riskAssessmentFlow = ai.defineFlow(
   {
     name: 'riskAssessmentFlow',
-    inputSchema: z.object({ analysisResult: z.any() }), // Keep public input simple
+    inputSchema: RiskAssessmentInputSchema,
     outputSchema: RiskAssessmentOutputSchema,
   },
   async (input: RiskAssessmentInput) => {
