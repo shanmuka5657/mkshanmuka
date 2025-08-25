@@ -11,6 +11,11 @@ interface PrintHeaderProps {
 }
 
 export function PrintHeader({ analysisResult }: PrintHeaderProps) {
+  // If analysisResult is not available, render nothing to prevent a crash.
+  if (!analysisResult) {
+    return null;
+  }
+
   const { customerDetails, cibilScore } = analysisResult;
 
   return (
