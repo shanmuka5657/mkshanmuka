@@ -17,7 +17,13 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import type { AnalyzeCreditReportOutput, AccountDetail } from './credit-report-analysis';
 
-// Helper to get the correct EMI value, prioritizing manual edits
+// Define a more specific type for accounts that includes the optional `isConsidered` field
+interface AccountDetailWithConsideration extends AccountDetail {
+  isConsidered?: boolean;
+  type?: string; // Add type if it's not already in AccountDetail
+  monthlyPaymentHistory?: { status: string }[]; // Add monthlyPaymentHistory
+}
+
 const getEmiValue = (acc: AccountDetail | any): number => {
     if (acc.manualEmi !== undefined && acc.manualEmi !== null) {
         return acc.manualEmi;
@@ -146,12 +152,12 @@ const riskAssessmentFlow = ai.defineFlow(
     
     // CRITICAL: Filter to only include accounts the user has explicitly marked as "isConsidered".
     // Fallback to true if isConsidered is not defined (for original report analysis)
-    const consideredAccounts = input.analysisResult.allAccounts.filter((acc: AccountDetail & { isConsidered?: boolean }) => acc.isConsidered !== false);
+    const consideredAccounts: AccountDetailWithConsideration[] = input.analysisResult.allAccounts.filter((acc: AccountDetailWithConsideration) => acc.isConsidered !== false);
     
     // --- EAD Calculation ---
-    const calculatedEad = consideredAccounts.reduce((sum: number, acc) => {
+    const calculatedEad = consideredAccounts.reduce((sum: number, acc: AccountDetailWithConsideration) => {
  const status = acc.status.toLowerCase();
-        if (status === 'active' || status === 'open' || status === 'in repayment') {
+        if (status === 'active' || status === 'open' || status === 'in repayment' || status === 'regular') { // Added 'regular' as a status to consider for EAD
              const outstandingNum = Number(String(acc.outstanding).replace(/[^0-9.-]+/g,""));
              return sum + (isNaN(outstandingNum) ? 0 : outstandingNum);
         }
@@ -160,7 +166,7 @@ const riskAssessmentFlow = ai.defineFlow(
 
     // --- PD Calculation (Rules-Based) ---
     let calculatedPd = 5; // Base PD
-    consideredAccounts.forEach(acc => {
+    consideredAccounts.forEach((acc: AccountDetailWithConsideration) => {
         if (acc.status.toLowerCase().includes('written-off') || acc.status.toLowerCase().includes('settled')) {
             calculatedPd += 30;
         }
@@ -181,7 +187,7 @@ const riskAssessmentFlow = ai.defineFlow(
 
     // --- LGD Calculation (Rules-Based) ---
     const unsecuredTypes = ['credit card', 'personal loan', 'consumer loan'];
-    const { totalUnsecured, totalSecured } = consideredAccounts.reduce((acc, loan) => {
+    const { totalUnsecured, totalSecured } = consideredAccounts.reduce((acc: { totalUnsecured: number, totalSecured: number }, loan: AccountDetailWithConsideration) => {
         const outstanding = Number(String(loan.outstanding).replace(/[^0-9.-]+/g,""));
         if (loan.type && unsecuredTypes.some(type => loan.type.toLowerCase().includes(type))) {
             acc.totalUnsecured += outstanding;
