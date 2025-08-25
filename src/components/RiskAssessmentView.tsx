@@ -124,7 +124,7 @@ export function RiskAssessmentView({ analysisResult, onBack }: RiskAssessmentVie
     <div className="space-y-6">
       <div className="flex justify-between items-center no-print">
         <Button variant="outline" onClick={onBack}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Summary View
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Main View
         </Button>
         <Button onClick={handleDownload} disabled={isLoading || !assessment}>
           <Download className="mr-2 h-4 w-4" /> Download Report
