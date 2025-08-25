@@ -150,7 +150,7 @@ const riskAssessmentFlow = ai.defineFlow(
     
     // --- EAD Calculation ---
     const calculatedEad = consideredAccounts.reduce((sum, acc) => {
-        const status = acc.status.toLowerCase();
+ const status = acc.status.toLowerCase();
         if (status === 'active' || status === 'open' || status === 'in repayment') {
              const outstandingNum = Number(String(acc.outstanding).replace(/[^0-9.-]+/g,""));
              return sum + (isNaN(outstandingNum) ? 0 : outstandingNum);
