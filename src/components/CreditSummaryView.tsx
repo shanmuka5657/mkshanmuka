@@ -7,7 +7,6 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
-import { ArrowLeft, Download, InfoIcon, Shield, Loader2, MessageSquare, PlusCircle, Search } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -22,6 +21,22 @@ import { Label } from './ui/label';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { PrintHeader } from './PrintHeader';
+import { Textarea } from './ui/textarea';
+
+// Inline SVG components to replace Lucide icons
+const ArrowLeftIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+);
+const DownloadIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+);
+const SearchIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+);
+const MessageSquareIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+);
+
 
 interface EnhancedAccountDetail extends AccountDetail {
   isConsidered: boolean;
@@ -32,6 +47,8 @@ interface CreditSummaryViewProps {
   analysisResult: AnalyzeCreditReportOutput;
   onBack: () => void;
   onAnalysisChange: (updatedAnalysis: AnalyzeCreditReportOutput) => void;
+  onAssessRisk?: (updatedAnalysis: AnalyzeCreditReportOutput) => void; // Made optional for credit/page
+  reportId?: string; // Made optional for credit/page
 }
 
 const SummaryCard = ({ title, value, subValue }: { title: string | number; value: string | number; subValue?: string }) => (
@@ -98,7 +115,7 @@ const getEmiValue = (acc: EnhancedAccountDetail): number => {
 
 type OwnershipType = 'Individual' | 'Guarantor' | 'Joint';
 
-export function CreditSummaryView({ analysisResult, onBack, onAnalysisChange }: CreditSummaryViewProps) {
+export function CreditSummaryView({ analysisResult, onBack, onAnalysisChange, onAssessRisk, reportId }: CreditSummaryViewProps) {
     const { toast } = useToast();
     const [isClient, setIsClient] = useState(false);
     
@@ -405,7 +422,14 @@ export function CreditSummaryView({ analysisResult, onBack, onAnalysisChange }: 
         return "Please provide a reason for this change.";
     }
 
+    useEffect(() => {
+        // This effect prevents the hydration error by ensuring the component
+        // only renders on the client side where `window` is available.
+        setIsClient(true);
+      }, []);
+    
     if (!isClient) {
+        // Render nothing on the server to avoid mismatch
         return null;
     }
 
@@ -413,16 +437,24 @@ export function CreditSummaryView({ analysisResult, onBack, onAnalysisChange }: 
     <>
     <div className="flex justify-between items-center mb-4 no-print">
         <Button variant="outline" onClick={onBack}>
-            <ArrowLeft className="mr-2 h-4 w-4"/> Back to Main View
+            <ArrowLeftIcon className="mr-2 h-4 w-4"/> Back to Main View
         </Button>
-        <Button onClick={handleDownload}>
-            <Download className="mr-2 h-4 w-4" /> Download Summary
-        </Button>
+        <div className='flex gap-2'>
+            {reportId ? null : ( // Only show on new report page
+                 <Button onClick={() => onAssessRisk && onAssessRisk(analysisResult)}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4"><path d="m3.5 2 2.1 2.1"/><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/><path d="M20.5 22 19 20.5"/></svg>
+                    Save & Assess Risk
+                </Button>
+            )}
+            <Button onClick={handleDownload}>
+                <DownloadIcon className="mr-2 h-4 w-4" /> Download Summary
+            </Button>
+        </div>
     </div>
 
     <div className="space-y-6 printable-area" ref={summaryRef}>
         <div className="print-header">
-            <PrintHeader analysisResult={analysisResult} />
+            {analysisResult && <PrintHeader analysisResult={analysisResult} />}
         </div>
 
         <Card>
@@ -494,7 +526,7 @@ export function CreditSummaryView({ analysisResult, onBack, onAnalysisChange }: 
 
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Search size={20} /> Enquiry Details</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><SearchIcon size={20} /> Enquiry Details</CardTitle>
                     <CardDescription>Credit enquiries made by lenders.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -644,7 +676,7 @@ export function CreditSummaryView({ analysisResult, onBack, onAnalysisChange }: 
                                         </div>
                                         {acc.changeLog && acc.changeLog.length > 0 && (
                                             <div className="mt-2 pt-2 border-t border-dashed">
-                                                <h4 className="text-xs font-semibold mb-1 flex items-center gap-1"><MessageSquare size={12}/>Manual Change Log:</h4>
+                                                <h4 className="text-xs font-semibold mb-1 flex items-center gap-1"><MessageSquareIcon style={{width: '12px', height: '12px'}}/>Manual Change Log:</h4>
                                                 <ul className="list-disc list-inside space-y-1 pl-1">
                                                     {acc.changeLog.map((log, i) => (
                                                         <li key={i} className="text-xs text-muted-foreground">{log}</li>
