@@ -26,13 +26,15 @@ const getRatingStyles = (rating: string) => {
     return { text: 'text-gray-500', bg: 'bg-gray-50 dark:bg-gray-900/10' };
 };
 
-const RatingColumn = ({ rating, title }: { rating: AiRatingOutput; title: string }) => {
+const RatingCard = ({ rating, riskAssessment }: { rating: AiRatingOutput | null, riskAssessment: RiskAssessmentOutput | null }) => {
+    if (!rating || !riskAssessment) return null;
+
     const ratingStyles = getRatingStyles(rating.rating);
 
     return (
         <div className="space-y-4">
-             <CardHeader className="p-0">
-                <CardTitle>{title}</CardTitle>
+             <CardHeader className="p-0 text-center">
+                <CardTitle>AI Generated Rating</CardTitle>
             </CardHeader>
             <Card className="p-4 flex flex-col items-center justify-center text-center">
                 <CardDescription className="mb-2">AI Generated Risk Score</CardDescription>
@@ -73,24 +75,20 @@ const RatingColumn = ({ rating, title }: { rating: AiRatingOutput; title: string
 
 export function AiRatingView({ analysisResult, onBack }: AiRatingViewProps) {
   const [isLoading, setIsLoading] = useState(true);
-  const [ratingWithGuarantor, setRatingWithGuarantor] = useState<AiRatingOutput | null>(null);
-  const [ratingWithoutGuarantor, setRatingWithoutGuarantor] = useState<AiRatingOutput | null>(null);
+  const [rating, setRating] = useState<AiRatingOutput | null>(null);
+  const [riskAssessment, setRiskAssessment] = useState<RiskAssessmentOutput | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     const runAnalysis = async () => {
       setIsLoading(true);
       try {
-        const riskAssessment = await getRiskAssessment({ analysisResult });
-        if (!riskAssessment) throw new Error("Could not get risk assessment for rating.");
+        const riskResult = await getRiskAssessment({ analysisResult });
+        if (!riskResult) throw new Error("Could not get risk assessment for rating.");
+        setRiskAssessment(riskResult);
         
-        const [ratingWith, ratingWithout] = await Promise.all([
-            getAiRating({ analysisResult, riskAssessment: riskAssessment.assessmentWithGuarantor }),
-            getAiRating({ analysisResult, riskAssessment: riskAssessment.assessmentWithoutGuarantor })
-        ]);
-
-        setRatingWithGuarantor(ratingWith);
-        setRatingWithoutGuarantor(ratingWithout);
+        const ratingResult = await getAiRating({ analysisResult, riskAssessment: riskResult });
+        setRating(ratingResult);
 
       } catch (error: any) {
         
@@ -111,12 +109,12 @@ export function AiRatingView({ analysisResult, onBack }: AiRatingViewProps) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px]">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Generating your dual AI Risk Ratings...</p>
+        <p className="text-muted-foreground">Generating your AI Risk Rating...</p>
       </div>
     );
   }
 
-  if (!ratingWithGuarantor || !ratingWithoutGuarantor) {
+  if (!rating || !riskAssessment) {
     return (
       <div className="text-center">
         <p className="mb-4">Could not load the AI Credit Meter.</p>
@@ -136,11 +134,10 @@ export function AiRatingView({ analysisResult, onBack }: AiRatingViewProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Award /> AI Credit Meter</CardTitle>
-          <CardDescription>A holistic, AI-powered assessment of your credit health, showing how guarantor loans affect your overall rating.</CardDescription>
+          <CardDescription>A holistic, AI-powered assessment of your credit health based on the customized report data.</CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <RatingColumn rating={ratingWithGuarantor} title="With Guarantor Loans" />
-            <RatingColumn rating={ratingWithoutGuarantor} title="Without Guarantor Loans" />
+        <CardContent className="max-w-md mx-auto">
+            <RatingCard rating={rating} riskAssessment={riskAssessment} />
         </CardContent>
       </Card>
 
@@ -156,7 +153,7 @@ export function AiRatingView({ analysisResult, onBack }: AiRatingViewProps) {
           </CardHeader>
             <CardContent>
               <div className="text-sm text-blue-800 dark:text-blue-300 prose prose-sm dark:prose-invert max-w-none">
-                  <p>{ratingWithGuarantor.scoreExplanation}</p>
+                  <p>{rating.scoreExplanation}</p>
               </div>
           </CardContent>
       </Card>
