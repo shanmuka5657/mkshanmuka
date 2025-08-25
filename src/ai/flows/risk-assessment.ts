@@ -138,7 +138,7 @@ const riskAssessmentFlow = ai.defineFlow(
     inputSchema: RiskAssessmentInputSchema,
     outputSchema: RiskAssessmentOutputSchema,
   },
-  async (input) => {
+  async (input: RiskAssessmentInput) => {
     
     // =================================================================
     // STEP 1: Perform deterministic calculations based on USER EDITS.
@@ -149,7 +149,7 @@ const riskAssessmentFlow = ai.defineFlow(
     const consideredAccounts = input.analysisResult.allAccounts.filter((acc: AccountDetail & { isConsidered?: boolean }) => acc.isConsidered !== false);
     
     // --- EAD Calculation ---
-    const calculatedEad = consideredAccounts.reduce((sum, acc) => {
+    const calculatedEad = consideredAccounts.reduce((sum: number, acc) => {
  const status = acc.status.toLowerCase();
         if (status === 'active' || status === 'open' || status === 'in repayment') {
              const outstandingNum = Number(String(acc.outstanding).replace(/[^0-9.-]+/g,""));
