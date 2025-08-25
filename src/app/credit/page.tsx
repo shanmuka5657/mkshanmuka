@@ -281,7 +281,7 @@ export default function CreditPage() {
       switch (activeView) {
         case 'summary':
           return <main className="container mx-auto p-4 md:p-8 space-y-6"><CreditSummaryView analysisResult={analysisResult} onBack={handleBack} onAssessRisk={handleAssessRisk} onAnalysisChange={() => {}} reportId={''} /></main>;
-        case 'risk':
+        case 'risk': // Removed onAnalysisChange={() => {}} prop
           // The risk view should ideally be on the [reportId] page after saving. 
           // This provides a read-only view for now, using the initial analysis.
           return <main className="container mx-auto p-4 md:p-8 space-y-6"><RiskAssessmentView analysisResult={analysisResult} onBack={handleBack} /></main>;
